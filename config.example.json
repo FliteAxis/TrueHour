@@ -1,0 +1,22 @@
+{
+  "claude": {
+    "api_key": "sk-ant-...",
+    "model": "claude-sonnet-4-20250514"
+  },
+  "google": {
+    "client_id": "",
+    "client_secret": "",
+    "refresh_token": "",
+    "calendar_id": "primary"
+  },
+  "notifications": {
+    "slack_webhook_url": "",
+    "discord_webhook_url": "",
+    "telegram_bot_token": "",
+    "telegram_chat_id": ""
+  },
+  "preferences": {
+    "timezone": "America/Chicago",
+    "reminder_advance_days": 30
+  }
+}

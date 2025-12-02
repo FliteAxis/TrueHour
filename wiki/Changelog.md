@@ -1,0 +1,132 @@
+# Changelog
+
+All notable changes to the TrueHour are documented here.
+
+## Latest Changes
+
+### Automated Release System (2025-11-28)
+- **Automatic releases on main branch merges**: Creates GitHub releases when PRs from develop are merged
+- **Semantic versioning**: Automatic version bumping based on commit message conventions
+  - `breaking:` or `major:` → Major version bump (x.0.0)
+  - `feat:` or `feature:` → Minor version bump (0.x.0)
+  - All other commits → Patch version bump (0.0.x)
+- **Release notes generation**: Automatically extracts content from this changelog
+- **Docker image tagging**: Images tagged with both `latest` and version number
+- **Comprehensive release documentation**: Created [Release Process](Release-Process) guide
+
+### FAA Lookup Bug Fixes & UX Improvements (2025-11-28)
+- **Fixed API endpoint mismatch**: Updated health check to use `/tail-lookup-api/api/v1/health`
+- **Fixed data source persistence**: Aircraft imported with FAA lookup now correctly save `source: 'faa'` property
+- **Added data source badges**:
+  - "✓ FAA Verified" badge (green) for FAA-sourced aircraft data
+  - "ForeFlight" badge (blue) for ForeFlight CSV data
+  - Badges display consistently in both CSV import modal and Manage Aircraft screen
+- **Browser cache issue resolved**: Updated JavaScript correctly served after container rebuild
+- **Example deployment configurations**:
+  - `infrastructure/examples/docker-compose.basic.yml` - Simple deployment without FAA lookup
+  - `infrastructure/examples/docker-compose.with-faa-lookup.yml` - Full deployment with tail-lookup
+  - `infrastructure/examples/README.md` - Comprehensive deployment documentation
+
+### tail-lookup Integration (2025-11-28)
+- **Integrated tail-lookup service** for FAA aircraft data verification
+- **Lightweight Python + SQLite architecture** (256MB memory)
+- Profile-based conditional deployment (`profiles: [faa-lookup]`)
+- Internal networking only (`expose: ["8080"]`)
+- Environment variables:
+  - `ENABLE_FAA_LOOKUP` - Toggle FAA lookup feature
+  - `TAIL_LOOKUP_API_URL=http://tail-lookup:8080`
+- Automatic daily FAA data updates via tail-lookup nightly builds
+- Simpler service architecture with single lightweight container
+- Verified working with local testing (N172SP, N55350)
+
+### Build Performance Optimization (2025-11-28)
+- **Parallelized multi-architecture builds** using GitHub Actions matrix strategy
+- Split workflows into prepare, build (parallel), and merge jobs
+- Build each platform separately using push-by-digest strategy
+- Merge platform images into single multi-platform manifest
+- Per-platform cache scoping for better efficiency
+- Applied to: `docker-build.yml`, `docker-build-develop.yml`, `cron.yml`
+- **Expected build time**: ~15 minutes (down from 45+ minutes, 3x speedup)
+
+### Platform Support Changes (2025-11-28)
+- **Dropped ARM v7 support** from all workflows (too slow, rarely used)
+- Kept `linux/amd64` and `linux/arm64` (most common platforms)
+- Updated all documentation to remove arm/v7 references
+
+## Features
+
+### Aircraft Import UI Redesign
+- Replaced single "Aircraft Name" field with separate fields for Tail Number, Year, Make, and Model
+- Fields display in 2x2 grid with larger text boxes for easier editing
+- All fields pre-fill from logbook CSV data
+- Added purple gradient button styling matching app theme
+- Dropdown format changed to `[TailNumber] Type` (e.g., `[N52440] Cessna P172 Skyhawk Powermatic`)
+
+### Simulator Support
+- Fixed AATD simulator not appearing in import list
+- Simulator time properly tracked from `SimulatedFlight` column
+- Simulator fields auto-populate: "N/A" for Year/Make, type for Model (e.g., "AATD Simulator")
+
+### Set as Default Feature
+- Added "★ Set as Default" button to aircraft management form
+- Button appears when viewing a non-default aircraft
+- Matches existing button styling (btn-secondary)
+- Automatically hides when aircraft is already default
+- Updates dropdown to show ★ indicator after setting default
+- Added "★ Set as default aircraft" checkbox to CSV import modal
+- First aircraft in import list is checked by default
+- Only one aircraft can be marked as default at a time
+- Default aircraft is set automatically during import
+
+### FAA Aircraft Lookup (Self-Hosted via tail-lookup)
+- Automatic aircraft details lookup from FAA Registry for US aircraft (N-numbers)
+- **Fully self-contained** - runs entirely in your infrastructure with no external API dependencies
+- **Conditional deployment** - Enable/disable via environment flag (`ENABLE_FAA_LOOKUP`)
+- Self-hosted tail-lookup service runs as Docker sidecar container using Compose profiles
+- **No CORS issues** - dynamically proxied through nginx at `/tail-lookup-api/`
+- Profile-based conditional deployment
+- Opt-in feature (disabled by default) with checkbox toggle in UI
+- Only attempts lookup for tail numbers starting with 'N'
+- Shows data source badges: "✓ FAA Verified" (green), "ForeFlight" (blue)
+- 24-hour cache duration to improve performance and reduce API calls
+- Graceful fallback to ForeFlight CSV data if lookup fails or is disabled
+- JSON API integration - no HTML scraping required
+- Three deployment modes: Basic (no lookup), with tail-lookup service
+- Dynamic nginx configuration based on deployment mode
+- Automated deployment script with automatic profile selection
+- Full Portainer support with native profile integration
+- Automated daily database updates via tail-lookup nightly builds
+- Environment configuration template with feature flags
+- Debug function available in console: `AircraftLookup.testLookup('N12345')`
+
+## Bug Fixes
+
+- **CSV Format**: Dynamic header row detection for ForeFlight format changes
+- **Data Loss**: Fixed aircraft import modal clearing data before use
+- **Year Field**: Fixed Year field data flow from CSV to UI
+- **equipType Field**: Fixed simulator detection by checking both `equipType (FAA)` and `equipType` fields
+- **Default Values**: Pre-filled rate fields with defaults ($150 wet, $120 dry, $6/gal, 8 gal/hr)
+- **Duplicate IDs**: Added random component to ID generation
+- **Name Formatting**: Removed "Aircraft" suffix and replaced "AICSA" with "Piper"
+- **Certification Reset**: Fixed certification dropdown not resetting aircraft hours to 0 when "None" is selected
+- **FAA Lookup UX**: Replaced system alerts with inline status messages that auto-hide after 4 seconds
+- **FAA Lookup Availability**: Checkbox automatically detects if tail-lookup API is available; disables and greys out with informational message when FAA lookup is not enabled in deployment
+
+## Documentation
+
+### Docs Folder Migration
+- Migrated all documentation from `docs/` to `wiki/` for GitHub Wiki integration
+- Updated `README.md` to reference wiki instead of docs
+- Updated `.dockerignore` to exclude wiki folders
+- Deleted `docs/` folder
+
+## Related Documentation
+
+- [Release Process](Release-Process) - How releases are created
+- [Branch Strategy](Branch-Strategy) - Git workflow
+- [GitHub Actions](GitHub-Actions) - CI/CD pipeline
+- [Deployment Guide](Deployment) - Production deployment
+
+---
+
+**Note**: This changelog is used to generate release notes when PRs are merged from develop to main. Keep it up to date with all changes!
