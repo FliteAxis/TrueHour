@@ -6,12 +6,14 @@ services:
       context: ..
       dockerfile: infrastructure/Dockerfile.frontend
     ports:
-      - "8181:80"
+      - "${APP_PORT:-8181}:80"
     depends_on:
       - api
     restart: unless-stopped
     networks:
       - truehour-network
+    env_file:
+      - .env
 
   api:
     build:
@@ -24,12 +26,15 @@ services:
     environment:
       - DATABASE_URL=postgresql://truehour:truehour@db:5432/truehour
       - CONFIG_PATH=/app/config/config.json
+      - ENABLE_FAA_LOOKUP=${ENABLE_FAA_LOOKUP:-false}
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - truehour-network
+    env_file:
+      - .env
 
   db:
     image: postgres:16-alpine

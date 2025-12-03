@@ -1,4 +1,4 @@
-"""Pydantic models for tail-lookup API responses."""
+"""Pydantic models for TrueHour FAA lookup API responses."""
 from typing import Optional, List
 from pydantic import BaseModel, Field
 

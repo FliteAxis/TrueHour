@@ -58,7 +58,7 @@ function saveBudget() {
             make: make,
             model: model,
             registration: registration,
-            rateType: item.querySelector('.aircraft-rate-type').value,
+            rateType: item.querySelector('.rate-type-btn.active')?.dataset.type || item.querySelector('.aircraft-rate-type')?.value || 'wet',
             baseRate: parseFloat(item.querySelector('.aircraft-base-rate').value) || 0,
             fuelPrice: parseFloat(item.querySelector('.fuel-price').value) || 0,
             fuelBurn: parseFloat(item.querySelector('.fuel-burn').value) || 0,
@@ -299,6 +299,31 @@ function init() {
             calculate();
         }
     });
+
+    // Handle rate type toggle buttons
+    document.getElementById('aircraftList').addEventListener('click', function(e) {
+        if (e.target.classList.contains('rate-type-btn')) {
+            var rateType = e.target.dataset.type;
+            var aircraftItem = e.target.closest('.aircraft-item');
+            var fuelInputs = aircraftItem.querySelector('.fuel-inputs');
+            var buttons = aircraftItem.querySelectorAll('.rate-type-btn');
+
+            // Update button states
+            buttons.forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            e.target.classList.add('active');
+
+            // Toggle fuel inputs visibility
+            if (rateType === 'wet') {
+                fuelInputs.classList.add('hidden');
+            } else {
+                fuelInputs.classList.remove('hidden');
+            }
+
+            calculate();
+        }
+    });
     
     document.getElementById('aircraftList').addEventListener('input', calculate);
     calculate();
@@ -383,27 +408,37 @@ function addAircraft(defaults) {
     var isDefault = defaults && (defaults.id === 'PA28-151' || defaults.id === 'C-172' || defaults.id === 'C-R182' || defaults.id === 'PA28-181');
     var showRemove = !isDefault;
 
-    // Build HTML with separate fields for make, model, registration
-    var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px;" data-aircraft-id="' + aircraftId + '">';
-    html += '<div><label style="font-size:0.85em;color:#666;">Make</label>';
-    html += '<input type="text" class="input-field aircraft-make" placeholder="e.g., Cessna" value="' + make + '"></div>';
-    html += '<div><label style="font-size:0.85em;color:#666;">Model</label>';
-    html += '<input type="text" class="input-field aircraft-model" placeholder="e.g., 172" value="' + model + '"></div>';
-    html += '<div><label style="font-size:0.85em;color:#666;">Registration</label>';
-    html += '<input type="text" class="input-field aircraft-registration" placeholder="e.g., N12345" value="' + registration + '"></div>';
+    // Build HTML with modern card layout
+    var html = '<div class="aircraft-header">';
+    html += '<div class="aircraft-info-grid" data-aircraft-id="' + aircraftId + '">';
+    html += '<div class="aircraft-field">';
+    html += '<label class="aircraft-field-label">Make</label>';
+    html += '<input type="text" class="input-field aircraft-make" placeholder="CESSNA" value="' + make + '">';
+    html += '</div>';
+    html += '<div class="aircraft-field">';
+    html += '<label class="aircraft-field-label">Model</label>';
+    html += '<input type="text" class="input-field aircraft-model" placeholder="172P" value="' + model + '">';
+    html += '</div>';
+    html += '<div class="aircraft-field">';
+    html += '<label class="aircraft-field-label">Registration</label>';
+    html += '<input type="text" class="input-field aircraft-registration" placeholder="N52440" value="' + registration + '">';
+    html += '</div>';
+    html += '</div>';
+    if (showRemove) {
+        html += '<button class="btn-remove aircraft-remove">✕</button>';
+    }
     html += '</div>';
 
-    html += '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">';
-    html += '<select class="input-field aircraft-rate-type">';
-    html += '<option value="wet"' + (rateType === 'wet' ? ' selected' : '') + '>Wet</option>';
-    html += '<option value="dry"' + (rateType === 'dry' ? ' selected' : '') + '>Dry</option>';
-    html += '</select>';
-    html += '<div class="aircraft-rate-section">';
-    html += '<span style="color: #999;">$</span>';
-    html += '<input type="number" class="input-field aircraft-base-rate" value="' + baseRate + '">';
-    html += '<span class="input-unit">/hr</span>';
+    html += '<div class="aircraft-rate-config">';
+    html += '<div class="rate-type-toggle">';
+    html += '<button type="button" class="rate-type-btn' + (rateType === 'wet' ? ' active' : '') + '" data-type="wet">Wet</button>';
+    html += '<button type="button" class="rate-type-btn' + (rateType === 'dry' ? ' active' : '') + '" data-type="dry">Dry</button>';
     html += '</div>';
-    html += showRemove ? '<button class="btn-remove aircraft-remove">Remove</button>' : '<span></span>';
+    html += '<div class="rate-value">';
+    html += '<span class="currency">$</span>';
+    html += '<input type="number" class="input-field aircraft-base-rate" value="' + baseRate + '" style="width:80px;font-size:1em;font-weight:600;">';
+    html += '<span class="unit">/hr</span>';
+    html += '</div>';
     html += '</div>';
 
     html += '<div class="fuel-inputs' + (rateType === 'wet' ? ' hidden' : '') + '">';
@@ -423,7 +458,7 @@ function addAircraft(defaults) {
     html += '<div class="hour-input-group"><label>Personal:</label><div class="hour-input-row">';
     html += '<input type="number" class="input-field hour-input aircraft-family-hours" value="0" step="0.1"><span style="font-size:0.85em;color:#999;">hrs</span></div>';
     html += '<div class="hour-cost-display aircraft-family-cost">$0</div></div>';
-    html += '<div style="font-size:0.95em;color:#1e40af;font-weight:700;align-self:center;">Total: <span class="aircraft-total-cost">$0</span></div>';
+    html += '<div class="total-display"><div class="total-display-label">Total</div><div class="total-display-value aircraft-total-cost">$0</div></div>';
     html += '</div>';
 
     newItem.innerHTML = html;
@@ -963,7 +998,7 @@ function calculate() {
     var aircraftItems = document.querySelectorAll('#aircraftList .aircraft-item');
     for (var i = 0; i < aircraftItems.length; i++) {
         var item = aircraftItems[i];
-        var rateType = item.querySelector('.aircraft-rate-type').value;
+        var rateType = item.querySelector('.rate-type-btn.active')?.dataset.type || item.querySelector('.aircraft-rate-type')?.value || 'wet';
         var aircraftRate = parseFloat(item.querySelector('.aircraft-base-rate').value) || 0;
 
         if (rateType === 'dry') {

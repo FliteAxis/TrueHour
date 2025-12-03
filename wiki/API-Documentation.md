@@ -1,14 +1,267 @@
 # API Documentation
 
-Comprehensive documentation for all tail-lookup API endpoints, request/response formats, and usage examples.
+Comprehensive documentation for all TrueHour API endpoints, request/response formats, and usage examples.
 
 ## Base URL
 
-**Local Development**: `http://localhost:8080`
-**Docker Container**: `http://localhost:8080` (or your mapped port)
+**Local Development**: `http://localhost:8000`
+**Docker Container**: `http://localhost:8000` (or your mapped port)
 **Production**: Depends on your deployment
 
-## API Endpoints
+## API Documentation Interfaces
+
+**Interactive API Explorer**: http://localhost:8000/docs (Swagger UI)
+**Alternative Documentation**: http://localhost:8000/redoc (ReDoc)
+
+---
+
+## User Aircraft Management API (Phase 1)
+
+These endpoints manage your personal aircraft list (owned, club, rental aircraft).
+
+### List User Aircraft
+
+**Endpoint**: `GET /api/user/aircraft`
+
+**Query Parameters**:
+- `is_active` (optional): Filter by active status (true/false)
+
+**Response**: `200 OK` with array of aircraft objects
+
+**Example Request**:
+```bash
+curl http://localhost:8000/api/user/aircraft
+curl http://localhost:8000/api/user/aircraft?is_active=true
+```
+
+**Example Response**:
+```json
+[
+  {
+    "id": 1,
+    "tail_number": "N172SP",
+    "year": 2001,
+    "make": "Cessna",
+    "model": "172S",
+    "ownership_type": "owned",
+    "is_active": true,
+    "created_at": "2025-12-01T10:00:00Z",
+    "updated_at": "2025-12-01T10:00:00Z"
+  }
+]
+```
+
+### Get Single Aircraft
+
+**Endpoint**: `GET /api/user/aircraft/{id}`
+
+**Parameters**:
+- `id` (path, required): Aircraft ID
+
+**Response**: `200 OK` with aircraft object or `404 Not Found`
+
+**Example Request**:
+```bash
+curl http://localhost:8000/api/user/aircraft/1
+```
+
+### Add Aircraft
+
+**Endpoint**: `POST /api/user/aircraft`
+
+**Request Body**:
+```json
+{
+  "tail_number": "N172SP",
+  "year": 2001,
+  "make": "Cessna",
+  "model": "172S",
+  "ownership_type": "owned",
+  "is_active": true
+}
+```
+
+**Response**: `201 Created` with created aircraft object
+
+**Example Request**:
+```bash
+curl -X POST http://localhost:8000/api/user/aircraft \
+  -H "Content-Type: application/json" \
+  -d '{"tail_number":"N172SP","year":2001,"make":"Cessna","model":"172S","ownership_type":"owned","is_active":true}'
+```
+
+### Update Aircraft
+
+**Endpoint**: `PUT /api/user/aircraft/{id}`
+
+**Parameters**:
+- `id` (path, required): Aircraft ID
+
+**Request Body**: Same as Add Aircraft
+
+**Response**: `200 OK` with updated aircraft or `404 Not Found`
+
+### Delete Aircraft
+
+**Endpoint**: `DELETE /api/user/aircraft/{id}`
+
+**Parameters**:
+- `id` (path, required): Aircraft ID
+
+**Response**: `200 OK` with success message or `404 Not Found`
+
+**Example Request**:
+```bash
+curl -X DELETE http://localhost:8000/api/user/aircraft/1
+```
+
+---
+
+## Expense Tracking API (Phase 1)
+
+These endpoints manage aviation expenses with filtering and aggregation.
+
+### List Expenses
+
+**Endpoint**: `GET /api/expenses`
+
+**Query Parameters**:
+- `aircraft_id` (optional): Filter by aircraft ID
+- `category` (optional): Filter by expense category
+- `start_date` (optional): Filter expenses from this date (YYYY-MM-DD)
+- `end_date` (optional): Filter expenses until this date (YYYY-MM-DD)
+- `limit` (optional, default 100): Maximum number of results
+- `offset` (optional, default 0): Pagination offset
+
+**Response**: `200 OK` with array of expense objects
+
+**Example Requests**:
+```bash
+# Get all expenses
+curl http://localhost:8000/api/expenses
+
+# Get fuel expenses only
+curl http://localhost:8000/api/expenses?category=fuel
+
+# Get expenses for specific aircraft
+curl http://localhost:8000/api/expenses?aircraft_id=1
+
+# Get expenses in date range
+curl "http://localhost:8000/api/expenses?start_date=2025-01-01&end_date=2025-12-31"
+
+# Pagination
+curl "http://localhost:8000/api/expenses?limit=20&offset=40"
+```
+
+**Example Response**:
+```json
+[
+  {
+    "id": 1,
+    "aircraft_id": 1,
+    "date": "2025-12-01",
+    "category": "fuel",
+    "subcategory": "100LL",
+    "amount": 75.50,
+    "description": "Fuel at KAPA",
+    "vendor": "Signature Flight Support",
+    "created_at": "2025-12-01T15:30:00Z",
+    "updated_at": "2025-12-01T15:30:00Z"
+  }
+]
+```
+
+### Get Single Expense
+
+**Endpoint**: `GET /api/expenses/{id}`
+
+**Parameters**:
+- `id` (path, required): Expense ID
+
+**Response**: `200 OK` with expense object or `404 Not Found`
+
+### Get Expense Summary
+
+**Endpoint**: `GET /api/expenses/summary`
+
+**Query Parameters**:
+- `start_date` (optional): Summary start date (YYYY-MM-DD)
+- `end_date` (optional): Summary end date (YYYY-MM-DD)
+- `group_by` (optional, default "category"): Group by "category" or "subcategory"
+
+**Response**: `200 OK` with aggregated summary
+
+**Example Request**:
+```bash
+curl "http://localhost:8000/api/expenses/summary?start_date=2025-01-01&end_date=2025-12-31"
+```
+
+**Example Response**:
+```json
+[
+  {
+    "category": "fuel",
+    "total_amount": 2450.75,
+    "count": 23,
+    "avg_amount": 106.55,
+    "min_amount": 45.00,
+    "max_amount": 180.25
+  },
+  {
+    "category": "maintenance",
+    "total_amount": 1200.00,
+    "count": 4,
+    "avg_amount": 300.00,
+    "min_amount": 150.00,
+    "max_amount": 600.00
+  }
+]
+```
+
+### Add Expense
+
+**Endpoint**: `POST /api/expenses`
+
+**Request Body**:
+```json
+{
+  "aircraft_id": 1,
+  "date": "2025-12-01",
+  "category": "fuel",
+  "subcategory": "100LL",
+  "amount": 75.50,
+  "description": "Fuel at KAPA",
+  "vendor": "Signature Flight Support"
+}
+```
+
+**Response**: `201 Created` with created expense object
+
+### Update Expense
+
+**Endpoint**: `PUT /api/expenses/{id}`
+
+**Parameters**:
+- `id` (path, required): Expense ID
+
+**Request Body**: Same as Add Expense
+
+**Response**: `200 OK` with updated expense or `404 Not Found`
+
+### Delete Expense
+
+**Endpoint**: `DELETE /api/expenses/{id}`
+
+**Parameters**:
+- `id` (path, required): Expense ID
+
+**Response**: `200 OK` with success message or `404 Not Found`
+
+---
+
+## FAA Aircraft Lookup API
+
+These endpoints provide FAA aircraft registry lookups using the embedded SQLite database.
 
 ### 1. Single Aircraft Lookup
 

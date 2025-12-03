@@ -45,6 +45,7 @@ docker-compose.override.yml
 .env
 .env.local
 .env.*.local
+infrastructure/.env
 
 # Backup files
 *.backup
@@ -55,3 +56,7 @@ docker-compose.override.yml
 tmp/
 temp/
 *.tmp
+
+# Logfiles
+logbook_*.csv
+Foreflight_*.csv

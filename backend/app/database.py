@@ -1,4 +1,4 @@
-"""SQLite database operations for tail-lookup."""
+"""SQLite database operations for FAA aircraft lookup."""
 import sqlite3
 from typing import Optional
 from app.models import AircraftResponse, StatsResponse

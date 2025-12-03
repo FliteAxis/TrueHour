@@ -149,18 +149,17 @@ const AircraftLookup = (function() {
     }
 
     /**
-     * Fetch aircraft data from FAA Registry API via self-hosted tail-lookup
+     * Fetch aircraft data from FAA Registry API via TrueHour backend
      */
     async function fetchFromFAA(tailNumber) {
         const cleaned = tailNumber.trim().toUpperCase();
 
-        // Using self-hosted tail-lookup API
-        // https://github.com/ryakel/tail-lookup
-        // Runs as a sidecar container in docker-compose
-        const tailLookupUrl = `/tail-lookup-api/api/v1/aircraft/${encodeURIComponent(cleaned)}`;
+        // Using TrueHour unified API backend
+        // FAA lookup is built into the main API
+        const tailLookupUrl = `/api/v1/aircraft/${encodeURIComponent(cleaned)}`;
 
         try {
-            console.log(`Looking up ${cleaned} via self-hosted tail-lookup API...`);
+            console.log(`Looking up ${cleaned} via TrueHour API...`);
             const response = await fetch(tailLookupUrl, {
                 method: 'GET',
                 headers: {
@@ -178,7 +177,7 @@ const AircraftLookup = (function() {
 
             const data = await response.json();
 
-            // Parse tail-lookup response format
+            // Parse TrueHour API response format
             const result = parseTailLookupResponse(data, cleaned);
 
             if (result) {
@@ -194,26 +193,26 @@ const AircraftLookup = (function() {
     }
 
     /**
-     * Parse tail-lookup API response
+     * Parse TrueHour API FAA lookup response
      */
     function parseTailLookupResponse(data, tailNumber) {
         try {
-            // tail-lookup returns: { tail_number, manufacturer, model, series, aircraft_type, engine_type, num_engines, num_seats, year_mfr }
+            // TrueHour API returns: { tail_number, manufacturer, model, series, aircraft_type, engine_type, num_engines, num_seats, year_mfr }
             const year = data.year_mfr || '';
             const make = data.manufacturer || '';
             const model = data.model || '';
 
-            console.log(`Parsed tail-lookup response for ${tailNumber}:`, { year, make, model });
+            console.log(`Parsed FAA lookup response for ${tailNumber}:`, { year, make, model });
 
             if (make && model) {
                 return { year, make, model };
             }
 
             // Log the full response for debugging if parsing failed
-            console.warn(`Unexpected tail-lookup response structure for ${tailNumber}:`, data);
+            console.warn(`Unexpected TrueHour API response structure for ${tailNumber}:`, data);
             return null;
         } catch (error) {
-            console.error('Failed to parse tail-lookup response:', error);
+            console.error('Failed to parse TrueHour API response:', error);
             return null;
         }
     }
@@ -363,7 +362,7 @@ const AircraftLookup = (function() {
     }
 
     /**
-     * Check if tail-lookup service is available
+     * Check if FAA lookup service is available
      * @returns {Promise<boolean>} True if service is healthy and available
      */
     async function checkServiceAvailability() {
@@ -373,8 +372,8 @@ const AircraftLookup = (function() {
         }, 2000); // 2 second timeout
 
         try {
-            console.log('[AircraftLookup] Checking tail-lookup service availability...');
-            const response = await fetch('/tail-lookup-api/api/v1/health', {
+            console.log('[AircraftLookup] Checking FAA lookup service availability...');
+            const response = await fetch('/api/v1/health', {
                 method: 'GET',
                 signal: controller.signal
             });

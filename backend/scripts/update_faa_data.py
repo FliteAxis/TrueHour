@@ -53,7 +53,7 @@ def download_faa_data() -> zipfile.ZipFile:
                 FAA_URL,
                 timeout=timeout,
                 stream=True,
-                headers={'User-Agent': 'tail-lookup-builder/1.0'}
+                headers={'User-Agent': 'truehour-faa-builder/1.0'}
             )
             response.raise_for_status()
 

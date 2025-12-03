@@ -1,8 +1,11 @@
 version: '3.8'
 
+# Docker Compose for GHCR images (develop branch)
+# Use this to test with images built from the develop branch
+
 services:
   frontend:
-    image: ghcr.io/fliteaxis/truehour-frontend:latest
+    image: ghcr.io/fliteaxis/truehour-frontend:develop
     ports:
       - "${APP_PORT:-8181}:80"
     depends_on:
@@ -14,7 +17,7 @@ services:
       - .env
 
   api:
-    image: ghcr.io/fliteaxis/truehour-api:latest
+    image: ghcr.io/fliteaxis/truehour-api:develop
     ports:
       - "8000:8000"
     environment:

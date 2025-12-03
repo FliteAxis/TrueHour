@@ -9,7 +9,9 @@ from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from typing import List, Optional
 
 from app.database import Database
+from app.postgres_database import postgres_db
 from app.models import AircraftResponse, HealthResponse, StatsResponse, BulkRequest, BulkResponse, BulkResult
+from app.routers import aircraft, expenses
 
 DB_PATH = os.getenv("DB_PATH", "/app/data/aircraft.db")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -20,6 +22,11 @@ db: Optional[Database] = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db
+
+    # Initialize Postgres connection
+    await postgres_db.connect()
+    print("✅ PostgreSQL connection pool initialized")
+
     # Phase 0: Allow startup without FAA database
     if os.path.exists(DB_PATH):
         db = Database(DB_PATH)
@@ -27,7 +34,12 @@ async def lifespan(app: FastAPI):
     else:
         print(f"⚠️  FAA database not found at {DB_PATH} - aircraft lookup disabled")
         print("   Run: python backend/scripts/update_faa_data.py to build it")
+
     yield
+
+    # Cleanup
+    await postgres_db.close()
+    print("✅ PostgreSQL connection pool closed")
     if db:
         db.close()
 
@@ -37,16 +49,20 @@ app = FastAPI(
     description="Aviation Expense Tracking and Flight Management API",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url=None,  # Disable default docs to use custom ones with footer
-    redoc_url=None  # Disable default redoc to use custom ones with footer
+    docs_url=None,
+    redoc_url=None
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include routers
+app.include_router(aircraft.router)
+app.include_router(expenses.router)
 
 
 def normalize_tail(tail: str) -> str:
@@ -125,7 +141,6 @@ async def custom_swagger_ui_html():
         title=app.title + " - API Documentation",
     )
 
-    # Inject footer before closing body tag
     html_content = swagger_html.body.decode('utf-8')
     html_with_footer = html_content.replace('</body>', f'{footer_html}</body>')
 
@@ -194,7 +209,6 @@ async def custom_redoc_html():
         title=app.title + " - API Documentation",
     )
 
-    # Inject footer before closing body tag
     html_content = redoc_html.body.decode('utf-8')
     html_with_footer = html_content.replace('</body>', f'{footer_html}</body>')
 

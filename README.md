@@ -6,21 +6,30 @@ TrueHour (formerly flight-budget) is a local-first application for tracking avia
 
 ## 🚀 Quick Start
 
+### Using Pre-Built Images (Recommended)
+
 ```bash
 # Clone the repository
 git clone https://github.com/FliteAxis/TrueHour.git
 cd TrueHour
 
-# Create local configuration
-mkdir -p data
-cp config.example.json data/config.json
-# Edit data/config.json with your API keys (optional for basic features)
+# Pull and start latest stable images
+docker compose -f infrastructure/docker-compose.ghcr.yml pull
+docker compose -f infrastructure/docker-compose.ghcr.yml up -d
 
-# Start all services
-docker-compose -f infrastructure/docker-compose.yml up -d
+# Access the application
+open http://localhost:8181
+```
 
-# View logs
-docker-compose -f infrastructure/docker-compose.yml logs -f
+### Building from Source
+
+```bash
+# Clone and build
+git clone https://github.com/FliteAxis/TrueHour.git
+cd TrueHour
+
+# Build and start all services
+docker compose -f infrastructure/docker-compose.yml up -d --build
 
 # Access the application
 open http://localhost:8181
@@ -30,15 +39,18 @@ That's it! The database schema will be automatically initialized on first run.
 
 ## ✨ Features
 
-### Current (Phase 0)
-- ✈️ **Aircraft Management** - Track owned, club, and rental aircraft
-- 📊 **Expense Tracking** - Monitor all aviation-related costs
-- 🔍 **FAA Aircraft Lookup** - Real-time N-number lookups with baked-in FAA registry
+### Current Features
+- ✈️ **Aircraft Management** - Track owned, club, and rental aircraft with CRUD API
+- 📊 **Expense Tracking** - Full expense management with filtering and summaries
+- 💰 **Expense Reports** - Aggregated summaries by category with statistics
+- 🔍 **FAA Aircraft Lookup** - Real-time N-number lookups with baked-in FAA registry (308K+ aircraft)
+- 📝 **ForeFlight Import** - Import your complete logbook from ForeFlight CSV
 - 🐳 **Local Deployment** - Runs entirely on your machine with Docker
 - 💾 **PostgreSQL Storage** - Persistent data with proper relational database
+- 🔄 **Automated Builds** - Nightly FAA data updates via GitHub Actions
+- 📦 **GHCR Images** - Multi-platform Docker images (amd64/arm64)
 
 ### Coming Soon
-- 📝 **ForeFlight Import** - Import your complete logbook from ForeFlight CSV (Phase 3)
 - 💰 **Budget Tracking** - Manual budget allocations with spending comparison (Phase 4)
 - 🔔 **Reminders** - Track medical, flight review, and currency deadlines (Phase 6)
 - 🤖 **AI Chat Assistant** - Natural language queries powered by Claude (Phase 7)
@@ -74,16 +86,33 @@ truehour/
 
 ## 🔧 Configuration
 
-### Basic Setup (No API Keys Required)
+### Basic Setup
 
-TrueHour works out of the box for:
+1. Copy the environment template:
+```bash
+cp infrastructure/.env.example infrastructure/.env
+```
+
+2. Edit `infrastructure/.env` to enable features:
+```bash
+# Enable FAA aircraft lookups (optional, enabled by default)
+ENABLE_FAA_LOOKUP=true
+
+# Customize port if needed
+APP_PORT=8181
+```
+
+Core features available:
 - Aircraft management
 - Expense tracking
-- FAA lookups
+- ForeFlight CSV import
+- **FAA lookups** - 308K+ aircraft database baked into the image (toggle with `ENABLE_FAA_LOOKUP` in `.env`)
 
-### Advanced Features (Requires API Keys)
+The FAA aircraft database is automatically included in all Docker images and updated nightly.
 
-Edit `data/config.json` to enable:
+### Advanced Features (Requires API Keys - Phase 7+)
+
+Edit `data/config.json` to enable future features:
 
 ```json
 {
@@ -116,30 +145,41 @@ Edit `data/config.json` to enable:
 
 ```bash
 # Start with development configuration
-docker-compose -f infrastructure/docker-compose.yml \
+docker compose -f infrastructure/docker-compose.yml \
                -f infrastructure/docker-compose.dev.yml up
 
 # Backend will auto-reload on code changes
 # Database will be exposed on localhost:5432
 ```
 
+### Test with Develop Branch Images
+
+```bash
+# Pull and run latest develop builds
+docker compose -f infrastructure/docker-compose.ghcr-develop.yml pull
+docker compose -f infrastructure/docker-compose.ghcr-develop.yml up -d
+```
+
 ### Run FAA Database Build Script
 
 ```bash
 cd backend
-python scripts/update_faa_data.py
-# Creates backend/data/faa.db
+pip install requests
+python scripts/update_faa_data.py data/aircraft.db
+# Creates backend/data/aircraft.db with latest FAA data
 ```
 
 ### Access Database Directly
 
 ```bash
 # Connect to running database
-docker exec -it truehour-db-1 psql -U truehour truehour
+docker exec -it infrastructure-db-1 psql -U truehour truehour
 
 # Run queries
+\dt                    # List tables
 SELECT COUNT(*) FROM aircraft;
 SELECT * FROM expenses ORDER BY date DESC LIMIT 10;
+\q                     # Quit
 ```
 
 ## 💾 Backup & Restore
@@ -147,20 +187,20 @@ SELECT * FROM expenses ORDER BY date DESC LIMIT 10;
 ### Backup Database
 
 ```bash
-docker exec truehour-db-1 pg_dump -U truehour truehour > backup_$(date +%Y%m%d).sql
+docker exec infrastructure-db-1 pg_dump -U truehour truehour > backup_$(date +%Y%m%d).sql
 ```
 
 ### Restore Database
 
 ```bash
-cat backup_20251201.sql | docker exec -i truehour-db-1 psql -U truehour truehour
+cat backup_20251203.sql | docker exec -i infrastructure-db-1 psql -U truehour truehour
 ```
 
 ### Reset Everything (⚠️ Destroys All Data)
 
 ```bash
-docker-compose -f infrastructure/docker-compose.yml down -v
-docker-compose -f infrastructure/docker-compose.yml up -d
+docker compose -f infrastructure/docker-compose.yml down -v
+docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
 ## 📊 Database Schema
@@ -168,55 +208,99 @@ docker-compose -f infrastructure/docker-compose.yml up -d
 The PostgreSQL database includes:
 
 - **aircraft** - Your aircraft list (owned, club, rental)
-- **flights** - Flight log entries from ForeFlight or manual entry
+- **flights** - Flight log entries from ForeFlight or manual entry (Phase 3)
 - **expenses** - All aviation expenses (fuel, insurance, subscriptions, etc.)
-- **budgets** - Budget definitions for expense tracking
-- **budget_entries** - Monthly budget allocations
-- **reminders** - Deadlines for medicals, flight reviews, currency
-- **chat_history** - Conversation history with Claude AI
+- **budgets** - Budget definitions for expense tracking (Phase 4)
+- **budget_entries** - Monthly budget allocations (Phase 4)
+- **reminders** - Deadlines for medicals, flight reviews, currency (Phase 6)
+- **chat_history** - Conversation history with Claude AI (Phase 7)
 
-See `infrastructure/init.sql` for complete schema.
+See [infrastructure/init.sql](infrastructure/init.sql) for complete schema.
 
 ## 🔍 API Endpoints
 
-### Current Endpoints (from tail-lookup)
+### FAA Aircraft Lookup
 
 ```
-GET  /api/aircraft/{tail}      # FAA aircraft lookup by N-number
-GET  /api/aircraft/stats        # Database statistics
-GET  /                          # API health check
+GET  /api/v1/aircraft/{tail}    # Lookup by N-number (e.g., N172SP)
+POST /api/v1/aircraft/bulk      # Bulk lookup (max 50)
+GET  /api/v1/stats               # FAA database statistics
+GET  /api/v1/health              # Health check
 ```
 
-### Coming in Phase 1
+### User Aircraft Management (Phase 1)
 
 ```
-GET    /api/user/aircraft       # List user's aircraft
-POST   /api/user/aircraft       # Add aircraft
-PUT    /api/user/aircraft/{id}  # Update aircraft
-DELETE /api/user/aircraft/{id}  # Remove aircraft
-
-GET    /api/expenses            # List expenses
-POST   /api/expenses            # Add expense
-PUT    /api/expenses/{id}       # Update expense
-DELETE /api/expenses/{id}       # Delete expense
+GET    /api/user/aircraft         # List user's aircraft
+GET    /api/user/aircraft/{id}    # Get single aircraft
+POST   /api/user/aircraft         # Add aircraft
+PUT    /api/user/aircraft/{id}    # Update aircraft
+DELETE /api/user/aircraft/{id}    # Remove aircraft
 ```
 
-## 📦 Data Import
+### Expense Tracking (Phase 1)
 
-### ForeFlight CSV Import (Coming in Phase 3)
+```
+GET    /api/expenses              # List expenses (with filters)
+GET    /api/expenses/{id}         # Get single expense
+GET    /api/expenses/summary      # Aggregated summary by category
+POST   /api/expenses              # Add expense
+PUT    /api/expenses/{id}         # Update expense
+DELETE /api/expenses/{id}         # Delete expense
+```
 
-Export your logbook from ForeFlight and import:
+**Query Parameters for `/api/expenses`:**
+- `aircraft_id` - Filter by aircraft
+- `category` - Filter by expense category
+- `start_date` / `end_date` - Date range filter
+- `limit` / `offset` - Pagination
+
+**API Documentation:** http://localhost:8000/docs (Swagger UI)
+
+## 📦 Docker Images
+
+### Available Images
+
+TrueHour publishes multi-platform Docker images to GitHub Container Registry:
+
+| Image | Tag | Purpose | Updated |
+|-------|-----|---------|---------|
+| `ghcr.io/fliteaxis/truehour-api` | `latest` | Stable API releases | On main branch push |
+| `ghcr.io/fliteaxis/truehour-api` | `develop` | Development builds | On develop branch push |
+| `ghcr.io/fliteaxis/truehour-api` | `nightly` | Latest FAA data | Daily at 6 AM UTC |
+| `ghcr.io/fliteaxis/truehour-frontend` | `latest` | Stable frontend | On main branch push |
+| `ghcr.io/fliteaxis/truehour-frontend` | `develop` | Development frontend | On develop branch push |
+
+### Pull Specific Version
 
 ```bash
-# Via API (Phase 3)
-curl -X POST http://localhost:8000/api/flights/import \
-  -F "file=@ForeFlight_Export.csv"
+# Pull specific dated release
+docker pull ghcr.io/fliteaxis/truehour-api:2025-12-03
+
+# Pull nightly build
+docker pull ghcr.io/fliteaxis/truehour-api:nightly
+
+# Pull develop
+docker pull ghcr.io/fliteaxis/truehour-api:develop
 ```
+
+## 📝 Data Import
+
+### ForeFlight CSV Import
+
+Export your logbook from ForeFlight and import via the web interface:
+
+1. Open http://localhost:8181
+2. Click "Import Logbook" or use the CSV import button
+3. Select your ForeFlight export CSV file
+4. Review and confirm aircraft mappings
+5. Import flights and aircraft data
 
 The importer handles:
 - Multi-section CSV format
 - Aircraft and flights
 - Simulator vs aircraft distinction
+- Automatic FAA data lookup for N-numbers (when enabled)
 - Deduplication on re-import
 
 ## 🚦 Troubleshooting
@@ -225,45 +309,79 @@ The importer handles:
 
 ```bash
 # Check logs
-docker-compose -f infrastructure/docker-compose.yml logs
+docker compose -f infrastructure/docker-compose.yml logs
 
 # Restart services
-docker-compose -f infrastructure/docker-compose.yml restart
+docker compose -f infrastructure/docker-compose.yml restart
+
+# Check container status
+docker compose -f infrastructure/docker-compose.yml ps
 ```
 
 ### Database Connection Issues
 
 ```bash
 # Verify database is healthy
-docker-compose -f infrastructure/docker-compose.yml ps
+docker ps --filter "name=infrastructure-db"
 
 # Check database logs
-docker-compose -f infrastructure/docker-compose.yml logs db
+docker logs infrastructure-db-1
 ```
 
 ### Frontend Not Loading
 
 ```bash
+# Check if ports are available
+lsof -i :8181
+lsof -i :8000
+
 # Rebuild frontend container
-docker-compose -f infrastructure/docker-compose.yml up -d --build frontend
+docker compose -f infrastructure/docker-compose.yml up -d --build frontend
+```
+
+### API Returns 503
+
+```bash
+# Check if FAA database exists
+docker exec infrastructure-api-1 ls -lh /app/data/
+
+# Rebuild database if missing
+cd backend
+python scripts/update_faa_data.py data/aircraft.db
+docker compose -f infrastructure/docker-compose.yml restart api
 ```
 
 ## 🗺️ Roadmap
 
-### Phase 0: Repository Setup ✅
+### Phase 0: Repository Setup ✅ Complete
 - Monorepo structure
 - Docker Compose with 3 containers
 - PostgreSQL schema
 - Basic frontend/backend migration
 
-### Phase 1: Backend Foundation (Next)
-- Postgres connection in backend
+### Phase 1: Backend Foundation ✅ Complete
+- PostgreSQL integration with asyncpg
 - User aircraft CRUD endpoints
-- Expenses CRUD endpoints
-- Frontend → API migration (remove localStorage)
+- Expenses CRUD endpoints with filtering
+- Expense summary and aggregation
+- GHCR image publishing
+- Automated nightly FAA data builds
+- ForeFlight CSV import (already working)
 
-### Phase 2-9: Feature Development
-See [PHASE_0_PLAN.md](PHASE_0_PLAN.md) for detailed roadmap.
+### Phase 2: Frontend Migration (Next)
+- Remove localStorage dependencies
+- Migrate to API-based data management
+- Update UI for new endpoints
+
+### Phase 3: Future Features
+- Budget tracking
+- Notifications
+- Reminders
+- Claude chatbot
+- Google Calendar integration
+- CI/CD enhancements
+
+See [tmp/fliteaxis_architecture_final.md](tmp/fliteaxis_architecture_final.md) for detailed architecture.
 
 ## 📜 Migration Notice
 
@@ -289,8 +407,9 @@ MIT License - See [LICENSE](LICENSE) for details
 ## 🔗 Links
 
 - **GitHub Organization:** [FliteAxis](https://github.com/FliteAxis)
+- **Container Registry:** [GHCR Packages](https://github.com/orgs/FliteAxis/packages)
 - **Issues:** [Report bugs or request features](https://github.com/FliteAxis/TrueHour/issues)
-- **Architecture Document:** `.claude/fliteaxis_architecture_final.md`
+- **API Documentation:** http://localhost:8000/docs (when running)
 
 ## ✈️ About
 
@@ -303,12 +422,13 @@ TrueHour is built for pilots who want to:
 Built with:
 - **Frontend:** HTML/CSS/JavaScript (Vanilla)
 - **Backend:** Python FastAPI
-- **Database:** PostgreSQL 16
-- **Aircraft Data:** FAA Registry (nightly updates)
+- **Database:** PostgreSQL 16 + SQLite (FAA data)
+- **Aircraft Data:** FAA Registry (nightly updates, 308K+ aircraft)
 - **Deployment:** Docker Compose
+- **CI/CD:** GitHub Actions → GHCR
 
 ---
 
-**Questions?** Open an issue or check the [documentation](wiki/)
+**Questions?** Open an issue or check the [API documentation](http://localhost:8000/docs)
 
 **Happy Flying!** 🛩️

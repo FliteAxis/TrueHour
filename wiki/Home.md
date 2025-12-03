@@ -6,6 +6,17 @@
 
 Welcome to the TrueHour documentation! TrueHour is a personal aviation expense tracking and flight management application.
 
+## Current Status: Phase 1 Complete
+
+**Backend Foundation (Phase 1)** is now complete with:
+- PostgreSQL integration with async connection pooling
+- User aircraft management CRUD API
+- Expense tracking API with filtering and aggregation
+- Multi-platform Docker images on GHCR (amd64/arm64)
+- Automated nightly FAA data updates
+
+**Next:** Phase 2 - Frontend migration to use new API endpoints
+
 ## 🚀 Quick Start
 
 - [Getting Started](Getting-Started.md) - Installation and setup

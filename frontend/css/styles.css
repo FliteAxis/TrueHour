@@ -339,11 +339,19 @@ select.input-field {
 .aircraft-item {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px;
-    background: #fafafa;
-    border-radius: 6px;
-    margin-bottom: 10px;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.aircraft-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    border-color: #d1d5db;
 }
 
 .aircraft-rate-section {
@@ -355,19 +363,26 @@ select.input-field {
 .aircraft-item-row2 {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 15px;
+    gap: 20px;
     align-items: start;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
 }
 
 .hour-input-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
 }
 
 .hour-input-group label {
-    font-size: 0.85em;
-    color: #666;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .hour-input-row {
@@ -381,10 +396,10 @@ select.input-field {
 }
 
 .hour-cost-display {
-    font-size: 0.8em;
-    color: #1e40af;
-    font-weight: 600;
-    margin-top: 2px;
+    font-size: 0.875em;
+    color: #2563eb;
+    font-weight: 700;
+    margin-top: 4px;
 }
 
 .aircraft-id {
@@ -421,14 +436,27 @@ select.input-field {
 
 /* Buttons */
 .btn-remove {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+    padding: 8px 12px;
+    border-radius: 8px;
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 1em;
     font-weight: 600;
+    transition: all 0.2s ease;
+    min-width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-remove:hover {
+    background: #fecaca;
+    border-color: #fca5a5;
+    color: #7f1d1d;
+    transform: translateY(-1px);
 }
 
 .btn-add {
@@ -1440,4 +1468,162 @@ select.input-field {
         flex-direction: column;
         gap: 0.5rem;
     }
+}
+
+/* Aircraft Header Styling */
+.aircraft-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.aircraft-info-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1.3fr 1fr;
+    gap: 14px;
+    flex: 1;
+}
+
+.aircraft-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.aircraft-field-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.aircraft-field input {
+    font-size: 1.05em;
+    font-weight: 500;
+    color: #111827;
+    padding: 10px;
+}
+
+.aircraft-field input::placeholder {
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.aircraft-controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.aircraft-rate-config {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.rate-badge {
+    font-size: 0.75em;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rate-badge.wet {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.rate-badge.dry {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.rate-value {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 1.125em;
+    font-weight: 700;
+    color: #111827;
+}
+
+.rate-value .currency {
+    font-size: 0.9em;
+    color: #6b7280;
+}
+
+.rate-value .unit {
+    font-size: 0.75em;
+    color: #9ca3af;
+    font-weight: 500;
+}
+
+.total-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.total-display-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.total-display-value {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #2563eb;
+}
+
+/* Rate Type Toggle Buttons */
+.rate-type-toggle {
+    display: flex;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.rate-type-btn {
+    padding: 8px 16px;
+    border: none;
+    background: white;
+    color: #6b7280;
+    font-size: 0.875em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid #e5e7eb;
+}
+
+.rate-type-btn:last-child {
+    border-right: none;
+}
+
+.rate-type-btn:hover {
+    background: #f9fafb;
+}
+
+.rate-type-btn.active {
+    background: #3b82f6;
+    color: white;
+}
+
+.rate-type-btn.active:hover {
+    background: #2563eb;
 }
