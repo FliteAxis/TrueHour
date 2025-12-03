@@ -1,28 +1,27 @@
-name: Build - Main
+name: Build and Push - Main
 
 on:
   push:
     branches: [main]
     paths:
-      - 'app/**'
-      - 'Dockerfile'
-      - 'requirements.txt'
-  pull_request:
-    branches: [main]
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infrastructure/**'
+  workflow_dispatch:
 
 permissions:
-  contents: write  # Required for creating tags and releases
+  contents: write
   packages: write
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ryakel/tail-lookup
+  REGISTRY: ghcr.io
+  FRONTEND_IMAGE: ghcr.io/fliteaxis/truehour-frontend
+  API_IMAGE: ghcr.io/fliteaxis/truehour-api
 
 jobs:
   version:
     name: Determine Version
     runs-on: ubuntu-latest
-    if: github.event_name != 'pull_request'
     outputs:
       new_tag: ${{ steps.version.outputs.new_tag }}
       tag_exists: ${{ steps.version.outputs.tag_exists }}
@@ -35,7 +34,6 @@ jobs:
       - name: Determine version bump
         id: version
         run: |
-          # Get latest tag (highest semantic version, not most recent in git history)
           LATEST_TAG=$(git tag -l "v*.*.*" | sort -V | tail -n 1)
 
           if [ -z "$LATEST_TAG" ]; then
@@ -55,7 +53,6 @@ jobs:
             COMMITS=$(git log ${LATEST_TAG}..HEAD --oneline)
           fi
 
-          # Only bump version if there are new commits
           if [ -n "$COMMITS" ]; then
             if echo "$COMMITS" | grep -iE "^[a-f0-9]+ (breaking|major):" > /dev/null; then
               MAJOR=$((MAJOR + 1))
@@ -72,49 +69,46 @@ jobs:
           NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
-          # Check if tag already exists
           if git rev-parse "$NEW_TAG" >/dev/null 2>&1; then
-            echo "Tag $NEW_TAG already exists, skipping tag creation"
             echo "tag_exists=true" >> $GITHUB_OUTPUT
           else
-            echo "Will create tag $NEW_TAG after successful build"
             echo "tag_exists=false" >> $GITHUB_OUTPUT
           fi
 
   prepare-database:
-    name: Prepare Database
+    name: Prepare FAA Database
     runs-on: ubuntu-latest
-    needs: version
-    if: always()  # Run even if release is skipped (for PRs)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Download latest database from releases
+      - name: Download or build FAA database
         run: |
-          mkdir -p data
-          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/ryakel/tail-lookup/releases/latest \
+          mkdir -p backend/data
+
+          # Try to download from previous releases
+          DOWNLOAD_URL=$(curl -s https://api.github.com/repos/FliteAxis/TrueHour/releases/latest \
             | jq -r '.assets[]? | select(.name == "aircraft.db") | .browser_download_url' 2>/dev/null || echo "")
 
           if [ -z "$DOWNLOAD_URL" ] || [ "$DOWNLOAD_URL" = "null" ]; then
             echo "No existing database found, building fresh..."
-            pip install -q requests httpx
-            python scripts/update_faa_data.py data/aircraft.db
+            pip install -q requests
+            python backend/scripts/update_faa_data.py backend/data/aircraft.db
           else
             echo "Downloading from $DOWNLOAD_URL"
-            curl -L -o data/aircraft.db "$DOWNLOAD_URL"
+            curl -L -o backend/data/aircraft.db "$DOWNLOAD_URL"
           fi
 
       - name: Upload database artifact
         uses: actions/upload-artifact@v4
         with:
           name: aircraft-database
-          path: data/aircraft.db
+          path: backend/data/aircraft.db
           retention-days: 1
 
-  build:
-    name: Build ${{ matrix.platform }}
-    needs: prepare-database
+  build-api:
+    name: Build API (${{ matrix.platform }})
+    needs: [version, prepare-database]
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -129,7 +123,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aircraft-database
-          path: data
+          path: backend/data
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -137,14 +131,69 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        if: github.event_name != 'pull_request'
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract platform name for cache
+      - name: Extract platform name
+        id: platform
+        run: echo "name=$(echo ${{ matrix.platform }} | sed 's/\//-/g')" >> $GITHUB_OUTPUT
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: backend
+          file: backend/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.API_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=api-${{ steps.platform.outputs.name }}
+          cache-to: type=gha,mode=max,scope=api-${{ steps.platform.outputs.name }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests-api
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests-api/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-api-${{ steps.platform.outputs.name }}
+          path: /tmp/digests-api/*
+          if-no-files-found: error
+          retention-days: 1
+
+  build-frontend:
+    name: Build Frontend (${{ matrix.platform }})
+    needs: version
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract platform name
         id: platform
         run: echo "name=$(echo ${{ matrix.platform }} | sed 's/\//-/g')" >> $GITHUB_OUTPUT
 
@@ -153,109 +202,155 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          file: infrastructure/Dockerfile.frontend
           platforms: ${{ matrix.platform }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          cache-from: type=gha,scope=build-${{ steps.platform.outputs.name }}
-          cache-to: type=gha,mode=max,scope=build-${{ steps.platform.outputs.name }}
+          outputs: type=image,name=${{ env.FRONTEND_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=frontend-${{ steps.platform.outputs.name }}
+          cache-to: type=gha,mode=max,scope=frontend-${{ steps.platform.outputs.name }}
 
       - name: Export digest
         run: |
-          mkdir -p /tmp/digests
+          mkdir -p /tmp/digests-frontend
           digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests-frontend/${digest#sha256:}"
 
       - name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ steps.platform.outputs.name }}
-          path: /tmp/digests/*
+          name: digests-frontend-${{ steps.platform.outputs.name }}
+          path: /tmp/digests-frontend/*
           if-no-files-found: error
           retention-days: 1
 
-  merge:
-    name: Create Multi-Platform Manifest
+  merge-api:
+    name: Create API Multi-Platform Manifest
     runs-on: ubuntu-latest
-    needs: [version, build]
-    if: github.event_name != 'pull_request'
+    needs: [version, build-api]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-api-*
+          path: /tmp/digests-api
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get metadata
+        id: meta
+        run: echo "date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Create manifest and push
+        working-directory: /tmp/digests-api
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.API_IMAGE }}:latest \
+            --tag ${{ env.API_IMAGE }}:${{ steps.meta.outputs.date }} \
+            --tag ${{ env.API_IMAGE }}:${{ needs.version.outputs.new_tag }} \
+            $(printf '${{ env.API_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: docker buildx imagetools inspect ${{ env.API_IMAGE }}:latest
+
+  merge-frontend:
+    name: Create Frontend Multi-Platform Manifest
+    runs-on: ubuntu-latest
+    needs: [version, build-frontend]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-frontend-*
+          path: /tmp/digests-frontend
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get metadata
+        id: meta
+        run: echo "date=$(date -u +%Y-%m-%d)" >> $GITHUB_OUTPUT
+
+      - name: Create manifest and push
+        working-directory: /tmp/digests-frontend
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.FRONTEND_IMAGE }}:latest \
+            --tag ${{ env.FRONTEND_IMAGE }}:${{ steps.meta.outputs.date }} \
+            --tag ${{ env.FRONTEND_IMAGE }}:${{ needs.version.outputs.new_tag }} \
+            $(printf '${{ env.FRONTEND_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: docker buildx imagetools inspect ${{ env.FRONTEND_IMAGE }}:latest
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [version, merge-api, merge-frontend, prepare-database]
+    if: needs.version.outputs.tag_exists != 'true'
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Download digests
+      - name: Download database artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: digests-*
-          path: /tmp/digests
-          merge-multiple: true
+          name: aircraft-database
+          path: .
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Get metadata
-        id: meta
-        run: |
-          DATE=$(date -u +%Y-%m-%d)
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-
-      - name: Create manifest list and push
-        working-directory: /tmp/digests
-        run: |
-          docker buildx imagetools create \
-            --tag ${{ env.IMAGE_NAME }}:latest \
-            --tag ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.date }} \
-            --tag ${{ env.IMAGE_NAME }}:${{ needs.version.outputs.new_tag }} \
-            $(printf '${{ env.IMAGE_NAME }}@sha256:%s ' *)
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:latest
-
-      - name: Trigger Portainer webhook (optional)
-        if: github.ref == 'refs/heads/main'
-        continue-on-error: true
-        env:
-          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
-        run: |
-          if [ -n "$WEBHOOK_URL" ]; then
-            curl -X POST "$WEBHOOK_URL"
-          fi
-
-      # Create and push git tag (after successful build)
       - name: Create and push git tag
-        if: github.ref == 'refs/heads/main' && needs.version.outputs.tag_exists != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "${{ needs.version.outputs.new_tag }}" -m "Release ${{ needs.version.outputs.new_tag }}"
           git push origin "${{ needs.version.outputs.new_tag }}"
-          echo "✓ Created and pushed tag: ${{ needs.version.outputs.new_tag }}"
 
-      # Create GitHub release (after successful build and tag creation)
       - name: Create GitHub Release
-        if: github.ref == 'refs/heads/main' && needs.version.outputs.tag_exists != 'true'
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ needs.version.outputs.new_tag }}
           name: Release ${{ needs.version.outputs.new_tag }}
+          artifacts: "aircraft.db"
           body: |
-            ## 🚀 What's New
+            ## TrueHour Release ${{ needs.version.outputs.new_tag }}
 
-            Release ${{ needs.version.outputs.new_tag }}
+            ### Docker Images
 
-            ## 📦 Docker Images
-
+            **Frontend:**
             ```bash
-            docker pull ryakel/tail-lookup:${{ needs.version.outputs.new_tag }}
-            docker pull ryakel/tail-lookup:latest
+            docker pull ghcr.io/fliteaxis/truehour-frontend:${{ needs.version.outputs.new_tag }}
+            docker pull ghcr.io/fliteaxis/truehour-frontend:latest
             ```
 
-            **[Full Documentation](https://github.com/ryakel/tail-lookup/wiki)**
+            **API:**
+            ```bash
+            docker pull ghcr.io/fliteaxis/truehour-api:${{ needs.version.outputs.new_tag }}
+            docker pull ghcr.io/fliteaxis/truehour-api:latest
+            ```
+
+            ### Quick Start
+
+            ```bash
+            cd infrastructure
+            docker-compose up -d
+            ```
+
+            **[Full Documentation](https://github.com/FliteAxis/TrueHour/wiki)**
           token: ${{ secrets.GITHUB_TOKEN }}
