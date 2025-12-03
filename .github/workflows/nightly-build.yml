@@ -1,4 +1,4 @@
-name: Nightly Build
+name: Nightly Build (GHCR)
 
 on:
   schedule:
@@ -11,13 +11,17 @@ permissions:
   packages: write
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ryakel/tail-lookup
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/fliteaxis/truehour-api
 
 jobs:
-  build:
+  build-database:
+    name: Build FAA Database
     runs-on: ubuntu-latest
-
+    outputs:
+      records: ${{ steps.info.outputs.records }}
+      size: ${{ steps.info.outputs.size }}
+      date: ${{ steps.info.outputs.date }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -28,89 +32,186 @@ jobs:
           python-version: '3.12'
 
       - name: Install Python dependencies
-        run: |
-          pip install requests
+        run: pip install requests
 
       - name: Download and build database
         run: |
-          python scripts/update_faa_data.py data/aircraft.db
+          mkdir -p backend/data
+          python backend/scripts/update_faa_data.py backend/data/aircraft.db
 
       - name: Get build info
         id: info
         run: |
-          RECORDS=$(sqlite3 data/aircraft.db "SELECT COUNT(*) FROM master")
-          SIZE=$(du -h data/aircraft.db | cut -f1)
+          RECORDS=$(sqlite3 backend/data/aircraft.db "SELECT COUNT(*) FROM master")
+          SIZE=$(du -h backend/data/aircraft.db | cut -f1)
           DATE=$(date -u +%Y-%m-%d)
           echo "records=$RECORDS" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "date=$DATE" >> $GITHUB_OUTPUT
 
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aircraft-database
+          path: backend/data/aircraft.db
+          retention-days: 7
+
+  build-api:
+    name: Build API (${{ matrix.platform }})
+    needs: build-database
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform:
+          - linux/amd64
+          - linux/arm64
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: aircraft-database
+          path: backend/data
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - name: Extract platform name
+        id: platform
+        run: echo "name=$(echo ${{ matrix.platform }} | sed 's/\//-/g')" >> $GITHUB_OUTPUT
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
         with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.date }}
+          context: backend
+          file: backend/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.API_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=api-nightly-${{ steps.platform.outputs.name }}
+          cache-to: type=gha,mode=max,scope=api-nightly-${{ steps.platform.outputs.name }}
           labels: |
-            org.opencontainers.image.title=tail-lookup
-            org.opencontainers.image.description=FAA Aircraft Registration Lookup API
-            org.opencontainers.image.created=${{ steps.info.outputs.date }}
-            org.opencontainers.image.source=https://github.com/ryakel/tail-lookup
-            faa.data.records=${{ steps.info.outputs.records }}
-            faa.data.date=${{ steps.info.outputs.date }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            org.opencontainers.image.title=truehour-api
+            org.opencontainers.image.description=TrueHour Aviation Expense Tracking API
+            org.opencontainers.image.source=https://github.com/FliteAxis/TrueHour
+            faa.data.records=${{ needs.build-database.outputs.records }}
+            faa.data.date=${{ needs.build-database.outputs.date }}
 
-      - name: Update GitHub Release
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests-api
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests-api/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-api-${{ steps.platform.outputs.name }}
+          path: /tmp/digests-api/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge-api:
+    name: Create Multi-Platform Manifest
+    runs-on: ubuntu-latest
+    needs: [build-database, build-api]
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests-api-*
+          path: /tmp/digests-api
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create manifest and push
+        working-directory: /tmp/digests-api
+        run: |
+          docker buildx imagetools create \
+            --tag ${{ env.API_IMAGE }}:nightly \
+            --tag ${{ env.API_IMAGE }}:nightly-${{ needs.build-database.outputs.date }} \
+            $(printf '${{ env.API_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: docker buildx imagetools inspect ${{ env.API_IMAGE }}:nightly
+
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-database, merge-api]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download database artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: aircraft-database
+          path: .
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: data-${{ steps.info.outputs.date }}
-          name: "FAA Data - ${{ steps.info.outputs.date }}"
+          tag_name: data-${{ needs.build-database.outputs.date }}
+          name: "FAA Data - ${{ needs.build-database.outputs.date }}"
           body: |
             ## FAA Aircraft Registration Database
-            
-            **Date:** ${{ steps.info.outputs.date }}
-            **Records:** ${{ steps.info.outputs.records }}
-            **DB Size:** ${{ steps.info.outputs.size }}
-            
-            **Docker Image:**
+
+            **Date:** ${{ needs.build-database.outputs.date }}
+            **Records:** ${{ needs.build-database.outputs.records }}
+            **DB Size:** ${{ needs.build-database.outputs.size }}
+
+            **Docker Image (Nightly):**
+            ```bash
+            docker pull ${{ env.API_IMAGE }}:nightly
+            docker pull ${{ env.API_IMAGE }}:nightly-${{ needs.build-database.outputs.date }}
             ```
-            docker pull ryakel/tail-lookup:${{ steps.info.outputs.date }}
-            docker pull ryakel/tail-lookup:latest
-            ```
-            
-            Source: [FAA Releasable Aircraft Database](https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download)
-          files: data/aircraft.db
+
+            **Downloadable Database:**
+            The `aircraft.db` file is attached to this release for direct download.
+
+            **Source:** [FAA Releasable Aircraft Database](https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download)
+          files: aircraft.db
           prerelease: false
 
-      - name: Trigger Portainer webhook (optional)
-        continue-on-error: true
-        env:
-          WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
-        run: |
-          if [ -n "$WEBHOOK_URL" ]; then
-            curl -X POST "$WEBHOOK_URL"
-          fi
-
+  summary:
+    name: Build Summary
+    runs-on: ubuntu-latest
+    needs: [build-database, merge-api, create-release]
+    steps:
       - name: Summary
         run: |
-          echo "## Build Complete 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "## Nightly Build Complete 🌙" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Date | ${{ steps.info.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Records | ${{ steps.info.outputs.records }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| DB Size | ${{ steps.info.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`${{ env.IMAGE_NAME }}:${{ steps.info.outputs.date }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Date | ${{ needs.build-database.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Records | ${{ needs.build-database.outputs.records }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| DB Size | ${{ needs.build-database.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ env.API_IMAGE }}:nightly\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull and Run" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.API_IMAGE }}:nightly" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
