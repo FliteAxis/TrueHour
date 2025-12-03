@@ -1,16 +1,19 @@
 # CI/CD Pipeline
 
-Comprehensive documentation of the tail-lookup CI/CD workflows, automation, and deployment processes.
+Comprehensive documentation of the TrueHour CI/CD workflows, automation, and deployment processes.
 
 ## Overview
 
-Tail-lookup uses GitHub Actions for automated builds, testing, and deployment. The CI/CD pipeline consists of three main workflows:
+TrueHour uses GitHub Actions for automated builds, testing, and deployment. The CI/CD pipeline consists of three main workflows:
 
-1. **Nightly Build** - Daily automated database updates
+1. **Nightly Build** - Daily automated FAA database updates
 2. **Main Branch Build** - Builds triggered by code changes to main, with versioning and releases
 3. **Develop Branch Build** - Builds triggered by code changes to develop branch
 
-All workflows build Docker images and publish to Docker Hub with appropriate tagging.
+All workflows build Docker images and publish to GitHub Container Registry (GHCR) with appropriate tagging.
+
+**Registry**: `ghcr.io/fliteaxis/*`
+**Platforms**: linux/amd64, linux/arm64
 
 ## Workflows
 
@@ -20,15 +23,16 @@ All workflows build Docker images and publish to Docker Hub with appropriate tag
 **Purpose**: Daily automated FAA database updates
 **Schedule**: Daily at 6:00 AM UTC (cron: `0 6 * * *`)
 **Trigger**: Schedule or manual dispatch
+**Output**: `ghcr.io/fliteaxis/truehour-api:nightly` and GitHub release with database artifact
 
 #### Workflow Steps
 
 ```yaml
-name: Nightly Build
+name: Nightly Build (GHCR)
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # 6 AM UTC daily
+    - cron: '0 6 * * *'  # 6 AM UTC daily (after FAA's 11:30 PM CT update)
   workflow_dispatch:      # Allow manual trigger
 
 permissions:
@@ -36,8 +40,8 @@ permissions:
   packages: write         # For publishing Docker images
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ryakel/tail-lookup
+  REGISTRY: ghcr.io
+  API_IMAGE: ghcr.io/fliteaxis/truehour-api
 ```
 
 **Step 1: Checkout repository**
@@ -62,144 +66,193 @@ env:
 ```yaml
 - name: Download and build database
   run: |
-    python scripts/update_faa_data.py data/aircraft.db
+    mkdir -p backend/data
+    python backend/scripts/update_faa_data.py backend/data/aircraft.db
 ```
 - Downloads ReleasableAircraft.zip from FAA (~30MB)
 - Parses MASTER.txt and ACFTREF.txt
 - Builds SQLite database (~25MB)
 - Takes ~30-45 seconds
+- Stored in `backend/data/aircraft.db` for monorepo structure
 
 **Step 4: Get build info**
 ```yaml
 - name: Get build info
   id: info
   run: |
-    RECORDS=$(sqlite3 data/aircraft.db "SELECT COUNT(*) FROM master")
-    SIZE=$(du -h data/aircraft.db | cut -f1)
+    RECORDS=$(sqlite3 backend/data/aircraft.db "SELECT COUNT(*) FROM master")
+    SIZE=$(du -h backend/data/aircraft.db | cut -f1)
     DATE=$(date -u +%Y-%m-%d)
     echo "records=$RECORDS" >> $GITHUB_OUTPUT
     echo "size=$SIZE" >> $GITHUB_OUTPUT
     echo "date=$DATE" >> $GITHUB_OUTPUT
 ```
-- Queries database for record count
-- Gets database file size
+- Queries database for record count (~308K records)
+- Gets database file size (~25MB)
 - Generates date string for tagging
-- Outputs used in subsequent steps
+- Outputs used in subsequent steps and GitHub release
 
-**Step 5: Set up Docker Buildx**
+**Step 5: Build multi-platform images**
+
+The workflow uses a matrix strategy to build for multiple platforms in parallel:
+
 ```yaml
-- name: Set up Docker Buildx
-  uses: docker/setup-buildx-action@v3
+strategy:
+  matrix:
+    platform:
+      - linux/amd64
+      - linux/arm64
 ```
-- Enables advanced Docker build features
-- Required for caching and multi-platform builds
 
-**Step 6: Log in to Docker Hub**
+Each platform:
+1. Sets up QEMU for cross-platform builds
+2. Sets up Docker Buildx
+3. Logs in to GHCR using `GITHUB_TOKEN`
+4. Builds image with push-by-digest strategy
+5. Uploads digest artifact
+
+**Step 6: Merge multi-platform manifest**
+
 ```yaml
-- name: Log in to Docker Hub
-  uses: docker/login-action@v3
-  with:
-    username: ${{ secrets.DOCKERHUB_USERNAME }}
-    password: ${{ secrets.DOCKERHUB_TOKEN }}
+- name: Create manifest and push
+  run: |
+    docker buildx imagetools create \
+      --tag ${{ env.API_IMAGE }}:nightly \
+      --tag ${{ env.API_IMAGE }}:nightly-${{ needs.build-database.outputs.date }} \
+      $(printf '${{ env.API_IMAGE }}@sha256:%s ' *)
 ```
-- Authenticates with Docker Hub
-- Uses repository secrets for credentials
-- Required for pushing images
 
-**Step 7: Build and push Docker image**
-```yaml
-- name: Build and push
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    push: true
-    tags: |
-      ${{ env.IMAGE_NAME }}:latest
-      ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.date }}
-    labels: |
-      org.opencontainers.image.title=tail-lookup
-      org.opencontainers.image.description=FAA Aircraft Registration Lookup API
-      org.opencontainers.image.created=${{ steps.info.outputs.date }}
-      org.opencontainers.image.source=https://github.com/ryakel/tail-lookup
-      faa.data.records=${{ steps.info.outputs.records }}
-      faa.data.date=${{ steps.info.outputs.date }}
-    cache-from: type=gha
-    cache-to: type=gha,mode=max
-```
-- Builds Docker image with fresh database
-- Tags with `latest` and date (e.g., `2025-11-28`)
-- Adds metadata labels for tracking
-- Uses GitHub Actions cache for faster builds
+- Downloads all platform digests
+- Combines into single multi-platform image
+- Tags with both `nightly` (latest) and date-specific tags
+- Users can pull either tag and get the correct platform automatically
 
-**Step 8: Create GitHub Release**
+**Step 7: Create GitHub Release**
+
 ```yaml
-- name: Update GitHub Release
+- name: Create GitHub Release
   uses: softprops/action-gh-release@v2
   with:
-    tag_name: data-${{ steps.info.outputs.date }}
-    name: "FAA Data - ${{ steps.info.outputs.date }}"
-    body: |
-      ## FAA Aircraft Registration Database
-
-      **Date:** ${{ steps.info.outputs.date }}
-      **Records:** ${{ steps.info.outputs.records }}
-      **DB Size:** ${{ steps.info.outputs.size }}
-
-      **Docker Image:**
-      ```
-      docker pull ryakel/tail-lookup:${{ steps.info.outputs.date }}
-      docker pull ryakel/tail-lookup:latest
-      ```
-
-      Source: [FAA Releasable Aircraft Database](https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download)
-    files: data/aircraft.db
-    prerelease: false
+    tag_name: data-${{ needs.build-database.outputs.date }}
+    name: "FAA Data - ${{ needs.build-database.outputs.date }}"
+    files: aircraft.db
 ```
-- Creates GitHub Release with database file
-- Tags release with date (e.g., `data-2025-11-28`)
-- Includes metadata (record count, size)
-- Provides Docker pull commands
-- Attaches database file for manual download
 
-**Step 9: Trigger Portainer webhook (optional)**
-```yaml
-- name: Trigger Portainer webhook (optional)
-  continue-on-error: true
-  env:
-    WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
-  run: |
-    if [ -n "$WEBHOOK_URL" ]; then
-      curl -X POST "$WEBHOOK_URL"
-    fi
+- Creates GitHub release with date tag (e.g., `data-2025-12-02`)
+- Attaches `aircraft.db` file for direct download
+- Includes metadata (record count, file size, Docker pull commands)
+- Allows users to download database without Docker
+
+#### Key Features
+
+- **Multi-platform support**: Builds for both amd64 and arm64 architectures
+- **Parallel builds**: Matrix strategy reduces build time from 45+ minutes to ~15 minutes
+- **Automatic tagging**: Both `nightly` and date-specific tags
+- **GitHub releases**: Database available for direct download
+- **No secrets needed**: Uses `GITHUB_TOKEN` for authentication
+
+---
+
+### 2. Main Branch Build Workflow
+
+**File**: `.github/workflows/build-main.yml`
+**Purpose**: Build and release on main branch pushes
+**Trigger**: Push to main branch (code changes to `backend/**`, `frontend/**`, or `infrastructure/**`)
+**Output**:
+- `ghcr.io/fliteaxis/truehour-api:latest`
+- `ghcr.io/fliteaxis/truehour-frontend:latest`
+- Tagged releases on GitHub
+
+#### Key Features
+
+- **Multi-service builds**: Builds both API and frontend containers
+- **Multi-platform**: linux/amd64 and linux/arm64
+- **Parallel builds**: Matrix strategy for fast builds
+- **Semantic versioning**: Automatic version bumping based on commits
+- **GitHub releases**: Automatic release creation with changelog
+
+---
+
+### 3. Develop Branch Build Workflow
+
+**File**: `.github/workflows/build-develop.yml`
+**Purpose**: Build and test on develop branch pushes
+**Trigger**: Push to develop branch (code changes to `backend/**`, `frontend/**`, or `infrastructure/**`)
+**Output**:
+- `ghcr.io/fliteaxis/truehour-api:develop`
+- `ghcr.io/fliteaxis/truehour-frontend:develop`
+
+#### Key Features
+
+- **Multi-service builds**: Builds both API and frontend containers
+- **Multi-platform**: linux/amd64 and linux/arm64
+- **Parallel builds**: Matrix strategy for fast builds
+- **Multiple tags**: `develop`, `develop-YYYY-MM-DD`, `develop-SHA`
+- **Testing environment**: Used to test before merging to main
+
+---
+
+## Docker Image Tags
+
+### Production (Main Branch)
+
+All stable releases from the main branch:
+
+```bash
+# Latest stable release
+ghcr.io/fliteaxis/truehour-api:latest
+ghcr.io/fliteaxis/truehour-frontend:latest
+
+# Date-tagged releases
+ghcr.io/fliteaxis/truehour-api:2025-12-02
+ghcr.io/fliteaxis/truehour-frontend:2025-12-02
+
+# Semantic versions (if tagged)
+ghcr.io/fliteaxis/truehour-api:v1.0.0
+ghcr.io/fliteaxis/truehour-frontend:v1.0.0
 ```
-- Optional webhook for automatic deployment
-- Triggers Portainer to pull latest image
-- Continues even if webhook not configured
-- No failure if webhook URL not set
 
-**Step 10: Build summary**
-```yaml
-- name: Summary
-  run: |
-    echo "## Build Complete 🎉" >> $GITHUB_STEP_SUMMARY
-    echo "" >> $GITHUB_STEP_SUMMARY
-    echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-    echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-    echo "| Date | ${{ steps.info.outputs.date }} |" >> $GITHUB_STEP_SUMMARY
-    echo "| Records | ${{ steps.info.outputs.records }} |" >> $GITHUB_STEP_SUMMARY
-    echo "| DB Size | ${{ steps.info.outputs.size }} |" >> $GITHUB_STEP_SUMMARY
-    echo "| Image | \`${{ env.IMAGE_NAME }}:${{ steps.info.outputs.date }}\` |" >> $GITHUB_STEP_SUMMARY
+### Development (Develop Branch)
+
+All builds from the develop branch:
+
+```bash
+# Latest develop build
+ghcr.io/fliteaxis/truehour-api:develop
+ghcr.io/fliteaxis/truehour-frontend:develop
+
+# Date-tagged develop builds
+ghcr.io/fliteaxis/truehour-api:develop-2025-12-02
+ghcr.io/fliteaxis/truehour-frontend:develop-2025-12-02
+
+# Commit-tagged builds
+ghcr.io/fliteaxis/truehour-api:develop-5f6d9dc
+ghcr.io/fliteaxis/truehour-frontend:develop-5f6d9dc
 ```
-- Creates formatted summary in GitHub Actions UI
-- Shows key metrics from build
-- Helps track builds over time
 
-#### Timing and Schedule
+### Nightly (FAA Data Updates)
 
+Fresh FAA database daily:
+
+```bash
+# Latest nightly build
+ghcr.io/fliteaxis/truehour-api:nightly
+
+# Date-tagged nightly builds
+ghcr.io/fliteaxis/truehour-api:nightly-2025-12-02
+```
+
+---
+
+## Workflow Timing
+
+### Nightly Build Schedule
+
+**Time**: 6:00 AM UTC daily
 **Why 6 AM UTC?**
 - FAA updates data daily at 11:30 PM CT (5:30 AM UTC)
 - 30-minute buffer ensures data is ready
-- Low traffic time minimizes impact on users
+- Low traffic time minimizes impact
 
 **Manual Trigger**:
 - Available via GitHub Actions UI

@@ -104,7 +104,7 @@ async function initAircraftUI() {
             console.log('No default aircraft found');
         }
 
-        // Initialize FAA lookup checkbox and check if tail-lookup API is available
+        // Initialize FAA lookup checkbox and check if FAA lookup is available
         console.log('About to call checkFAALookupAvailability()...');
         await checkFAALookupAvailability();
         console.log('checkFAALookupAvailability() called');
@@ -133,10 +133,10 @@ async function checkSingleLookupAvailability() {
 }
 
 /**
- * Check if tail-lookup API is available and update UI accordingly
+ * Check if FAA lookup service is available and update UI accordingly
  */
 async function checkFAALookupAvailability() {
-    console.log('Checking tail-lookup API availability...');
+    console.log('Checking FAA lookup service availability...');
 
     const checkbox = document.getElementById('enableFAALookup');
     const statusDiv = document.getElementById('faaLookupStatus');
@@ -157,12 +157,12 @@ async function checkFAALookupAvailability() {
     const isAvailable = await AircraftLookup.checkServiceAvailability();
 
     if (isAvailable) {
-        // tail-lookup API is available - enable the checkbox
-        console.log('tail-lookup API is available');
+        // FAA lookup service is available - enable the checkbox
+        console.log('FAA lookup service is available');
         enableFAALookupCheckbox(checkbox, label, statusDiv);
     } else {
-        // tail-lookup API is not available (ENABLE_FAA_LOOKUP=false or network error)
-        console.log('tail-lookup API not available');
+        // FAA lookup service is not available (ENABLE_FAA_LOOKUP=false or network error)
+        console.log('FAA lookup service not available');
         disableFAALookupCheckbox(checkbox, label, statusDiv, 'FAA lookup is not enabled in this deployment');
     }
 }

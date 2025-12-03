@@ -153,7 +153,7 @@ const OnboardingManager = {
         // Clear any existing aircraft from previous sessions
         this.clearExistingAircraft();
 
-        // Check if tail-lookup service is available and auto-enable FAA lookups
+        // Check if FAA lookup service is available and auto-enable FAA lookups
         await this.checkAndEnableFAALookup();
 
         this.currentPath = 'foreflight';
@@ -1164,7 +1164,7 @@ const OnboardingManager = {
     },
 
     /**
-     * Check if tail-lookup service is available and auto-enable FAA lookups
+     * Check if FAA lookup service is available and auto-enable FAA lookups
      */
     checkAndEnableFAALookup: async function() {
         if (typeof AircraftLookup === 'undefined') {
@@ -1172,16 +1172,16 @@ const OnboardingManager = {
             return;
         }
 
-        console.log('[Onboarding] Checking tail-lookup service availability...');
+        console.log('[Onboarding] Checking FAA lookup service availability...');
 
         const isAvailable = await AircraftLookup.checkServiceAvailability();
 
         if (isAvailable) {
-            console.log('[Onboarding] tail-lookup service detected - auto-enabling FAA lookups');
+            console.log('[Onboarding] FAA lookup service detected - auto-enabling FAA lookups');
             AircraftLookup.setOnlineLookupEnabled(true);
             this.showHelp('✓ FAA aircraft verification enabled - aircraft will be verified against FAA registry');
         } else {
-            console.log('[Onboarding] tail-lookup service not available - using ForeFlight data only');
+            console.log('[Onboarding] FAA lookup service not available - using ForeFlight data only');
             AircraftLookup.setOnlineLookupEnabled(false);
             // Optionally show help message
             // this.showHelp('Using ForeFlight data only (FAA lookup unavailable)');

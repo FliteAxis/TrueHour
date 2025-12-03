@@ -4,6 +4,37 @@ All notable changes to the TrueHour are documented here.
 
 ## Latest Changes
 
+### Phase 1: Backend Foundation Complete (2025-12-02)
+- **PostgreSQL integration**: Full async PostgreSQL support with connection pooling
+- **User aircraft CRUD API**: Complete REST API for managing personal aircraft
+  - `GET /api/user/aircraft` - List all user aircraft with optional filtering
+  - `GET /api/user/aircraft/{id}` - Get single aircraft details
+  - `POST /api/user/aircraft` - Add new aircraft
+  - `PUT /api/user/aircraft/{id}` - Update aircraft details
+  - `DELETE /api/user/aircraft/{id}` - Remove aircraft
+- **Expense tracking API**: Full expense management with filtering and aggregation
+  - `GET /api/expenses` - List expenses with filtering (by aircraft, category, date range)
+  - `GET /api/expenses/{id}` - Get single expense
+  - `GET /api/expenses/summary` - Aggregated summary by category with statistics
+  - `POST /api/expenses` - Add new expense
+  - `PUT /api/expenses/{id}` - Update expense
+  - `DELETE /api/expenses/{id}` - Delete expense
+- **ForeFlight CSV import**: Full logbook import from ForeFlight exports (already working)
+  - Multi-section CSV format support
+  - Aircraft and flight data import
+  - Simulator vs aircraft distinction
+  - Automatic FAA data lookup for N-numbers
+  - Deduplication on re-import
+- **GHCR migration complete**: All workflows now push to GitHub Container Registry
+  - `ghcr.io/fliteaxis/truehour-api:latest` - Stable API releases
+  - `ghcr.io/fliteaxis/truehour-api:develop` - Development builds
+  - `ghcr.io/fliteaxis/truehour-api:nightly` - Nightly FAA data updates
+  - `ghcr.io/fliteaxis/truehour-frontend:latest` - Stable frontend
+  - `ghcr.io/fliteaxis/truehour-frontend:develop` - Development frontend
+- **Multi-platform images**: All images built for linux/amd64 and linux/arm64
+- **Database schema**: Complete PostgreSQL schema with aircraft, expenses, flights, budgets, and reminders tables
+- **Automated testing**: Comprehensive endpoint testing with 21 test cases covering CRUD, filtering, and error handling
+
 ### Automated Release System (2025-11-28)
 - **Automatic releases on main branch merges**: Creates GitHub releases when PRs from develop are merged
 - **Semantic versioning**: Automatic version bumping based on commit message conventions
