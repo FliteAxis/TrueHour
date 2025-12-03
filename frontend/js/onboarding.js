@@ -382,68 +382,82 @@ const OnboardingManager = {
             }
 
             return `
-            <div class="csv-aircraft-item" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: white;">
-                <div class="csv-aircraft-header" style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-                    <input type="checkbox" class="csv-aircraft-checkbox" id="wizard-csv-check-${index}" checked>
-                    <div class="csv-aircraft-info" style="flex: 1;">
-                        <div class="csv-aircraft-stats" style="font-weight: 500;">${a.registration}${a.totalTime ? ' - ' + a.totalTime.toFixed(1) + ' hours logged' : ''}${sourceBadge}</div>
+            <div class="csv-aircraft-item aircraft-item" style="padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; margin-bottom: 16px;">
+                <!-- Header Section -->
+                <div class="aircraft-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <input type="checkbox" class="csv-aircraft-checkbox" id="wizard-csv-check-${index}" checked style="width: 18px; height: 18px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 1.1em; color: #1e293b;">${a.registration}</div>
+                            ${a.totalTime ? '<div style="font-size: 0.875em; color: #64748b; margin-top: 2px;">' + a.totalTime.toFixed(1) + ' hours logged</div>' : ''}
+                        </div>
+                    </div>
+                    ${sourceBadge}
+                </div>
+
+                <!-- Aircraft Info Grid -->
+                <div class="aircraft-info-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="aircraft-field">
+                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Tail Number</label>
+                        <input type="text" class="input-field" id="wizard-csv-tail-${index}" value="${a.registration}" placeholder="e.g., N12345" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    </div>
+                    <div class="aircraft-field">
+                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Year</label>
+                        <input type="text" class="input-field" id="wizard-csv-year-${index}" value="${displayYear}" placeholder="e.g., 1981" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    </div>
+                    <div class="aircraft-field">
+                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Make</label>
+                        <input type="text" class="input-field" id="wizard-csv-make-${index}" value="${displayMake}" placeholder="e.g., Cessna" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    </div>
+                    <div class="aircraft-field">
+                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Model</label>
+                        <input type="text" class="input-field" id="wizard-csv-model-${index}" value="${displayModel}" placeholder="e.g., 172 Skyhawk" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
                     </div>
                 </div>
-                <div style="padding-left: 30px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div>
-                        <label style="font-size: 0.9em; color: #666;">Tail Number</label>
-                        <input type="text" class="input-field" id="wizard-csv-tail-${index}" value="${a.registration}" placeholder="e.g., N12345" style="font-size: 1.1em; padding: 10px;">
+
+                <!-- Rate Configuration Panel -->
+                <div class="aircraft-item-row2" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                    <div class="aircraft-rate-config">
+                        <div class="rate-type-toggle" data-aircraft-index="${index}">
+                            <button type="button" class="rate-type-btn active" data-type="wet" data-aircraft-index="${index}">Wet</button>
+                            <button type="button" class="rate-type-btn" data-type="dry" data-aircraft-index="${index}">Dry</button>
+                        </div>
+                        <div class="rate-value" id="wizard-csv-rate-value-${index}">
+                            <span class="currency">$</span>
+                            <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="150" min="0" style="width:80px;font-size:1em;font-weight:600;">
+                            <span class="unit">/hr</span>
+                        </div>
                     </div>
-                    <div>
-                        <label style="font-size: 0.9em; color: #666;">Year</label>
-                        <input type="text" class="input-field" id="wizard-csv-year-${index}" value="${displayYear}" placeholder="e.g., 1981" style="font-size: 1.1em; padding: 10px;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.9em; color: #666;">Make</label>
-                        <input type="text" class="input-field" id="wizard-csv-make-${index}" value="${displayMake}" placeholder="e.g., Cessna" style="font-size: 1.1em; padding: 10px;">
-                    </div>
-                    <div>
-                        <label style="font-size: 0.9em; color: #666;">Model</label>
-                        <input type="text" class="input-field" id="wizard-csv-model-${index}" value="${displayModel}" placeholder="e.g., 172 Skyhawk" style="font-size: 1.1em; padding: 10px;">
-                    </div>
-                </div>
-                <div style="display: flex; gap: 15px; margin-bottom: 8px; padding-left: 30px;">
-                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                        <input type="radio" name="wizard-csv-rate-type-${index}" value="wet" checked data-aircraft-index="${index}">
-                        <span style="font-size: 0.9em;">Wet Rate</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
-                        <input type="radio" name="wizard-csv-rate-type-${index}" value="dry" data-aircraft-index="${index}">
-                        <span style="font-size: 0.9em;">Dry Rate</span>
-                    </label>
-                </div>
-                <div class="csv-aircraft-rates" style="padding-left: 30px;">
-                    <div id="wizard-csv-wet-section-${index}">
-                        <label id="wizard-csv-wet-label-${index}" style="font-size: 0.9em; color: #666;">Rate ($/hr)</label>
-                        <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="150" min="0" style="background: #fffacd;">
-                    </div>
-                    <div id="wizard-csv-dry-section-${index}" style="display: none;">
-                        <label id="wizard-csv-dry-label-${index}" style="font-size: 0.9em; color: #666;">Rate ($/hr)</label>
-                        <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="120" min="0" style="background: #fffacd;">
-                    </div>
-                    <div id="wizard-csv-fuel-section-${index}" style="display: none;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div>
-                                <label style="font-size: 0.9em; color: #666;">Fuel Price ($/gal)</label>
-                                <input type="number" class="input-field" id="wizard-csv-fuel-price-${index}" value="6" min="0" step="0.10" style="background: #fffacd;">
-                            </div>
-                            <div>
-                                <label style="font-size: 0.9em; color: #666;">Fuel Burn (gal/hr)</label>
-                                <input type="number" class="input-field" id="wizard-csv-fuel-burn-${index}" value="8" min="0" step="0.5" style="background: #fffacd;">
+
+                    <div class="csv-aircraft-rates">
+                        <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="120" min="0" style="width:80px;font-size:1em;font-weight:600;display:none;">
+
+                        <div id="wizard-csv-fuel-section-${index}" class="fuel-inputs hidden" style="margin-top: 12px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Price</label>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span style="color: #64748b; font-weight: 600; font-size: 1em;">$</span>
+                                        <input type="number" class="input-field" id="wizard-csv-fuel-price-${index}" value="6" min="0" step="0.10" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; background: white; box-sizing: border-box;">
+                                        <span style="color: #64748b; font-size: 0.85em; white-space: nowrap;">/gal</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Burn</label>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <input type="number" class="input-field" id="wizard-csv-fuel-burn-${index}" value="8" min="0" step="0.5" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; background: white; box-sizing: border-box;">
+                                        <span style="color: #64748b; font-size: 0.85em; white-space: nowrap;">gal/hr</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div style="padding-left: 30px; margin-top: 10px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em;">
-                        <input type="checkbox" id="wizard-csv-default-${index}" ${index === 0 ? 'checked' : ''} data-aircraft-index="${index}">
-                        <span>★ Set as default aircraft</span>
-                    </label>
+
+                <!-- Default Aircraft Checkbox -->
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="wizard-csv-default-${index}" ${index === 0 ? 'checked' : ''} data-aircraft-index="${index}" style="width: 16px; height: 16px; cursor: pointer;">
+                    <label for="wizard-csv-default-${index}" style="font-size: 0.875em; color: #64748b; cursor: pointer; user-select: none;">★ Set as default aircraft</label>
                 </div>
             </div>
             `;
@@ -458,15 +472,25 @@ const OnboardingManager = {
             </div>
         `;
 
-        // Attach event listeners to all radio buttons and checkboxes after HTML is rendered
-        console.log('[Onboarding] Attaching event listeners to radio buttons and checkboxes');
+        // Attach event listeners to toggle buttons and checkboxes after HTML is rendered
+        console.log('[Onboarding] Attaching event listeners to toggle buttons and checkboxes');
         csvAircraftData.forEach((a, index) => {
-            // Attach to rate type radio buttons
-            const radioButtons = document.querySelectorAll(`input[name="wizard-csv-rate-type-${index}"]`);
-            radioButtons.forEach(radio => {
-                radio.addEventListener('change', () => {
-                    console.log('[Onboarding] Radio button change event fired for index:', index);
-                    this.toggleWizardRateType(index);
+            // Attach to rate type toggle buttons
+            const toggleButtons = document.querySelectorAll(`.rate-type-toggle[data-aircraft-index="${index}"] .rate-type-btn`);
+            toggleButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const clickedBtn = e.target;
+                    const rateType = clickedBtn.dataset.type;
+                    const aircraftIndex = clickedBtn.dataset.aircraftIndex;
+
+                    console.log('[Onboarding] Toggle button clicked for index:', aircraftIndex, 'type:', rateType);
+
+                    // Update button states
+                    toggleButtons.forEach(b => b.classList.remove('active'));
+                    clickedBtn.classList.add('active');
+
+                    // Toggle sections
+                    this.toggleWizardRateType(parseInt(aircraftIndex), rateType);
                 });
             });
 
@@ -486,36 +510,54 @@ const OnboardingManager = {
     /**
      * Toggle between wet and dry rate for wizard aircraft
      */
-    toggleWizardRateType: function(index) {
-        console.log('[Onboarding] toggleWizardRateType called for index:', index);
-        const rateType = document.querySelector(`input[name="wizard-csv-rate-type-${index}"]:checked`)?.value;
-        console.log('[Onboarding] Rate type selected:', rateType);
+    toggleWizardRateType: function(index, rateType) {
+        console.log('[Onboarding] toggleWizardRateType called for index:', index, 'rateType:', rateType);
 
-        const wetSection = document.getElementById(`wizard-csv-wet-section-${index}`);
-        const drySection = document.getElementById(`wizard-csv-dry-section-${index}`);
+        const wetInput = document.getElementById(`wizard-csv-wet-${index}`);
+        const dryInput = document.getElementById(`wizard-csv-dry-${index}`);
+        const rateValueDiv = document.getElementById(`wizard-csv-rate-value-${index}`);
         const fuelSection = document.getElementById(`wizard-csv-fuel-section-${index}`);
 
         console.log('[Onboarding] Elements found:', {
-            wetSection: !!wetSection,
-            drySection: !!drySection,
+            wetInput: !!wetInput,
+            dryInput: !!dryInput,
+            rateValueDiv: !!rateValueDiv,
             fuelSection: !!fuelSection
         });
 
         if (rateType === 'wet') {
-            if (wetSection) wetSection.style.display = 'block';
-            if (drySection) drySection.style.display = 'none';
-            if (fuelSection) fuelSection.style.display = 'none';
+            // Show wet input in the rate-value div
+            const currentValue = wetInput.value;
+            rateValueDiv.innerHTML = `
+                <span class="currency">$</span>
+                <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${currentValue}" min="0" style="width:80px;font-size:1em;font-weight:600;">
+                <span class="unit">/hr</span>
+            `;
+            if (fuelSection) {
+                fuelSection.classList.add('hidden');
+                fuelSection.style.display = 'none';
+            }
         } else {
-            if (wetSection) wetSection.style.display = 'none';
-            if (drySection) drySection.style.display = 'block';
-            if (fuelSection) fuelSection.style.display = 'block';
+            // Show dry input in the rate-value div
+            const currentValue = dryInput.value;
+            rateValueDiv.innerHTML = `
+                <span class="currency">$</span>
+                <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="${currentValue}" min="0" style="width:80px;font-size:1em;font-weight:600;">
+                <span class="unit">/hr</span>
+            `;
+            // Keep wet input hidden but accessible for data storage
+            const hiddenWet = document.getElementById(`wizard-csv-wet-${index}`);
+            if (!hiddenWet) {
+                const wetValue = wetInput ? wetInput.value : '150';
+                rateValueDiv.insertAdjacentHTML('beforeend', `<input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${wetValue}" min="0" style="width:80px;font-size:1em;font-weight:600;display:none;">`);
+            }
+            if (fuelSection) {
+                fuelSection.classList.remove('hidden');
+                fuelSection.style.display = 'block';
+            }
         }
 
-        console.log('[Onboarding] After toggle, display values:', {
-            wet: wetSection?.style.display,
-            dry: drySection?.style.display,
-            fuel: fuelSection?.style.display
-        });
+        console.log('[Onboarding] After toggle, fuel section visible:', rateType === 'dry');
     },
 
     /**
@@ -836,7 +878,9 @@ const OnboardingManager = {
                     const year = document.getElementById(`wizard-csv-year-${index}`)?.value || aircraft.faaYear || aircraft.year || '';
                     const make = document.getElementById(`wizard-csv-make-${index}`)?.value || aircraft.faaMake || aircraft.make || '';
                     const model = document.getElementById(`wizard-csv-model-${index}`)?.value || aircraft.faaModel || aircraft.model || '';
-                    const rateType = document.querySelector(`input[name="wizard-csv-rate-type-${index}"]:checked`)?.value || 'wet';
+                    // Get rate type from active toggle button
+                    const activeRateBtn = document.querySelector(`.rate-type-toggle[data-aircraft-index="${index}"] .rate-type-btn.active`);
+                    const rateType = activeRateBtn?.dataset.type || 'wet';
                     const wetRate = parseFloat(document.getElementById(`wizard-csv-wet-${index}`)?.value) || 0;
                     const dryRate = parseFloat(document.getElementById(`wizard-csv-dry-${index}`)?.value) || 0;
                     const fuelPrice = parseFloat(document.getElementById(`wizard-csv-fuel-price-${index}`)?.value) || 6;

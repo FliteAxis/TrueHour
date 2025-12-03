@@ -4,12 +4,14 @@ services:
   frontend:
     image: ghcr.io/fliteaxis/truehour-frontend:latest
     ports:
-      - "8181:80"
+      - "${APP_PORT:-8181}:80"
     depends_on:
       - api
     networks:
       - truehour-network
     restart: unless-stopped
+    env_file:
+      - .env
 
   api:
     image: ghcr.io/fliteaxis/truehour-api:latest
@@ -18,12 +20,15 @@ services:
     environment:
       - DATABASE_URL=postgresql://truehour:truehour@db:5432/truehour
       - DB_PATH=/app/data/aircraft.db
+      - ENABLE_FAA_LOOKUP=${ENABLE_FAA_LOOKUP:-false}
     depends_on:
       db:
         condition: service_healthy
     networks:
       - truehour-network
     restart: unless-stopped
+    env_file:
+      - .env
 
   db:
     image: postgres:16-alpine
