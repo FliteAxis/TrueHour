@@ -257,11 +257,6 @@ function init() {
     
     // Hamburger menu
     document.getElementById('hamburgerMenu').addEventListener('click', toggleMenu);
-    document.getElementById('saveBudgetBtn').addEventListener('click', saveBudget);
-    document.getElementById('loadBudgetBtn').addEventListener('click', function() {
-        document.getElementById('budgetFileInput').click();
-    });
-    document.getElementById('budgetFileInput').addEventListener('change', loadBudget);
     
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {

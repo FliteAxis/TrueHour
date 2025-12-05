@@ -340,6 +340,66 @@ class PostgresDatabase:
             rows = await conn.fetch(query, *params)
             return [dict(row) for row in rows]
 
+    # Flight/Logbook Operations
+
+    async def get_flights(
+        self,
+        aircraft_id: Optional[int] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        limit: int = 1000,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get list of flights with filters."""
+        async with self.acquire() as conn:
+            query = "SELECT * FROM flights WHERE 1=1"
+            params = []
+            param_count = 0
+
+            if aircraft_id is not None:
+                param_count += 1
+                query += f" AND aircraft_id = ${param_count}"
+                params.append(aircraft_id)
+
+            if start_date:
+                param_count += 1
+                query += f" AND date >= ${param_count}"
+                params.append(start_date)
+
+            if end_date:
+                param_count += 1
+                query += f" AND date <= ${param_count}"
+                params.append(end_date)
+
+            query += " ORDER BY date DESC, time_out DESC"
+
+            param_count += 1
+            query += f" LIMIT ${param_count}"
+            params.append(limit)
+
+            param_count += 1
+            query += f" OFFSET ${param_count}"
+            params.append(offset)
+
+            rows = await conn.fetch(query, *params)
+            # Convert to dict and handle date/time serialization
+            result = []
+            for row in rows:
+                flight = dict(row)
+                # Convert date to ISO string
+                if flight.get('date'):
+                    flight['date'] = flight['date'].isoformat()
+                # Convert time fields to string
+                for field in ['time_out', 'time_off', 'time_on', 'time_in']:
+                    if flight.get(field):
+                        flight[field] = str(flight[field])
+                # Convert timestamps
+                for field in ['created_at', 'updated_at']:
+                    if flight.get(field):
+                        flight[field] = flight[field].isoformat()
+                result.append(flight)
+            return result
+
 
 # Global database instance
 postgres_db = PostgresDatabase()

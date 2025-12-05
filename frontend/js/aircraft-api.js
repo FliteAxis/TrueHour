@@ -147,6 +147,11 @@ const AircraftAPI = (function() {
         config.aircraft.push(newAircraft);
         isDirty = true;
 
+        // Trigger auto-save if enabled
+        if (typeof UserDataManager !== 'undefined' && UserDataManager.triggerAutoSave) {
+            UserDataManager.triggerAutoSave();
+        }
+
         // Set as default if first aircraft
         if (config.aircraft.length === 1) {
             config.defaultAircraftId = newAircraft.id;
@@ -174,6 +179,11 @@ const AircraftAPI = (function() {
         aircraft.updatedAt = new Date().toISOString();
         isDirty = true;
 
+        // Trigger auto-save if enabled
+        if (typeof UserDataManager !== 'undefined' && UserDataManager.triggerAutoSave) {
+            UserDataManager.triggerAutoSave();
+        }
+
         return aircraft;
     }
 
@@ -188,6 +198,11 @@ const AircraftAPI = (function() {
 
         config.aircraft.splice(index, 1);
         isDirty = true;
+
+        // Trigger auto-save if enabled
+        if (typeof UserDataManager !== 'undefined' && UserDataManager.triggerAutoSave) {
+            UserDataManager.triggerAutoSave();
+        }
 
         // Update default if deleted
         if (config.defaultAircraftId === id) {
@@ -207,6 +222,12 @@ const AircraftAPI = (function() {
 
         config.defaultAircraftId = id;
         isDirty = true;
+
+        // Trigger auto-save if enabled
+        if (typeof UserDataManager !== 'undefined' && UserDataManager.triggerAutoSave) {
+            UserDataManager.triggerAutoSave();
+        }
+
         return true;
     }
 
@@ -329,6 +350,32 @@ const AircraftAPI = (function() {
         return JSON.stringify(config, null, 2);
     }
 
+    /**
+     * Restore aircraft from database (used during load)
+     */
+    function restoreAircraft(aircraftList) {
+        if (!config) {
+            config = {
+                version: '1.0',
+                defaultAircraftId: null,
+                aircraft: []
+            };
+        }
+
+        // Replace aircraft array with loaded data
+        config.aircraft = aircraftList;
+        isDirty = false;  // Just loaded, so not dirty
+
+        console.log('[AircraftAPI] Restored', aircraftList.length, 'aircraft from database');
+
+        // Refresh UI if the display function exists
+        if (typeof displayAircraftList === 'function') {
+            displayAircraftList();
+        }
+
+        return config;
+    }
+
     // Public API
     return {
         init,
@@ -344,7 +391,8 @@ const AircraftAPI = (function() {
         importFromCSV,
         hasUnsavedChanges,
         promptSaveIfNeeded,
-        exportConfig
+        exportConfig,
+        restoreAircraft
     };
 })();
 

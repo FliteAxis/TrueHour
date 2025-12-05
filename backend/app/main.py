@@ -11,7 +11,7 @@ from typing import List, Optional
 from app.database import Database
 from app.postgres_database import postgres_db
 from app.models import AircraftResponse, HealthResponse, StatsResponse, BulkRequest, BulkResponse, BulkResult
-from app.routers import aircraft, expenses
+from app.routers import aircraft, expenses, user_data
 
 DB_PATH = os.getenv("DB_PATH", "/app/data/aircraft.db")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -63,6 +63,7 @@ app.add_middleware(
 # Include routers
 app.include_router(aircraft.router)
 app.include_router(expenses.router)
+app.include_router(user_data.router)
 
 
 def normalize_tail(tail: str) -> str:
