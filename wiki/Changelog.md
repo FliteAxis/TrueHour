@@ -4,6 +4,47 @@ All notable changes to the TrueHour are documented here.
 
 ## Latest Changes
 
+### Phase 3: Data Persistence 100% Complete (2025-12-04)
+- **Save/Load API endpoints**: Complete user data management
+  - `POST /api/user/save` - Persist all aircraft and budget state to PostgreSQL
+  - `GET /api/user/load` - Load all data (aircraft, expenses, flights, settings, budget state)
+  - `DELETE /api/user/data` - Safe delete with multi-step confirmation
+  - `GET/PUT /api/user/settings` - User settings management
+- **Budget/Training state persistence**: All training configuration now saved to database
+  - Certification goal (PPL, IR, CPL, CFI, etc.) saved and restored
+  - Current flight hours from ForeFlight import persisted
+  - All 14 training settings (instructor rates, costs, contingency %) saved
+  - Survives localStorage.clear() and browser session changes
+  - Stored as JSONB column in user_settings table
+  - Auto-save triggers on any certification or settings change
+- **Auto-save system**: Debounced auto-save with 3-second delay
+  - Triggers automatically on aircraft add/update/delete
+  - Triggers on certification goal changes (targetCert dropdown)
+  - Triggers on all 14 training settings field changes
+  - Toggle on/off via hamburger menu
+  - Status indicators show pending/saving/success/error states
+  - Last saved timestamp persists to database and displays in menu
+- **Custom modal dialogs**: No more browser popups
+  - Three-step delete confirmation process
+  - Live validation (type "DELETE" to confirm)
+  - Keyboard shortcuts (Enter to confirm, Escape to cancel)
+  - Centered dropdown menu with improved text alignment
+- **Export/Import config**: Download and upload JSON configuration files
+  - Exports all aircraft with metadata
+  - Exports budget state (certification, hours, settings)
+  - Import with option to save to database or load temporarily
+- **Form accessibility improvements**: Full WCAG compliance
+  - All 14 settings inputs have proper `<label>` elements with `for` attributes
+  - All inputs have `name` attributes for better form handling
+  - No more console warnings about missing labels or form field attributes
+- **UI improvements**: Refined hamburger menu dropdown
+  - All menu text centered for better visual balance
+  - Consistent alignment for "Auto-Save: ON" and "Last saved:" timestamp
+  - Clean, modern appearance with proper spacing
+- **Session tracking**: UUID-based sessions with last-saved timestamps
+- **Data persistence**: All aircraft and training data now survives localStorage.clear()
+- **Onboarding improvements**: Auto-skips onboarding when data exists in database
+
 ### Phase 1: Backend Foundation Complete (2025-12-02)
 - **PostgreSQL integration**: Full async PostgreSQL support with connection pooling
 - **User aircraft CRUD API**: Complete REST API for managing personal aircraft

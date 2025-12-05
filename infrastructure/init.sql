@@ -169,12 +169,34 @@ CREATE TABLE chat_history (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- User settings (Phase 3: auto-save preferences, default aircraft, timezone)
+CREATE TABLE user_settings (
+    id SERIAL PRIMARY KEY,
+    auto_save_enabled BOOLEAN DEFAULT true,
+    auto_save_interval INTEGER DEFAULT 3000,  -- milliseconds
+    default_aircraft_id INTEGER REFERENCES aircraft(id) ON DELETE SET NULL,
+    timezone VARCHAR(50) DEFAULT 'America/New_York',
+    budget_state JSONB,  -- Phase 3: certification goal, current hours, training settings
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- User sessions (Phase 3: session tracking and last saved timestamp)
+CREATE TABLE user_sessions (
+    id SERIAL PRIMARY KEY,
+    session_id VARCHAR(255) UNIQUE NOT NULL,
+    last_saved_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    expires_at TIMESTAMPTZ
+);
+
 -- Indexes for performance
 CREATE INDEX idx_flights_date ON flights(date DESC);
 CREATE INDEX idx_flights_aircraft ON flights(aircraft_id);
 CREATE INDEX idx_expenses_date ON expenses(date DESC);
 CREATE INDEX idx_expenses_category ON expenses(category);
 CREATE INDEX idx_reminders_due ON reminders(due_date) WHERE is_completed = false;
+CREATE INDEX idx_user_sessions_session_id ON user_sessions(session_id);
 
 -- Comments for documentation
 COMMENT ON TABLE aircraft IS 'User aircraft list - can include owned, club, and rental aircraft';
@@ -184,6 +206,8 @@ COMMENT ON TABLE budgets IS 'Budget definitions for tracking aviation spending';
 COMMENT ON TABLE budget_entries IS 'Monthly budget allocations - replaces Ally Bank envelope system';
 COMMENT ON TABLE reminders IS 'Reminders for medicals, flight reviews, currency, etc.';
 COMMENT ON TABLE chat_history IS 'Chat conversation history with Claude AI for context persistence';
+COMMENT ON TABLE user_settings IS 'User preferences including auto-save settings and default aircraft';
+COMMENT ON TABLE user_sessions IS 'Session tracking for auto-save and data persistence';
 
 COMMENT ON COLUMN flights.simulated_instrument_time IS 'Hood/foggles time in REAL aircraft';
 COMMENT ON COLUMN flights.simulated_flight_time IS 'Time in simulator device (AATD/BATD) - NOT flight time';

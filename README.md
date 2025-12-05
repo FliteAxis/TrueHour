@@ -45,6 +45,12 @@ That's it! The database schema will be automatically initialized on first run.
 - 💰 **Expense Reports** - Aggregated summaries by category with statistics
 - 🔍 **FAA Aircraft Lookup** - Real-time N-number lookups with baked-in FAA registry (308K+ aircraft)
 - 📝 **ForeFlight Import** - Import your complete logbook from ForeFlight CSV
+- 💾 **Data Persistence** - Save/load all data to PostgreSQL with custom modal UX
+- 🎓 **Training State Persistence** - Certification goals, flight hours, and training settings saved to database
+- 🔄 **Auto-Save** - Debounced auto-save with 3-second delay and toggle switch
+- 📁 **Export/Import Config** - Download and upload JSON configuration files
+- 🗑️ **Safe Delete** - Multi-step confirmation for deleting all data
+- ✅ **Form Accessibility** - Proper labels and semantic HTML for all form inputs
 - 🐳 **Local Deployment** - Runs entirely on your machine with Docker
 - 💾 **PostgreSQL Storage** - Persistent data with proper relational database
 - 🔄 **Automated Builds** - Nightly FAA data updates via GitHub Actions
@@ -255,6 +261,46 @@ DELETE /api/expenses/{id}         # Delete expense
 - `start_date` / `end_date` - Date range filter
 - `limit` / `offset` - Pagination
 
+### User Data Management (Phase 3)
+
+```
+POST   /api/user/save          # Save all data to database
+GET    /api/user/load          # Load all data from database
+DELETE /api/user/data          # Delete all user data (requires confirmation)
+GET    /api/user/settings      # Get user settings
+PUT    /api/user/settings      # Update user settings
+```
+
+**Headers:**
+- `X-Session-ID` - Session identifier for tracking saves
+
+**SaveDataRequest Model:**
+```json
+{
+  "aircraft": [...],
+  "budget_state": {
+    "targetCert": "ir",
+    "currentHours": {...},
+    "settings": {
+      "lessonsPerWeek": 2,
+      "instructorRate": 65,
+      "simulatorRate": 45,
+      "groundHours": 20,
+      "headsetCost": 300,
+      "booksCost": 300,
+      "bagCost": 50,
+      "medicalCost": 150,
+      "knowledgeCost": 175,
+      "checkrideCost": 900,
+      "insuranceCost": 1000,
+      "foreflightCost": 280,
+      "onlineSchoolCost": 0,
+      "contingencyPercent": 15
+    }
+  }
+}
+```
+
 **API Documentation:** http://localhost:8000/docs (Swagger UI)
 
 ## 📦 Docker Images
@@ -368,17 +414,29 @@ docker compose -f infrastructure/docker-compose.yml restart api
 - Automated nightly FAA data builds
 - ForeFlight CSV import (already working)
 
-### Phase 2: Frontend Migration (Next)
-- Remove localStorage dependencies
-- Migrate to API-based data management
-- Update UI for new endpoints
+### Phase 2: Frontend Migration ✅ Complete
+- Onboarding flow with guided setup
+- Aircraft management UI with database integration
+- ForeFlight CSV import with aircraft mapping
+- FAA lookup integration in UI
 
-### Phase 3: Future Features
-- Budget tracking
-- Notifications
-- Reminders
-- Claude chatbot
-- Google Calendar integration
+### Phase 3: Data Persistence ✅ 100% Complete
+- Save button with PostgreSQL persistence
+- Auto-save with 3-second debounce and toggle
+- Export/Import config as JSON files
+- Multi-step delete confirmation with custom modals
+- Status indicators (pending/saving/success/error)
+- Session tracking and last-saved timestamps
+- Training state persistence (certification goals, flight hours, all training settings)
+- Form accessibility improvements (proper labels and semantic HTML)
+- Centered menu dropdown UI with improved alignment
+
+### Phase 4: Future Features (Next)
+- Budget tracking with monthly allocations
+- Notifications system
+- Reminders for medicals and currency
+- Claude chatbot integration
+- Google Calendar sync
 - CI/CD enhancements
 
 See [tmp/fliteaxis_architecture_final.md](tmp/fliteaxis_architecture_final.md) for detailed architecture.

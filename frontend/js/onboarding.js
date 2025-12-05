@@ -38,8 +38,12 @@ const OnboardingManager = {
     /**
      * Initialize onboarding system
      */
-    init: function() {
+    init: async function() {
         console.log('[Onboarding] Initializing...');
+
+        // Wait a brief moment for UserDataManager to load from database
+        // This ensures we check for aircraft after database load completes
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Check if user has completed onboarding before
         const hasCompletedOnboarding = localStorage.getItem('truehour-onboarding-completed');
