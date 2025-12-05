@@ -21,6 +21,13 @@
 - [GitHub Actions](GitHub-Actions)
 - [Develop Branch Workflow](Develop-Branch-Workflow)
 
+**🔒 Security**
+- [Security Setup Guide](Security-Setup)
+- [Security CI/CD Pipeline](Security-CI-CD)
+- [Code Quality & Linting](Security-CI-CD#code-linting)
+- [SBOM Management](Security-CI-CD#sbom-generation)
+- [Vulnerability Scanning](Security-CI-CD#security-scanning)
+
 **📚 Dependencies**
 - [Dependency Management](Dependency-Management)
 - [Centralized Dependencies](Centralized-Dependencies)
@@ -48,4 +55,3 @@
 **🔗 Links**
 - [Repository](https://github.com/FliteAxis/TrueHour)
 - [Issues](https://github.com/FliteAxis/TrueHour/issues)
-

@@ -1,0 +1,227 @@
+name: SBOM Generation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/requirements.txt'
+      - 'backend/Dockerfile'
+      - 'infrastructure/Dockerfile.frontend'
+  pull_request:
+    branches: [main, develop]
+  release:
+    types: [published]
+  schedule:
+    # Generate weekly SBOM on Sundays at 3 AM EST (8 AM UTC)
+    - cron: '0 8 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: read
+  id-token: write
+
+jobs:
+  generate-python-sbom:
+    name: Generate Python SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install cyclonedx-bom pip-licenses
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          cyclonedx-py requirements \
+            --input backend/requirements.txt \
+            --output backend-sbom-cyclonedx.json \
+            --format json
+
+      - name: Generate SPDX SBOM with syft
+        uses: anchore/sbom-action@v0
+        with:
+          path: backend/requirements.txt
+          format: spdx-json
+          output-file: backend-sbom-spdx.json
+
+      - name: Generate license report
+        run: |
+          pip install -r backend/requirements.txt
+          pip-licenses --format=json --output-file=backend-licenses.json
+          pip-licenses --format=markdown --output-file=backend-licenses.md
+
+      - name: Upload Python SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sbom
+          path: |
+            backend-sbom-cyclonedx.json
+            backend-sbom-spdx.json
+            backend-licenses.json
+            backend-licenses.md
+          retention-days: 90
+
+  generate-container-sbom:
+    name: Generate Container SBOM
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image:
+          - name: truehour-api
+            context: backend
+            dockerfile: backend/Dockerfile
+          - name: truehour-frontend
+            context: .
+            dockerfile: infrastructure/Dockerfile.frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build container image
+        run: |
+          docker build -t ${{ matrix.image.name }}:sbom-scan \
+            -f ${{ matrix.image.dockerfile }} \
+            ${{ matrix.image.context }}
+
+      - name: Generate SBOM with Syft (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.image.name }}:sbom-scan
+          format: cyclonedx-json
+          output-file: ${{ matrix.image.name }}-sbom-cyclonedx.json
+
+      - name: Generate SBOM with Syft (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.image.name }}:sbom-scan
+          format: spdx-json
+          output-file: ${{ matrix.image.name }}-sbom-spdx.json
+
+      - name: Generate SBOM with Syft (Table for review)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ matrix.image.name }}:sbom-scan
+          format: table
+          output-file: ${{ matrix.image.name }}-sbom.txt
+
+      - name: Scan SBOM with Grype
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ matrix.image.name }}:sbom-scan
+          fail-build: false
+          severity-cutoff: high
+          output-format: sarif
+
+      - name: Upload container SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.image.name }}-sbom
+          path: |
+            ${{ matrix.image.name }}-sbom-cyclonedx.json
+            ${{ matrix.image.name }}-sbom-spdx.json
+            ${{ matrix.image.name }}-sbom.txt
+          retention-days: 90
+
+  attest-sbom:
+    name: Attest SBOM
+    runs-on: ubuntu-latest
+    needs: [generate-python-sbom, generate-container-sbom]
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Download all SBOMs
+        uses: actions/download-artifact@v4
+        with:
+          path: sboms
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Attest API SBOM
+        uses: actions/attest-sbom@v1
+        with:
+          subject-name: ghcr.io/fliteaxis/truehour-api
+          subject-digest: ${{ github.sha }}
+          sbom-path: sboms/truehour-api-sbom/truehour-api-sbom-spdx.json
+          push-to-registry: true
+
+      - name: Attest Frontend SBOM
+        uses: actions/attest-sbom@v1
+        with:
+          subject-name: ghcr.io/fliteaxis/truehour-frontend
+          subject-digest: ${{ github.sha }}
+          sbom-path: sboms/truehour-frontend-sbom/truehour-frontend-sbom-spdx.json
+          push-to-registry: true
+
+  publish-sbom:
+    name: Publish SBOM to Release
+    runs-on: ubuntu-latest
+    needs: [generate-python-sbom, generate-container-sbom]
+    if: github.event_name == 'release'
+    steps:
+      - name: Download all SBOMs
+        uses: actions/download-artifact@v4
+        with:
+          path: sboms
+
+      - name: Create SBOM archive
+        run: |
+          cd sboms
+          tar -czf truehour-sbom-${{ github.ref_name }}.tar.gz *
+
+      - name: Upload SBOM to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: sboms/truehour-sbom-${{ github.ref_name }}.tar.gz
+          tag_name: ${{ github.ref_name }}
+
+  sbom-summary:
+    name: SBOM Summary
+    runs-on: ubuntu-latest
+    needs: [generate-python-sbom, generate-container-sbom]
+    if: always()
+    steps:
+      - name: Download all SBOMs
+        uses: actions/download-artifact@v4
+
+      - name: Create SBOM summary
+        run: |
+          echo "# 📦 SBOM Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Generated SBOMs" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Format | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python Backend | CycloneDX, SPDX | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "| API Container | CycloneDX, SPDX | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Container | CycloneDX, SPDX | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## SBOM Standards" >> $GITHUB_STEP_SUMMARY
+          echo "- **CycloneDX**: Industry-standard SBOM format for security use cases" >> $GITHUB_STEP_SUMMARY
+          echo "- **SPDX**: ISO/IEC 5962:2021 standard for software bill of materials" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Artifact Retention" >> $GITHUB_STEP_SUMMARY
+          echo "- SBOMs retained for 90 days" >> $GITHUB_STEP_SUMMARY
+          echo "- Released SBOMs attached to GitHub releases permanently" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f python-sbom/backend-sbom-cyclonedx.json ]; then
+            echo "## Python Dependencies Summary" >> $GITHUB_STEP_SUMMARY
+            DEP_COUNT=$(jq '.components | length' python-sbom/backend-sbom-cyclonedx.json 2>/dev/null || echo "N/A")
+            echo "- Total dependencies: $DEP_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi

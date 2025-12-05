@@ -1,17 +1,17 @@
 """TrueHour: Aviation Expense Tracking and Flight Management API"""
+
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
-from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from typing import List, Optional
 
 from app.database import Database
+from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
-from app.models import AircraftResponse, HealthResponse, StatsResponse, BulkRequest, BulkResponse, BulkResult
-from app.routers import aircraft, expenses
+from app.routers import aircraft, expenses, user_data
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import FileResponse, HTMLResponse
 
 DB_PATH = os.getenv("DB_PATH", "/app/data/aircraft.db")
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
@@ -50,7 +50,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
     docs_url=None,
-    redoc_url=None
+    redoc_url=None,
 )
 
 app.add_middleware(
@@ -63,6 +63,7 @@ app.add_middleware(
 # Include routers
 app.include_router(aircraft.router)
 app.include_router(expenses.router)
+app.include_router(user_data.router)
 
 
 def normalize_tail(tail: str) -> str:
@@ -141,8 +142,8 @@ async def custom_swagger_ui_html():
         title=app.title + " - API Documentation",
     )
 
-    html_content = swagger_html.body.decode('utf-8')
-    html_with_footer = html_content.replace('</body>', f'{footer_html}</body>')
+    html_content = swagger_html.body.decode("utf-8")
+    html_with_footer = html_content.replace("</body>", f"{footer_html}</body>")
 
     return HTMLResponse(content=html_with_footer)
 
@@ -209,8 +210,8 @@ async def custom_redoc_html():
         title=app.title + " - API Documentation",
     )
 
-    html_content = redoc_html.body.decode('utf-8')
-    html_with_footer = html_content.replace('</body>', f'{footer_html}</body>')
+    html_content = redoc_html.body.decode("utf-8")
+    html_with_footer = html_content.replace("</body>", f"{footer_html}</body>")
 
     return HTMLResponse(content=html_with_footer)
 
@@ -247,56 +248,43 @@ async def bulk_lookup(request: BulkRequest):
     for tail in request.tail_numbers:
         normalized = normalize_tail(tail)
         if not normalized:
-            results.append(BulkResult(
-                tail_number=tail.upper(),
-                error="Invalid tail number"
-            ))
+            results.append(BulkResult(tail_number=tail.upper(), error="Invalid tail number"))
             continue
 
         aircraft = db.lookup(normalized)
         if aircraft:
             found += 1
-            results.append(BulkResult(
-                tail_number=aircraft.tail_number,
-                manufacturer=aircraft.manufacturer,
-                model=aircraft.model,
-                series=aircraft.series,
-                aircraft_type=aircraft.aircraft_type,
-                engine_type=aircraft.engine_type,
-                num_engines=aircraft.num_engines,
-                num_seats=aircraft.num_seats,
-                year_mfr=aircraft.year_mfr
-            ))
+            results.append(
+                BulkResult(
+                    tail_number=aircraft.tail_number,
+                    manufacturer=aircraft.manufacturer,
+                    model=aircraft.model,
+                    series=aircraft.series,
+                    aircraft_type=aircraft.aircraft_type,
+                    engine_type=aircraft.engine_type,
+                    num_engines=aircraft.num_engines,
+                    num_seats=aircraft.num_seats,
+                    year_mfr=aircraft.year_mfr,
+                )
+            )
         else:
-            results.append(BulkResult(
-                tail_number=f"N{normalized}",
-                error="Not found"
-            ))
+            results.append(BulkResult(tail_number=f"N{normalized}", error="Not found"))
 
-    return BulkResponse(
-        total=len(request.tail_numbers),
-        found=found,
-        results=results
-    )
+    return BulkResponse(total=len(request.tail_numbers), found=found, results=results)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse)
 async def health():
     """Health check with database status."""
     if db is None:
-        return HealthResponse(
-            status="degraded",
-            database_exists=False,
-            record_count=0,
-            last_updated=None
-        )
+        return HealthResponse(status="degraded", database_exists=False, record_count=0, last_updated=None)
 
     stats = db.get_stats()
     return HealthResponse(
         status="healthy" if stats.record_count > 0 else "degraded",
         database_exists=os.path.exists(DB_PATH),
         record_count=stats.record_count,
-        last_updated=stats.last_updated
+        last_updated=stats.last_updated,
     )
 
 

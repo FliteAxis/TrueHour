@@ -1,16 +1,18 @@
 """User aircraft management endpoints."""
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field, condecimal
+
 from datetime import datetime
 from decimal import Decimal
+from typing import List, Optional
 
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field, condecimal
 
 router = APIRouter(prefix="/api/user/aircraft", tags=["User Aircraft"])
 
 
 class UserAircraftCreate(BaseModel):
     """Create user aircraft."""
+
     tail_number: str = Field(..., description="Tail number (e.g., N172SP)")
     type_code: Optional[str] = None
     year: Optional[int] = Field(None, ge=1900, le=2100)
@@ -32,6 +34,7 @@ class UserAircraftCreate(BaseModel):
 
 class UserAircraftUpdate(BaseModel):
     """Update user aircraft (all fields optional)."""
+
     tail_number: Optional[str] = None
     type_code: Optional[str] = None
     year: Optional[int] = Field(None, ge=1900, le=2100)
@@ -53,6 +56,7 @@ class UserAircraftUpdate(BaseModel):
 
 class UserAircraftResponse(BaseModel):
     """User aircraft response."""
+
     id: int
     tail_number: str
     type_code: Optional[str] = None
@@ -78,9 +82,7 @@ class UserAircraftResponse(BaseModel):
 
 
 @router.get("", response_model=List[UserAircraftResponse])
-async def list_aircraft(
-    is_active: Optional[bool] = Query(None, description="Filter by active status")
-):
+async def list_aircraft(is_active: Optional[bool] = Query(None, description="Filter by active status")):
     """List all user aircraft."""
     from app.postgres_database import postgres_db
 
@@ -107,10 +109,7 @@ async def create_aircraft(aircraft: UserAircraftCreate):
     # Check if tail number already exists
     existing = await postgres_db.get_aircraft_by_tail(aircraft.tail_number)
     if existing:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Aircraft {aircraft.tail_number} already exists"
-        )
+        raise HTTPException(status_code=409, detail=f"Aircraft {aircraft.tail_number} already exists")
 
     try:
         created = await postgres_db.create_aircraft(aircraft.model_dump())
@@ -132,11 +131,8 @@ async def update_aircraft(aircraft_id: int, aircraft: UserAircraftUpdate):
     # If updating tail number, check for conflicts
     if aircraft.tail_number:
         conflict = await postgres_db.get_aircraft_by_tail(aircraft.tail_number)
-        if conflict and conflict['id'] != aircraft_id:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Aircraft {aircraft.tail_number} already exists"
-            )
+        if conflict and conflict["id"] != aircraft_id:
+            raise HTTPException(status_code=409, detail=f"Aircraft {aircraft.tail_number} already exists")
 
     try:
         # Filter out None values

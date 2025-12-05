@@ -429,6 +429,25 @@
         </div>
     </div>
 
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="deleteModalTitle">Delete All Data?</h2>
+            </div>
+            <div class="modal-body">
+                <p id="deleteModalMessage"></p>
+                <div id="deleteModalInput" style="display: none;">
+                    <input type="text" id="deleteConfirmInput" placeholder="Type DELETE to confirm">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn modal-btn-secondary" id="deleteModalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-danger" id="deleteModalConfirm">Continue</button>
+            </div>
+        </div>
+    </div>
+
     <div class="main-container">
         <div class="header">
             <div class="header-logo-container">
@@ -439,22 +458,40 @@
                 </div>
             </div>
 
-            <div class="hamburger-menu" id="hamburgerMenu">
-                <div class="hamburger-icon">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+            <div class="header-actions">
+                <div class="save-status" id="saveStatus"></div>
+                <button class="btn-save" id="saveBtn" title="Save to database">
+                    <span class="save-icon">💾</span>
+                    <span class="save-text">Save</span>
+                </button>
+                <div class="hamburger-menu" id="hamburgerMenu">
+                    <div class="hamburger-icon">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="menu-dropdown" id="menuDropdown">
+                <div class="menu-item" id="exportConfigBtn">
+                    <span class="menu-item-icon">⬇️</span>
+                    <span class="menu-item-text">Export Config</span>
                 </div>
-            </div>
-
-            <div class="menu-dropdown" id="menuDropdown">
-                <div class="menu-item" id="saveBudgetBtn">
-                    <span class="menu-item-icon">💾</span>
-                    <span class="menu-item-text">Save Budget</span>
+                <div class="menu-item" id="loadConfigBtn">
+                    <span class="menu-item-icon">⬆️</span>
+                    <span class="menu-item-text">Load Config</span>
                 </div>
-                <div class="menu-item" id="loadBudgetBtn">
-                    <span class="menu-item-icon">📂</span>
-                    <span class="menu-item-text">Load Budget</span>
+                <div class="menu-divider"></div>
+                <div class="menu-section-label">Settings</div>
+                <div class="menu-item" id="autoSaveToggle">
+                    <span class="menu-item-icon">🔄</span>
+                    <span class="menu-item-text">Auto-Save: <span id="autoSaveStatus">ON</span></span>
+                </div>
+                <div class="menu-item-subtext" id="lastSavedText">Last saved: Never</div>
+                <div class="menu-divider"></div>
+                <div class="menu-item menu-item-danger" id="deleteAllDataBtn">
+                    <span class="menu-item-icon">🗑️</span>
+                    <span class="menu-item-text">Delete All Data</span>
+                </div>
+                    </div>
                 </div>
             </div>
 
@@ -633,9 +670,9 @@
                 <div class="section-title">Financial & Time Planning</div>
 
                 <div class="input-row">
-                    <div class="input-label">Training Pace (Lessons per week)</div>
+                    <label class="input-label" for="lessonsPerWeek">Training Pace (Lessons per week)</label>
                     <div class="input-wrapper">
-                        <input type="number" class="input-field" id="lessonsPerWeek" value="2" min="1" max="7" step="0.5">
+                        <input type="number" class="input-field" id="lessonsPerWeek" name="lessonsPerWeek" value="2" min="1" max="7" step="0.5">
                         <span class="input-unit">lessons/week</span>
                     </div>
                 </div>
@@ -654,19 +691,19 @@
                 <div class="section-title">Other Hourly Rates</div>
 
                 <div class="input-row">
-                    <div class="input-label">Flight/Ground Instruction</div>
+                    <label class="input-label" for="instructorRate">Flight/Ground Instruction</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="instructorRate" value="60">
+                        <input type="number" class="input-field" id="instructorRate" name="instructorRate" value="60">
                         <span class="input-unit">per hour</span>
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Flight Simulator</div>
+                    <label class="input-label" for="simulatorRate">Flight Simulator</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="simulatorRate" value="105">
+                        <input type="number" class="input-field" id="simulatorRate" name="simulatorRate" value="105">
                         <span class="input-unit">per hour</span>
                     </div>
                 </div>
@@ -690,9 +727,9 @@
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Ground Instruction Hours</div>
+                    <label class="input-label" for="groundHours">Ground Instruction Hours</label>
                     <div class="input-wrapper">
-                        <input type="number" class="input-field" id="groundHours" value="0">
+                        <input type="number" class="input-field" id="groundHours" name="groundHours" value="0">
                         <span class="input-unit">hours</span>
                     </div>
                 </div>
@@ -708,87 +745,87 @@
                 <div class="section-title">Gear & Supplies</div>
 
                 <div class="input-row">
-                    <div class="input-label">Aviation Headset</div>
+                    <label class="input-label" for="headsetCost">Aviation Headset</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="headsetCost" value="0">
+                        <input type="number" class="input-field" id="headsetCost" name="headsetCost" value="0">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Ground School / Books</div>
+                    <label class="input-label" for="booksCost">Ground School / Books</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="booksCost" value="0">
+                        <input type="number" class="input-field" id="booksCost" name="booksCost" value="0">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Flight Supplies</div>
+                    <label class="input-label" for="bagCost">Flight Supplies</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="bagCost" value="0">
+                        <input type="number" class="input-field" id="bagCost" name="bagCost" value="0">
                     </div>
                 </div>
 
                 <div class="section-title">Exams & Fees</div>
 
                 <div class="input-row">
-                    <div class="input-label">Aviation Medical Exam</div>
+                    <label class="input-label" for="medicalCost">Aviation Medical Exam</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="medicalCost" value="300">
+                        <input type="number" class="input-field" id="medicalCost" name="medicalCost" value="300">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">FAA Knowledge Test</div>
+                    <label class="input-label" for="knowledgeCost">FAA Knowledge Test</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="knowledgeCost" value="250">
+                        <input type="number" class="input-field" id="knowledgeCost" name="knowledgeCost" value="250">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Practical Exam (Checkride)</div>
+                    <label class="input-label" for="checkrideCost">Practical Exam (Checkride)</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="checkrideCost" value="1000">
+                        <input type="number" class="input-field" id="checkrideCost" name="checkrideCost" value="1000">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Renter's Insurance (Annual)</div>
+                    <label class="input-label" for="insuranceCost">Renter's Insurance (Annual)</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="insuranceCost" value="1150">
+                        <input type="number" class="input-field" id="insuranceCost" name="insuranceCost" value="1150">
                     </div>
                 </div>
 
                 <div class="section-title">Subscriptions (Annual)</div>
 
                 <div class="input-row">
-                    <div class="input-label">ForeFlight / EFB</div>
+                    <label class="input-label" for="foreflightCost">ForeFlight / EFB</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="foreflightCost" value="275">
+                        <input type="number" class="input-field" id="foreflightCost" name="foreflightCost" value="275">
                     </div>
                 </div>
 
                 <div class="input-row">
-                    <div class="input-label">Online Ground School</div>
+                    <label class="input-label" for="onlineSchoolCost">Online Ground School</label>
                     <div class="input-wrapper">
                         <span style="color: #999;">$</span>
-                        <input type="number" class="input-field" id="onlineSchoolCost" value="0">
+                        <input type="number" class="input-field" id="onlineSchoolCost" name="onlineSchoolCost" value="0">
                     </div>
                 </div>
 
                 <div class="section-title">Contingency</div>
 
                 <div class="input-row">
-                    <div class="input-label">Contingency Fund (15-25%)</div>
+                    <label class="input-label" for="contingencyPercent">Contingency Fund (15-25%)</label>
                     <div class="input-wrapper">
-                        <input type="number" class="input-field" id="contingencyPercent" value="20">
+                        <input type="number" class="input-field" id="contingencyPercent" name="contingencyPercent" value="20">
                         <span class="input-unit">%</span>
                     </div>
                 </div>
@@ -1022,6 +1059,7 @@
     <script src="js/aircraft-lookup.js"></script>
     <script src="js/aircraft-api.js"></script>
     <script src="js/aircraft-ui.js"></script>
+    <script src="js/user-data.js"></script>
     <script src="js/onboarding.js"></script>
     <script src="js/app.js"></script>
 </body>
