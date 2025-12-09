@@ -128,7 +128,7 @@ function loadBudget(event) {
 
             if (budget.currentHours) {
                 currentHours = budget.currentHours;
-                
+
                 if (currentHours.totalTime && currentHours.totalTime > 0) {
                     document.getElementById('logbookSummary').style.display = 'block';
                     document.getElementById('summaryTotalTime').textContent = currentHours.totalTime.toFixed(1);
@@ -138,10 +138,10 @@ function loadBudget(event) {
                     document.getElementById('summaryInstrumentTime').textContent = currentHours.instrumentTotal.toFixed(1);
                     document.getElementById('summaryActualInstrument').textContent = currentHours.actualInstrument.toFixed(1);
                     document.getElementById('summarySimulatedInstrument').textContent = currentHours.simulatedInstrument.toFixed(1);
-                    
+
                     var simTimeElement = document.getElementById('summarySimTime');
                     simTimeElement.textContent = currentHours.simInstrumentTime.toFixed(1);
-                    
+
                     var container = document.getElementById('summarySimTimeContainer');
                     if (container && !container.querySelector('.sim-max-text')) {
                         var maxText = document.createElement('span');
@@ -152,7 +152,7 @@ function loadBudget(event) {
                         maxText.textContent = '/ 20 max';
                         container.appendChild(maxText);
                     }
-                    
+
                     document.getElementById('summaryInstrumentDualAirplane').textContent = currentHours.instrumentDualAirplane.toFixed(1);
                     document.getElementById('summaryRecentInstrument').textContent = currentHours.recentInstrument.toFixed(1);
                 }
@@ -228,14 +228,14 @@ function loadBudget(event) {
             }
 
             calculate();
-            
+
             preventAutoFill = true;
             updateDisplay();
             preventAutoFill = false;
-            
+
             document.getElementById('menuDropdown').classList.remove('open');
             document.getElementById('budgetFileInput').value = '';
-            
+
             alert('Budget loaded successfully!');
         } catch (error) {
             alert('Error loading budget file: ' + error.message);
@@ -249,15 +249,15 @@ function init() {
     for (var i = 0; i < defaultAircraft.length; i++) {
         addAircraft(defaultAircraft[i]);
     }
-    
+
     document.getElementById('addAircraftBtn').addEventListener('click', function() { addAircraft(); });
     document.getElementById('exportPdfBtn').addEventListener('click', exportToPDF);
     document.getElementById('logbookFile').addEventListener('change', parseLogbook);
     document.getElementById('targetCert').addEventListener('change', updateDisplay);
-    
+
     // Hamburger menu
     document.getElementById('hamburgerMenu').addEventListener('click', toggleMenu);
-    
+
     // Close menu when clicking outside
     document.addEventListener('click', function(e) {
         var menu = document.getElementById('menuDropdown');
@@ -266,7 +266,7 @@ function init() {
             menu.classList.remove('open');
         }
     });
-    
+
     var instrumentHeader = document.getElementById('instrumentDetailsHeader');
     if (instrumentHeader) {
         instrumentHeader.addEventListener('click', function() {
@@ -276,12 +276,12 @@ function init() {
             if (icon) icon.classList.toggle('open');
         });
     }
-    
+
     var inputs = document.querySelectorAll('.input-field');
     for (var i = 0; i < inputs.length; i++) {
         inputs[i].addEventListener('input', calculate);
     }
-    
+
     document.getElementById('aircraftList').addEventListener('change', function(e) {
         if (e.target.classList.contains('aircraft-rate-type')) {
             var aircraftItem = e.target.closest('.aircraft-item');
@@ -319,7 +319,7 @@ function init() {
             calculate();
         }
     });
-    
+
     document.getElementById('aircraftList').addEventListener('input', calculate);
     calculate();
 }
@@ -327,7 +327,7 @@ function init() {
 function exportToPDF() {
     var cert = document.getElementById('targetCert').value;
     var filename = 'flight-training-budget-' + (cert || 'general') + '.pdf';
-    
+
     var element = document.querySelector('.main-container');
     var opt = {
         margin: 0.5,
@@ -336,12 +336,12 @@ function exportToPDF() {
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
-    
+
     var btn = document.getElementById('exportPdfBtn');
     var originalText = btn.textContent;
     btn.textContent = 'Generating PDF...';
     btn.disabled = true;
-    
+
     html2pdf().set(opt).from(element).save().then(function() {
         btn.textContent = originalText;
         btn.disabled = false;
@@ -716,7 +716,7 @@ function processLogbook(data) {
     for (var i = 0; i < data.length; i++) {
         var row = data[i];
         if (!row.Date) continue;
-        
+
         var totalTime = row.TotalTime || 0;
         var pic = row.PIC || 0;
         var xc = row.CrossCountry || 0;
@@ -740,15 +740,15 @@ function processLogbook(data) {
             isSimulator = equipType === 'batd' || equipType === 'aatd' || equipType === 'ftd';
             isBATD = equipType === 'batd';
         }
-        
+
         if (isSimulator) {
             currentHours.simTime += simulator;
             currentHours.simInstrumentTime += simulated;
-            
+
             if (isBATD && simulator > 0) {
                 currentHours.batdTime += simulator;
             }
-            
+
             currentHours.instrumentTotal += simulated;
         } else {
             currentHours.actualInstrument += actual;
@@ -814,14 +814,14 @@ function processLogbook(data) {
     document.getElementById('summaryPICTime').textContent = currentHours.picTime.toFixed(1);
     document.getElementById('summaryXCTime').textContent = currentHours.picXC.toFixed(1);
     document.getElementById('summaryDualTime').textContent = currentHours.dualReceived.toFixed(1);
-    
+
     document.getElementById('summaryInstrumentTime').textContent = currentHours.instrumentTotal.toFixed(1);
     document.getElementById('summaryActualInstrument').textContent = currentHours.actualInstrument.toFixed(1);
     document.getElementById('summarySimulatedInstrument').textContent = currentHours.simulatedInstrument.toFixed(1);
-    
+
     var simTimeElement = document.getElementById('summarySimTime');
     simTimeElement.textContent = currentHours.simInstrumentTime.toFixed(1);
-    
+
     var container = document.getElementById('summarySimTimeContainer');
     if (container && !container.querySelector('.sim-max-text')) {
         var maxText = document.createElement('span');
@@ -832,7 +832,7 @@ function processLogbook(data) {
         maxText.textContent = '/ 20 max';
         container.appendChild(maxText);
     }
-    
+
     document.getElementById('summaryInstrumentDualAirplane').textContent = currentHours.instrumentDualAirplane.toFixed(1);
     document.getElementById('summaryRecentInstrument').textContent = currentHours.recentInstrument.toFixed(1);
 
@@ -904,17 +904,17 @@ function updateDisplay() {
     if (currentHours.totalTime) {
         document.getElementById('requirementsList').style.display = 'block';
     }
-    
+
     var html = '';
     var totalDualNeeded = 0;
     var totalSoloNeeded = 0;
-    
+
     for (var i = 0; i < reqs.length; i++) {
         var req = reqs[i];
         var current = currentHours[req.field] || 0;
         var needed = Math.max(req.required - current, 0);
         var pct = Math.min((current / req.required) * 100, 100);
-        
+
         if (needed > 0 && !req.isSpecial) {
             if (req.type === 'dual') {
                 totalDualNeeded = Math.max(totalDualNeeded, needed);
@@ -922,7 +922,7 @@ function updateDisplay() {
                 totalSoloNeeded = Math.max(totalSoloNeeded, needed);
             }
         }
-        
+
         if (currentHours.totalTime) {
             var status = pct >= 100 ? 'completed' : (pct > 0 ? 'in-progress' : 'not-started');
             var badge = pct >= 100 ? 'badge-completed' : (pct > 0 ? 'badge-in-progress' : 'badge-not-started');
@@ -931,7 +931,7 @@ function updateDisplay() {
             html += '<div class="requirement-item ' + status + '">';
             html += '<div class="requirement-header"><div class="requirement-title">' + req.name + '</div>';
             html += '<div class="requirement-badge ' + badge + '">' + badgeText + '</div></div>';
-            
+
             if (req.isSpecial) {
                 html += '<div class="requirement-stats"><span>Special flight requirement</span>';
                 html += '<span>' + (pct >= 100 ? 'Completed' : 'Not completed') + '</span></div>';
@@ -939,14 +939,14 @@ function updateDisplay() {
                 html += '<div class="requirement-stats"><span>' + current.toFixed(1) + ' / ' + req.required + ' hrs</span>';
                 html += '<span>' + needed.toFixed(1) + ' hrs needed</span></div>';
             }
-            
+
             if (req.showBreakdown && req.field === 'instrumentTotal') {
                 html += '<div class="requirement-breakdown">';
                 html += '(' + currentHours.batdTime.toFixed(1) + ' BATD hours included)<br>';
                 html += '(' + currentHours.simInstrumentTime.toFixed(1) + ' total simulator hours included)';
                 html += '</div>';
             }
-            
+
             html += '<div class="progress-bar"><div class="progress-fill" style="width:' + pct + '%"></div></div></div>';
         }
     }
@@ -1062,16 +1062,16 @@ function calculate() {
     var lessonsPerWeek = parseFloat(document.getElementById('lessonsPerWeek').value) || 2;
     var totalTrainingHours = totalDualHours + totalSoloHours;
     var avgHoursPerLesson = 1.5;
-    
+
     if (totalTrainingHours > 0) {
         var weeksToComplete = totalTrainingHours / (lessonsPerWeek * avgHoursPerLesson);
         var monthsToComplete = weeksToComplete / 4.33;
-        
+
         var trainingBudget = flightTrainingTotal + gearTotal + examsTotal + subscriptionsTotal;
         var trainingContingency = trainingBudget * (contingencyPercent / 100);
         var totalTrainingBudget = trainingBudget + trainingContingency;
         var monthlyBudget = totalTrainingBudget / monthsToComplete;
-        
+
         document.getElementById('estimatedMonths').textContent = '~ ' + Math.ceil(monthsToComplete) + ' Months';
         document.getElementById('monthlyBudget').textContent = '$' + monthlyBudget.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
     } else {
@@ -1130,7 +1130,7 @@ function updateBudgetChart(training, family, gear, exams, subs, contingency) {
     for (var i = 0; i < chartData.datasets[0].data.length; i++) {
         total += chartData.datasets[0].data[i];
     }
-    
+
     var html = '';
     for (var i = 0; i < chartData.labels.length; i++) {
         var value = chartData.datasets[0].data[i];
