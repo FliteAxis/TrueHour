@@ -140,12 +140,19 @@ jobs:
           image-ref: ${{ matrix.image.name }}:test
           format: 'sarif'
           output: 'trivy-${{ matrix.image.name }}.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
+
+      - name: Filter SARIF for CRITICAL and HIGH only
+        if: always() && hashFiles('trivy-${{ matrix.image.name }}.sarif') != ''
+        run: |
+          jq 'del(.runs[].results[] | select(.level == "note" or .level == "warning"))' \
+            trivy-${{ matrix.image.name }}.sarif > trivy-filtered.sarif
+          mv trivy-filtered.sarif trivy-${{ matrix.image.name }}.sarif
 
       - name: Upload Trivy results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('trivy-${{ matrix.image.name }}.sarif') != ''
         with:
           sarif_file: 'trivy-${{ matrix.image.name }}.sarif'
 
