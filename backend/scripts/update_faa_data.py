@@ -114,6 +114,9 @@ def download_faa_data() -> zipfile.ZipFile:
                 print(f"Download failed after {max_retries} attempts")
                 raise
 
+    # This should never be reached due to the raise above, but satisfies the linter
+    raise RuntimeError("Failed to download FAA data after all retries")
+
 
 def parse_csv(zf: zipfile.ZipFile, filename: str, expected_cols: list) -> list[dict]:
     """Parse a CSV file from the ZIP archive."""

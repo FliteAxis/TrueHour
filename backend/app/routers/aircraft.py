@@ -2,8 +2,9 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
+from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field, condecimal
 
@@ -26,8 +27,8 @@ class UserAircraftCreate(BaseModel):
     is_high_performance: bool = False
     is_simulator: bool = False
     category: Optional[str] = Field(None, description="owned, club, or rental")
-    hourly_rate_wet: Optional[condecimal(max_digits=10, decimal_places=2)] = None
-    hourly_rate_dry: Optional[condecimal(max_digits=10, decimal_places=2)] = None
+    hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: bool = True
 
@@ -48,8 +49,8 @@ class UserAircraftUpdate(BaseModel):
     is_high_performance: Optional[bool] = None
     is_simulator: Optional[bool] = None
     category: Optional[str] = None
-    hourly_rate_wet: Optional[condecimal(max_digits=10, decimal_places=2)] = None
-    hourly_rate_dry: Optional[condecimal(max_digits=10, decimal_places=2)] = None
+    hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -84,8 +85,6 @@ class UserAircraftResponse(BaseModel):
 @router.get("", response_model=List[UserAircraftResponse])
 async def list_aircraft(is_active: Optional[bool] = Query(None, description="Filter by active status")):
     """List all user aircraft."""
-    from app.postgres_database import postgres_db
-
     aircraft_list = await postgres_db.get_user_aircraft(is_active=is_active)
     return aircraft_list
 
@@ -93,8 +92,6 @@ async def list_aircraft(is_active: Optional[bool] = Query(None, description="Fil
 @router.get("/{aircraft_id}", response_model=UserAircraftResponse)
 async def get_aircraft(aircraft_id: int):
     """Get single aircraft by ID."""
-    from app.postgres_database import postgres_db
-
     aircraft = await postgres_db.get_aircraft_by_id(aircraft_id)
     if not aircraft:
         raise HTTPException(status_code=404, detail="Aircraft not found")
@@ -104,8 +101,6 @@ async def get_aircraft(aircraft_id: int):
 @router.post("", response_model=UserAircraftResponse, status_code=201)
 async def create_aircraft(aircraft: UserAircraftCreate):
     """Add aircraft to user's list."""
-    from app.postgres_database import postgres_db
-
     # Check if tail number already exists
     existing = await postgres_db.get_aircraft_by_tail(aircraft.tail_number)
     if existing:
@@ -115,14 +110,12 @@ async def create_aircraft(aircraft: UserAircraftCreate):
         created = await postgres_db.create_aircraft(aircraft.model_dump())
         return created
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.put("/{aircraft_id}", response_model=UserAircraftResponse)
 async def update_aircraft(aircraft_id: int, aircraft: UserAircraftUpdate):
     """Update aircraft details."""
-    from app.postgres_database import postgres_db
-
     # Check if aircraft exists
     existing = await postgres_db.get_aircraft_by_id(aircraft_id)
     if not existing:
@@ -142,14 +135,12 @@ async def update_aircraft(aircraft_id: int, aircraft: UserAircraftUpdate):
             raise HTTPException(status_code=404, detail="Aircraft not found")
         return updated
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.delete("/{aircraft_id}", status_code=204)
 async def delete_aircraft(aircraft_id: int):
     """Remove aircraft from user's list."""
-    from app.postgres_database import postgres_db
-
     success = await postgres_db.delete_aircraft(aircraft_id)
     if not success:
         raise HTTPException(status_code=404, detail="Aircraft not found")

@@ -1,9 +1,11 @@
 """User data management endpoints (save/load/delete)."""
 
+import json
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from app.postgres_database import postgres_db
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
 
@@ -14,7 +16,7 @@ class UserSettings(BaseModel):
     """User settings model."""
 
     auto_save_enabled: bool = True
-    auto_save_interval: int = Field(3000, ge=1000, le=10000)
+    auto_save_interval: int = Field(default=3000, ge=1000, le=10000)
     default_aircraft_id: Optional[int] = None
     timezone: str = "America/New_York"
     budget_state: Optional[Dict[str, Any]] = None  # Phase 3: certification, hours, settings
@@ -45,117 +47,106 @@ class SaveDataRequest(BaseModel):
     budget_state: Optional[Dict[str, Any]] = None  # Phase 3: certification, hours, settings
 
 
+def _safe_int(value: Any) -> Optional[int]:
+    """Safely convert value to int."""
+    if not value:
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _safe_float(value: Any) -> Optional[float]:
+    """Safely convert value to float."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return None
+
+
+async def _save_aircraft(conn: Any, aircraft_data: List[Dict[str, Any]]) -> int:
+    """Save aircraft data to database."""
+    count = 0
+    for ac in aircraft_data:
+        await conn.execute(
+            """
+            INSERT INTO aircraft (
+                tail_number, make, model, year, category,
+                hourly_rate_wet, hourly_rate_dry, notes, is_active
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+            ON CONFLICT (tail_number)
+            DO UPDATE SET
+                make = EXCLUDED.make,
+                model = EXCLUDED.model,
+                year = EXCLUDED.year,
+                category = EXCLUDED.category,
+                hourly_rate_wet = EXCLUDED.hourly_rate_wet,
+                hourly_rate_dry = EXCLUDED.hourly_rate_dry,
+                notes = EXCLUDED.notes,
+                updated_at = NOW()
+        """,
+            ac.get("registration"),
+            ac.get("make"),
+            ac.get("model"),
+            _safe_int(ac.get("year")),
+            ac.get("type", "owned"),
+            _safe_float(ac.get("wetRate")),
+            _safe_float(ac.get("dryRate")),
+            ac.get("notes"),
+        )
+        count += 1
+    return count
+
+
+async def _save_budget_state(conn: Any, budget_state: Dict[str, Any]) -> None:
+    """Save budget state to user settings."""
+    settings_row = await conn.fetchrow("SELECT id FROM user_settings ORDER BY id LIMIT 1")
+    budget_json = json.dumps(budget_state)
+
+    if settings_row:
+        await conn.execute(
+            "UPDATE user_settings SET budget_state = $1::jsonb, updated_at = NOW() WHERE id = $2",
+            budget_json,
+            settings_row["id"],
+        )
+    else:
+        await conn.execute(
+            """
+            INSERT INTO user_settings (auto_save_enabled, auto_save_interval, timezone, budget_state, updated_at)
+            VALUES (true, 3000, 'America/New_York', $1::jsonb, NOW())
+            """,
+            budget_json,
+        )
+
+
 @router.post("/save", status_code=200)
-async def save_user_data(  # noqa: C901
+async def save_user_data(
     data: Optional[SaveDataRequest] = None, session_id: Optional[str] = Header(None, alias="X-Session-ID")
 ):
-    """
-    Save current user state to database.
-
-    Accepts aircraft and expenses data from frontend and persists to PostgreSQL.
-    """
-    from app.postgres_database import postgres_db
-
-    # Generate session ID if not provided
+    """Save current user state to database."""
     if not session_id:
         session_id = str(uuid.uuid4())
 
     try:
         async with postgres_db.acquire() as conn:
-            # Save aircraft if provided
             aircraft_count = 0
             if data and data.aircraft:
-                for ac in data.aircraft:
-                    # Convert data types for database
-                    year = None
-                    if ac.get("year"):
-                        try:
-                            year = int(ac.get("year"))
-                        except (ValueError, TypeError):
-                            year = None
+                aircraft_count = await _save_aircraft(conn, data.aircraft)
 
-                    wet_rate = None
-                    if ac.get("wetRate") is not None:
-                        try:
-                            wet_rate = float(ac.get("wetRate"))
-                        except (ValueError, TypeError):
-                            wet_rate = None
-
-                    dry_rate = None
-                    if ac.get("dryRate") is not None:
-                        try:
-                            dry_rate = float(ac.get("dryRate"))
-                        except (ValueError, TypeError):
-                            dry_rate = None
-
-                    # Upsert aircraft (insert or update based on tail_number)
-                    await conn.execute(
-                        """
-                        INSERT INTO aircraft (
-                            tail_number, make, model, year, category,
-                            hourly_rate_wet, hourly_rate_dry, notes, is_active
-                        )
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-                        ON CONFLICT (tail_number)
-                        DO UPDATE SET
-                            make = EXCLUDED.make,
-                            model = EXCLUDED.model,
-                            year = EXCLUDED.year,
-                            category = EXCLUDED.category,
-                            hourly_rate_wet = EXCLUDED.hourly_rate_wet,
-                            hourly_rate_dry = EXCLUDED.hourly_rate_dry,
-                            notes = EXCLUDED.notes,
-                            updated_at = NOW()
-                    """,
-                        ac.get("registration"),  # Frontend uses 'registration'
-                        ac.get("make"),
-                        ac.get("model"),
-                        year,  # Converted to int
-                        ac.get("type", "owned"),  # Frontend uses 'type' field
-                        wet_rate,  # Converted to float
-                        dry_rate,  # Converted to float
-                        ac.get("notes"),
-                    )
-                    aircraft_count += 1
-
-            # Save budget_state if provided
             if data and data.budget_state:
-                import json
+                await _save_budget_state(conn, data.budget_state)
 
-                # Check if settings row exists
-                settings_row = await conn.fetchrow("SELECT id FROM user_settings ORDER BY id LIMIT 1")
-
-                if settings_row:
-                    # Update existing row
-                    await conn.execute(
-                        """
-                        UPDATE user_settings
-                        SET budget_state = $1::jsonb, updated_at = NOW()
-                        WHERE id = $2
-                    """,
-                        json.dumps(data.budget_state),
-                        settings_row["id"],
-                    )
-                else:
-                    # Insert new row
-                    await conn.execute(
-                        """
-                        INSERT INTO user_settings (
-                            auto_save_enabled, auto_save_interval, timezone, budget_state, updated_at
-                        )
-                        VALUES (true, 3000, 'America/New_York', $1::jsonb, NOW())
-                    """,
-                        json.dumps(data.budget_state),
-                    )
-
-            # Update session timestamp
             await conn.execute(
                 """
                 INSERT INTO user_sessions (session_id, last_saved_at)
                 VALUES ($1, NOW())
                 ON CONFLICT (session_id)
                 DO UPDATE SET last_saved_at = NOW()
-            """,
+                """,
                 session_id,
             )
 
@@ -167,7 +158,7 @@ async def save_user_data(  # noqa: C901
             "aircraft_saved": aircraft_count,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Save failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Save failed: {str(e)}") from e
 
 
 @router.get("/load", response_model=UserDataResponse)
@@ -177,7 +168,6 @@ async def load_user_data(session_id: Optional[str] = Header(None, alias="X-Sessi
 
     Returns all aircraft, expenses, and user settings.
     """
-    from app.postgres_database import postgres_db
 
     try:
         # Get all aircraft from database
@@ -214,8 +204,6 @@ async def load_user_data(session_id: Optional[str] = Header(None, alias="X-Sessi
             settings_row = await conn.fetchrow("SELECT * FROM user_settings ORDER BY id DESC LIMIT 1")
 
             if settings_row:
-                import json
-
                 budget_state = None
                 if settings_row.get("budget_state"):
                     budget_state = (
@@ -258,17 +246,13 @@ async def load_user_data(session_id: Optional[str] = Header(None, alias="X-Sessi
             last_saved_at=last_saved_at,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Load failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Load failed: {str(e)}") from e
 
 
 @router.put("/settings", response_model=UserSettings)
 async def update_user_settings(settings: UserSettings):
     """Update user settings (auto-save preferences, default aircraft, etc.)."""
-    from app.postgres_database import postgres_db
-
     try:
-        import json
-
         async with postgres_db.acquire() as conn:
             # Update or insert settings
             await conn.execute(
@@ -300,7 +284,7 @@ async def update_user_settings(settings: UserSettings):
 
         return settings
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Settings update failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Settings update failed: {str(e)}") from e
 
 
 @router.delete("/data", status_code=200)
@@ -313,7 +297,6 @@ async def delete_all_user_data(
     Requires confirmation text "DELETE" to proceed.
     This is a destructive operation that cannot be undone.
     """
-    from app.postgres_database import postgres_db
 
     # Verify confirmation text
     if confirmation.confirm_text != "DELETE":
@@ -341,17 +324,13 @@ async def delete_all_user_data(
             "deleted_at": datetime.now().isoformat(),
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}") from e
 
 
 @router.get("/settings", response_model=UserSettings)
 async def get_user_settings():
     """Get current user settings."""
-    from app.postgres_database import postgres_db
-
     try:
-        import json
-
         async with postgres_db.acquire() as conn:
             settings_row = await conn.fetchrow("SELECT * FROM user_settings ORDER BY id DESC LIMIT 1")
 
@@ -371,8 +350,7 @@ async def get_user_settings():
                     timezone=settings_row["timezone"],
                     budget_state=budget_state,
                 )
-            else:
-                # Return defaults if no settings exist
-                return UserSettings()
+            # Return defaults if no settings exist
+            return UserSettings()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to get settings: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get settings: {str(e)}") from e

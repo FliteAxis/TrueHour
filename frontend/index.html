@@ -27,23 +27,23 @@
             </div>
 
             <div class="onboarding-options">
-                <button class="onboarding-card" onclick="OnboardingManager.startManualPath()">
+                <div class="onboarding-card" role="button" tabindex="0" onclick="OnboardingManager.startManualPath()">
                     <div class="onboarding-icon">📝</div>
                     <h3>Start Fresh</h3>
                     <p>Enter your flight hours and training goals manually</p>
-                </button>
+                </div>
 
-                <button class="onboarding-card" onclick="OnboardingManager.startForeFlightPath()">
+                <div class="onboarding-card" role="button" tabindex="0" onclick="OnboardingManager.startForeFlightPath()">
                     <div class="onboarding-icon">✈️</div>
                     <h3>Import Logbook</h3>
                     <p>Upload your ForeFlight CSV to auto-fill your hours</p>
-                </button>
+                </div>
 
-                <button class="onboarding-card" onclick="OnboardingManager.startLoadPath()">
+                <div class="onboarding-card" role="button" tabindex="0" onclick="OnboardingManager.startLoadPath()">
                     <div class="onboarding-icon">💾</div>
                     <h3>Load Budget</h3>
                     <p>Continue working on a previously saved budget</p>
-                </button>
+                </div>
             </div>
 
             <div class="landing-footer">
@@ -550,15 +550,15 @@
 
                 <!-- FAA Lookup Toggle -->
                 <div class="input-row" style="padding: 10px; background: #f8fafc; border-radius: 8px; margin-top: 10px;">
-                    <label id="faaLookupLabel" style="display: flex; align-items: center; gap: 10px; cursor: not-allowed; font-size: 0.9em; opacity: 0.5;">
-                        <input type="checkbox" id="enableFAALookup" onchange="toggleFAALookup()" style="width: auto;" disabled>
-                        <span>
-                            Enable FAA Aircraft Lookup (US aircraft only)
-                            <div style="color: #64748b; font-size: 0.85em; margin-top: 2px;">
+                    <div style="display: flex; align-items: center; gap: 10px; font-size: 0.9em;">
+                        <input type="checkbox" id="enableFAALookup" onchange="toggleFAALookup()" style="width: auto;" disabled aria-labelledby="faaLookupLabel">
+                        <label id="faaLookupLabel" for="enableFAALookup" style="cursor: not-allowed; opacity: 0.5;">
+                            <span>Enable FAA Aircraft Lookup (US aircraft only)</span>
+                            <span style="display: block; color: #64748b; font-size: 0.85em; margin-top: 2px;">
                                 Automatically looks up aircraft details from FAA registry for N-numbers. Data is cached for 24 hours.
-                            </div>
-                        </span>
-                    </label>
+                            </span>
+                        </label>
+                    </div>
                     <div id="faaLookupStatus" style="display: block; margin-top: 8px; padding: 8px; border-radius: 6px; font-size: 0.85em; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;">
                         ℹ <strong>Checking availability...</strong><br>Verifying if FAA lookup is enabled in this deployment.
                     </div>
