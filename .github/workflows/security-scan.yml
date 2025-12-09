@@ -85,9 +85,11 @@ jobs:
           pip install safety bandit pip-audit
 
       - name: Run Safety scan
+        env:
+          SAFETY_API_KEY: ${{ secrets.SAFETY_API_KEY }}
         run: |
-          safety scan --target backend/requirements.txt --output json --save-as safety-report.json || true
-          safety scan --target backend/requirements.txt || true
+          safety --stage cicd scan --target backend --output json --save-as json safety-report.json || true
+          safety --stage cicd scan --target backend || true
 
       - name: Run Bandit
         run: |
