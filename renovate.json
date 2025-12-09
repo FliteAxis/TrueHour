@@ -10,105 +10,166 @@
   "username": "renovate[bot]",
   "gitAuthor": "Renovate Bot <bot@renovateapp.com>",
   "platform": "github",
-  "repositories": ["FliteAxis/TrueHour"],
-  "labels": ["dependencies", "renovate"],
+  "repositories": [
+    "FliteAxis/TrueHour"
+  ],
+  "labels": [
+    "dependencies",
+    "renovate"
+  ],
   "assigneesFromCodeOwners": true,
   "reviewersFromCodeOwners": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
   "semanticCommits": "enabled",
   "commitMessagePrefix": "chore(deps):",
-  "schedule": ["before 6am on monday"],
+  "schedule": [
+    "before 6am on monday"
+  ],
   "timezone": "America/New_York",
   "vulnerabilityAlerts": {
-    "labels": ["security"],
-    "assignees": ["@FliteAxis/security"],
-    "reviewers": ["@FliteAxis/security"],
+    "labels": [
+      "security"
+    ],
+    "assignees": [
+      "@FliteAxis/security"
+    ],
+    "reviewers": [
+      "@FliteAxis/security"
+    ],
     "semanticCommitType": "fix",
     "commitMessageSuffix": "[security]"
   },
   "packageRules": [
     {
       "description": "Group Docker base images",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["python", "postgres", "nginx"],
+      "matchDatasources": [
+        "docker"
+      ],
       "groupName": "Docker base images",
-      "schedule": ["before 6am on the first day of the month"]
+      "schedule": [
+        "before 6am on the first day of the month"
+      ],
+      "matchPackageNames": [
+        "/python/",
+        "/postgres/",
+        "/nginx/"
+      ]
     },
     {
       "description": "Automerge patch updates for Python dependencies",
-      "matchDatasources": ["pypi"],
-      "matchUpdateTypes": ["patch"],
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "automerge": true,
       "automergeType": "pr",
       "automergeStrategy": "squash"
     },
     {
       "description": "Automerge patch updates for GitHub Actions",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["patch"],
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "automerge": true,
       "automergeType": "pr",
       "automergeStrategy": "squash"
     },
     {
       "description": "Group all minor and patch Python dependencies",
-      "matchDatasources": ["pypi"],
-      "matchUpdateTypes": ["minor", "patch"],
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
       "groupName": "Python dependencies (non-major)"
     },
     {
       "description": "Separate major Python updates",
-      "matchDatasources": ["pypi"],
-      "matchUpdateTypes": ["major"],
+      "matchDatasources": [
+        "pypi"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "groupName": "Python dependencies (major)",
-      "schedule": ["before 6am on the first day of the month"]
+      "schedule": [
+        "before 6am on the first day of the month"
+      ]
     },
     {
       "description": "Group GitHub Actions updates",
-      "matchManagers": ["github-actions"],
+      "matchManagers": [
+        "github-actions"
+      ],
       "groupName": "GitHub Actions",
       "automerge": true
     },
     {
       "description": "FastAPI and Uvicorn should be updated together",
-      "matchPackagePatterns": ["^fastapi$", "^uvicorn"],
-      "groupName": "FastAPI ecosystem"
+      "groupName": "FastAPI ecosystem",
+      "matchPackageNames": [
+        "/^fastapi$/",
+        "/^uvicorn/"
+      ]
     },
     {
       "description": "Security updates with high priority",
-      "matchUpdateTypes": ["patch"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true,
-      "schedule": ["at any time"],
+      "schedule": [
+        "at any time"
+      ],
       "prPriority": 10
     },
     {
       "description": "Disable major version updates for stable APIs",
-      "matchPackagePatterns": ["^fastapi$", "^pydantic$"],
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "enabled": false,
-      "schedule": ["before 6am on the first day of the month"]
+      "schedule": [
+        "before 6am on the first day of the month"
+      ],
+      "matchPackageNames": [
+        "/^fastapi$/",
+        "/^pydantic$/"
+      ]
     }
   ],
   "pip_requirements": {
-    "fileMatch": ["(^|/)requirements\\.txt$"]
+    "managerFilePatterns": [
+      "/(^|/)requirements\\.txt$/"
+    ]
   },
   "dockerfile": {
     "enabled": true
   },
   "docker-compose": {
     "enabled": true,
-    "fileMatch": ["(^|/)docker-compose.*\\.ya?ml$"]
+    "managerFilePatterns": [
+      "/(^|/)docker-compose.*\\.ya?ml$/"
+    ]
   },
   "github-actions": {
     "enabled": true,
-    "fileMatch": ["\\.github/workflows/.+\\.ya?ml$"]
+    "managerFilePatterns": [
+      "/\\.github/workflows/.+\\.ya?ml$/"
+    ]
   },
   "lockFileMaintenance": {
     "enabled": false
   },
-  "stabilityDays": 3,
   "minimumReleaseAge": "3 days",
   "prCreation": "not-pending",
   "prNotPendingHours": 24,
