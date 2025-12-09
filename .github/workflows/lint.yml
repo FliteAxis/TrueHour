@@ -132,6 +132,7 @@ jobs:
 
       - name: Validate docker-compose.ghcr.yml
         run: |
+          touch infrastructure/.env
           docker compose -f infrastructure/docker-compose.ghcr.yml config > /dev/null
 
       - name: Lint with docker-compose-linter

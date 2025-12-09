@@ -43,8 +43,7 @@ jobs:
         run: |
           cyclonedx-py requirements \
             -i backend/requirements.txt \
-            -o backend-sbom-cyclonedx.json \
-            --format json
+            -o backend-sbom-cyclonedx.json
 
       - name: Generate SPDX SBOM with syft
         uses: anchore/sbom-action@v0
