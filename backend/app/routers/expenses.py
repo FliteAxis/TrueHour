@@ -1,16 +1,18 @@
 """Expense management endpoints."""
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query
-from pydantic import BaseModel, Field, condecimal
+
 from datetime import date, datetime
 from decimal import Decimal
+from typing import List, Optional
 
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel, Field, condecimal
 
 router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
 
 class ExpenseCreate(BaseModel):
     """Create expense."""
+
     aircraft_id: Optional[int] = Field(None, description="Associated aircraft ID (null for general expenses)")
     category: str = Field(..., description="Expense category (fuel, insurance, maintenance, etc.)")
     subcategory: Optional[str] = None
@@ -27,6 +29,7 @@ class ExpenseCreate(BaseModel):
 
 class ExpenseUpdate(BaseModel):
     """Update expense (all fields optional)."""
+
     aircraft_id: Optional[int] = None
     category: Optional[str] = None
     subcategory: Optional[str] = None
@@ -43,6 +46,7 @@ class ExpenseUpdate(BaseModel):
 
 class ExpenseResponse(BaseModel):
     """Expense response."""
+
     id: int
     aircraft_id: Optional[int] = None
     category: str
@@ -64,6 +68,7 @@ class ExpenseResponse(BaseModel):
 
 class ExpenseSummaryResponse(BaseModel):
     """Expense summary grouped by category."""
+
     group_name: str
     count: int
     total_amount: Decimal
@@ -81,18 +86,13 @@ async def list_expenses(
     start_date: Optional[date] = Query(None, description="Filter by start date"),
     end_date: Optional[date] = Query(None, description="Filter by end date"),
     limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
-    offset: int = Query(0, ge=0, description="Pagination offset")
+    offset: int = Query(0, ge=0, description="Pagination offset"),
 ):
     """List expenses with optional filters."""
     from app.postgres_database import postgres_db
 
     expenses = await postgres_db.get_expenses(
-        aircraft_id=aircraft_id,
-        category=category,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit,
-        offset=offset
+        aircraft_id=aircraft_id, category=category, start_date=start_date, end_date=end_date, limit=limit, offset=offset
     )
     return expenses
 
@@ -101,22 +101,15 @@ async def list_expenses(
 async def get_expense_summary(
     start_date: Optional[date] = Query(None, description="Summary start date"),
     end_date: Optional[date] = Query(None, description="Summary end date"),
-    group_by: str = Query("category", description="Group by category or subcategory")
+    group_by: str = Query("category", description="Group by category or subcategory"),
 ):
     """Get expense summary grouped by category or subcategory."""
     from app.postgres_database import postgres_db
 
     if group_by not in ["category", "subcategory"]:
-        raise HTTPException(
-            status_code=400,
-            detail="group_by must be 'category' or 'subcategory'"
-        )
+        raise HTTPException(status_code=400, detail="group_by must be 'category' or 'subcategory'")
 
-    summary = await postgres_db.get_expense_summary(
-        start_date=start_date,
-        end_date=end_date,
-        group_by=group_by
-    )
+    summary = await postgres_db.get_expense_summary(start_date=start_date, end_date=end_date, group_by=group_by)
     return summary
 
 
@@ -140,10 +133,7 @@ async def create_expense(expense: ExpenseCreate):
     if expense.aircraft_id:
         aircraft = await postgres_db.get_aircraft_by_id(expense.aircraft_id)
         if not aircraft:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Aircraft with ID {expense.aircraft_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Aircraft with ID {expense.aircraft_id} not found")
 
     try:
         created = await postgres_db.create_expense(expense.model_dump())
@@ -166,10 +156,7 @@ async def update_expense(expense_id: int, expense: ExpenseUpdate):
     if expense.aircraft_id:
         aircraft = await postgres_db.get_aircraft_by_id(expense.aircraft_id)
         if not aircraft:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Aircraft with ID {expense.aircraft_id} not found"
-            )
+            raise HTTPException(status_code=404, detail=f"Aircraft with ID {expense.aircraft_id} not found")
 
     try:
         # Filter out None values

@@ -1,10 +1,13 @@
 """Pydantic models for TrueHour FAA lookup API responses."""
-from typing import Optional, List
+
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
 class AircraftResponse(BaseModel):
     """Aircraft registration lookup response."""
+
     tail_number: str
     manufacturer: str
     model: str
@@ -26,7 +29,7 @@ class AircraftResponse(BaseModel):
                 "engine_type": "Reciprocating",
                 "num_engines": 1,
                 "num_seats": 4,
-                "year_mfr": 2001
+                "year_mfr": 2001,
             }
         }
     }
@@ -34,19 +37,15 @@ class AircraftResponse(BaseModel):
 
 class BulkRequest(BaseModel):
     """Bulk lookup request."""
+
     tail_numbers: List[str] = Field(..., max_length=50)
 
-    model_config = {
-        "json_schema_extra": {
-            "example": {
-                "tail_numbers": ["N172SP", "N12345", "N67890"]
-            }
-        }
-    }
+    model_config = {"json_schema_extra": {"example": {"tail_numbers": ["N172SP", "N12345", "N67890"]}}}
 
 
 class BulkResult(BaseModel):
     """Single result within bulk response."""
+
     tail_number: str
     manufacturer: Optional[str] = None
     model: Optional[str] = None
@@ -61,6 +60,7 @@ class BulkResult(BaseModel):
 
 class BulkResponse(BaseModel):
     """Bulk lookup response."""
+
     total: int
     found: int
     results: List[BulkResult]
@@ -76,13 +76,10 @@ class BulkResponse(BaseModel):
                         "manufacturer": "CESSNA",
                         "model": "172S",
                         "aircraft_type": "Fixed Wing Single-Engine",
-                        "engine_type": "Reciprocating"
+                        "engine_type": "Reciprocating",
                     },
-                    {
-                        "tail_number": "N99999",
-                        "error": "Not found"
-                    }
-                ]
+                    {"tail_number": "N99999", "error": "Not found"},
+                ],
             }
         }
     }
@@ -90,6 +87,7 @@ class BulkResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """Health check response."""
+
     status: str
     database_exists: bool
     record_count: int
@@ -98,5 +96,6 @@ class HealthResponse(BaseModel):
 
 class StatsResponse(BaseModel):
     """Database statistics response."""
+
     record_count: int
     last_updated: Optional[str] = None

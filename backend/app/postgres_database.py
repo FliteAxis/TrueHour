@@ -1,10 +1,11 @@
 """PostgreSQL database operations for user data."""
+
 import os
-from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
+from datetime import date
+from typing import Any, Dict, List, Optional
+
 import asyncpg
-from datetime import datetime, date
-from decimal import Decimal
 
 
 class PostgresDatabase:
@@ -12,20 +13,12 @@ class PostgresDatabase:
 
     def __init__(self):
         self.pool: Optional[asyncpg.Pool] = None
-        self.database_url = os.getenv(
-            "DATABASE_URL",
-            "postgresql://truehour:truehour@db:5432/truehour"
-        )
+        self.database_url = os.getenv("DATABASE_URL", "postgresql://truehour:truehour@db:5432/truehour")
 
     async def connect(self):
         """Create connection pool."""
         if not self.pool:
-            self.pool = await asyncpg.create_pool(
-                self.database_url,
-                min_size=2,
-                max_size=10,
-                command_timeout=60
-            )
+            self.pool = await asyncpg.create_pool(self.database_url, min_size=2, max_size=10, command_timeout=60)
 
     async def close(self):
         """Close connection pool."""
@@ -47,40 +40,30 @@ class PostgresDatabase:
         """Get list of user aircraft."""
         async with self.acquire() as conn:
             if is_active is None:
-                rows = await conn.fetch(
-                    "SELECT * FROM aircraft ORDER BY tail_number"
-                )
+                rows = await conn.fetch("SELECT * FROM aircraft ORDER BY tail_number")
             else:
-                rows = await conn.fetch(
-                    "SELECT * FROM aircraft WHERE is_active = $1 ORDER BY tail_number",
-                    is_active
-                )
+                rows = await conn.fetch("SELECT * FROM aircraft WHERE is_active = $1 ORDER BY tail_number", is_active)
             return [dict(row) for row in rows]
 
     async def get_aircraft_by_id(self, aircraft_id: int) -> Optional[Dict[str, Any]]:
         """Get single aircraft by ID."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM aircraft WHERE id = $1",
-                aircraft_id
-            )
+            row = await conn.fetchrow("SELECT * FROM aircraft WHERE id = $1", aircraft_id)
             return dict(row) if row else None
 
     async def get_aircraft_by_tail(self, tail_number: str) -> Optional[Dict[str, Any]]:
         """Get aircraft by tail number."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM aircraft WHERE tail_number = $1",
-                tail_number.upper()
-            )
+            row = await conn.fetchrow("SELECT * FROM aircraft WHERE tail_number = $1", tail_number.upper())
             return dict(row) if row else None
 
     async def create_aircraft(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new aircraft."""
-        data['tail_number'] = data['tail_number'].upper()
+        data["tail_number"] = data["tail_number"].upper()
 
         async with self.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 INSERT INTO aircraft (
                     tail_number, type_code, year, make, model, gear_type, engine_type,
                     aircraft_class, is_complex, is_taa, is_high_performance, is_simulator,
@@ -89,33 +72,34 @@ class PostgresDatabase:
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
                 RETURNING *
             """,
-                data.get('tail_number'),
-                data.get('type_code'),
-                data.get('year'),
-                data.get('make'),
-                data.get('model'),
-                data.get('gear_type'),
-                data.get('engine_type'),
-                data.get('aircraft_class'),
-                data.get('is_complex', False),
-                data.get('is_taa', False),
-                data.get('is_high_performance', False),
-                data.get('is_simulator', False),
-                data.get('category'),
-                data.get('hourly_rate_wet'),
-                data.get('hourly_rate_dry'),
-                data.get('notes'),
-                data.get('is_active', True)
+                data.get("tail_number"),
+                data.get("type_code"),
+                data.get("year"),
+                data.get("make"),
+                data.get("model"),
+                data.get("gear_type"),
+                data.get("engine_type"),
+                data.get("aircraft_class"),
+                data.get("is_complex", False),
+                data.get("is_taa", False),
+                data.get("is_high_performance", False),
+                data.get("is_simulator", False),
+                data.get("category"),
+                data.get("hourly_rate_wet"),
+                data.get("hourly_rate_dry"),
+                data.get("notes"),
+                data.get("is_active", True),
             )
             return dict(row)
 
     async def update_aircraft(self, aircraft_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update aircraft."""
-        if 'tail_number' in data:
-            data['tail_number'] = data['tail_number'].upper()
+        if "tail_number" in data:
+            data["tail_number"] = data["tail_number"].upper()
 
         async with self.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 UPDATE aircraft
                 SET
                     tail_number = COALESCE($2, tail_number),
@@ -140,33 +124,30 @@ class PostgresDatabase:
                 RETURNING *
             """,
                 aircraft_id,
-                data.get('tail_number'),
-                data.get('type_code'),
-                data.get('year'),
-                data.get('make'),
-                data.get('model'),
-                data.get('gear_type'),
-                data.get('engine_type'),
-                data.get('aircraft_class'),
-                data.get('is_complex'),
-                data.get('is_taa'),
-                data.get('is_high_performance'),
-                data.get('is_simulator'),
-                data.get('category'),
-                data.get('hourly_rate_wet'),
-                data.get('hourly_rate_dry'),
-                data.get('notes'),
-                data.get('is_active')
+                data.get("tail_number"),
+                data.get("type_code"),
+                data.get("year"),
+                data.get("make"),
+                data.get("model"),
+                data.get("gear_type"),
+                data.get("engine_type"),
+                data.get("aircraft_class"),
+                data.get("is_complex"),
+                data.get("is_taa"),
+                data.get("is_high_performance"),
+                data.get("is_simulator"),
+                data.get("category"),
+                data.get("hourly_rate_wet"),
+                data.get("hourly_rate_dry"),
+                data.get("notes"),
+                data.get("is_active"),
             )
             return dict(row) if row else None
 
     async def delete_aircraft(self, aircraft_id: int) -> bool:
         """Delete aircraft."""
         async with self.acquire() as conn:
-            result = await conn.execute(
-                "DELETE FROM aircraft WHERE id = $1",
-                aircraft_id
-            )
+            result = await conn.execute("DELETE FROM aircraft WHERE id = $1", aircraft_id)
             return result == "DELETE 1"
 
     # Expense CRUD Operations
@@ -178,7 +159,7 @@ class PostgresDatabase:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         limit: int = 100,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
         """Get list of expenses with filters."""
         async with self.acquire() as conn:
@@ -222,16 +203,14 @@ class PostgresDatabase:
     async def get_expense_by_id(self, expense_id: int) -> Optional[Dict[str, Any]]:
         """Get single expense by ID."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT * FROM expenses WHERE id = $1",
-                expense_id
-            )
+            row = await conn.fetchrow("SELECT * FROM expenses WHERE id = $1", expense_id)
             return dict(row) if row else None
 
     async def create_expense(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new expense."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 INSERT INTO expenses (
                     aircraft_id, category, subcategory, description, amount, date,
                     is_recurring, recurrence_interval, recurrence_end_date,
@@ -240,25 +219,26 @@ class PostgresDatabase:
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING *
             """,
-                data.get('aircraft_id'),
-                data['category'],
-                data.get('subcategory'),
-                data.get('description'),
-                data['amount'],
-                data['date'],
-                data.get('is_recurring', False),
-                data.get('recurrence_interval'),
-                data.get('recurrence_end_date'),
-                data.get('vendor'),
-                data.get('is_tax_deductible', False),
-                data.get('tax_category')
+                data.get("aircraft_id"),
+                data["category"],
+                data.get("subcategory"),
+                data.get("description"),
+                data["amount"],
+                data["date"],
+                data.get("is_recurring", False),
+                data.get("recurrence_interval"),
+                data.get("recurrence_end_date"),
+                data.get("vendor"),
+                data.get("is_tax_deductible", False),
+                data.get("tax_category"),
             )
             return dict(row)
 
     async def update_expense(self, expense_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update expense."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 UPDATE expenses
                 SET
                     aircraft_id = COALESCE($2, aircraft_id),
@@ -278,38 +258,33 @@ class PostgresDatabase:
                 RETURNING *
             """,
                 expense_id,
-                data.get('aircraft_id'),
-                data.get('category'),
-                data.get('subcategory'),
-                data.get('description'),
-                data.get('amount'),
-                data.get('date'),
-                data.get('is_recurring'),
-                data.get('recurrence_interval'),
-                data.get('recurrence_end_date'),
-                data.get('vendor'),
-                data.get('is_tax_deductible'),
-                data.get('tax_category')
+                data.get("aircraft_id"),
+                data.get("category"),
+                data.get("subcategory"),
+                data.get("description"),
+                data.get("amount"),
+                data.get("date"),
+                data.get("is_recurring"),
+                data.get("recurrence_interval"),
+                data.get("recurrence_end_date"),
+                data.get("vendor"),
+                data.get("is_tax_deductible"),
+                data.get("tax_category"),
             )
             return dict(row) if row else None
 
     async def delete_expense(self, expense_id: int) -> bool:
         """Delete expense."""
         async with self.acquire() as conn:
-            result = await conn.execute(
-                "DELETE FROM expenses WHERE id = $1",
-                expense_id
-            )
+            result = await conn.execute("DELETE FROM expenses WHERE id = $1", expense_id)
             return result == "DELETE 1"
 
     async def get_expense_summary(
-        self,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        group_by: str = "category"
+        self, start_date: Optional[date] = None, end_date: Optional[date] = None, group_by: str = "category"
     ) -> List[Dict[str, Any]]:
         """Get expense summary grouped by category or subcategory."""
         async with self.acquire() as conn:
+            # group_field is validated to be either 'category' or 'subcategory'
             group_field = "category" if group_by == "category" else "subcategory"
             query = f"""
                 SELECT
@@ -321,7 +296,7 @@ class PostgresDatabase:
                     MAX(amount) as max_amount
                 FROM expenses
                 WHERE 1=1
-            """
+            """  # nosec B608
             params = []
             param_count = 0
 
@@ -348,7 +323,7 @@ class PostgresDatabase:
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         limit: int = 1000,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[Dict[str, Any]]:
         """Get list of flights with filters."""
         async with self.acquire() as conn:
@@ -387,14 +362,14 @@ class PostgresDatabase:
             for row in rows:
                 flight = dict(row)
                 # Convert date to ISO string
-                if flight.get('date'):
-                    flight['date'] = flight['date'].isoformat()
+                if flight.get("date"):
+                    flight["date"] = flight["date"].isoformat()
                 # Convert time fields to string
-                for field in ['time_out', 'time_off', 'time_on', 'time_in']:
+                for field in ["time_out", "time_off", "time_on", "time_in"]:
                     if flight.get(field):
                         flight[field] = str(flight[field])
                 # Convert timestamps
-                for field in ['created_at', 'updated_at']:
+                for field in ["created_at", "updated_at"]:
                     if flight.get(field):
                         flight[field] = flight[field].isoformat()
                 result.append(flight)

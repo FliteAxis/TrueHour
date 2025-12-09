@@ -2,7 +2,8 @@
 
 ## Overview
 
-This project uses a centralized dependency management system via [`dependencies.json`](../dependencies.json) to avoid hardcoded version numbers scattered across multiple files.
+This project uses a centralized dependency management system via [`dependencies.json`](../dependencies.json) to avoid
+hardcoded version numbers scattered across multiple files.
 
 ## The Problem We Solved
 

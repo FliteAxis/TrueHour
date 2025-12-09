@@ -182,7 +182,8 @@ All notable changes to the TrueHour are documented here.
 - **Name Formatting**: Removed "Aircraft" suffix and replaced "AICSA" with "Piper"
 - **Certification Reset**: Fixed certification dropdown not resetting aircraft hours to 0 when "None" is selected
 - **FAA Lookup UX**: Replaced system alerts with inline status messages that auto-hide after 4 seconds
-- **FAA Lookup Availability**: Checkbox automatically detects if tail-lookup API is available; disables and greys out with informational message when FAA lookup is not enabled in deployment
+- **FAA Lookup Availability**: Checkbox automatically detects if tail-lookup API is available; disables and greys out with
+  informational message when FAA lookup is not enabled in deployment
 
 ## Documentation
 

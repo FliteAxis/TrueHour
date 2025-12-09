@@ -2,7 +2,8 @@
 
 **Personal aviation expense tracking and flight management application**
 
-TrueHour (formerly flight-budget) is a local-first application for tracking aviation expenses, managing flight logs, and analyzing your flying costs. Built for pilots who want complete control over their data without relying on cloud services.
+TrueHour (formerly flight-budget) is a local-first application for tracking aviation expenses, managing flight logs, and
+analyzing your flying costs. Built for pilots who want complete control over their data without relying on cloud services.
 
 ## 🚀 Quick Start
 

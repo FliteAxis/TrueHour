@@ -1,6 +1,8 @@
 """SQLite database operations for FAA aircraft lookup."""
+
 import sqlite3
 from typing import Optional
+
 from app.models import AircraftResponse, StatsResponse
 
 AIRCRAFT_TYPES = {
@@ -14,7 +16,7 @@ AIRCRAFT_TYPES = {
     "8": "Powered Parachute",
     "9": "Gyroplane",
     "H": "Hybrid Lift",
-    "O": "Other"
+    "O": "Other",
 }
 
 ENGINE_TYPES = {
@@ -29,7 +31,7 @@ ENGINE_TYPES = {
     "8": "4-Cycle",
     "9": "Unknown",
     "10": "Electric",
-    "11": "Rotary"
+    "11": "Rotary",
 }
 
 
@@ -43,7 +45,8 @@ class Database:
 
     def lookup(self, n_number: str) -> Optional[AircraftResponse]:
         """Lookup aircraft by N-number (without 'N' prefix)."""
-        cursor = self.conn.execute("""
+        cursor = self.conn.execute(
+            """
             SELECT
                 m.n_number,
                 m.mfr_mdl_code,
@@ -58,7 +61,9 @@ class Database:
             FROM master m
             LEFT JOIN acftref a ON m.mfr_mdl_code = a.code
             WHERE m.n_number = ?
-        """, (n_number,))
+        """,
+            (n_number,),
+        )
 
         row = cursor.fetchone()
         if not row:
@@ -73,7 +78,7 @@ class Database:
             engine_type=ENGINE_TYPES.get(str(row["type_engine"]), "Unknown"),
             num_engines=int(row["no_eng"]) if row["no_eng"] else None,
             num_seats=int(row["no_seats"]) if row["no_seats"] else None,
-            year_mfr=int(row["year_mfr"]) if row["year_mfr"] else None
+            year_mfr=int(row["year_mfr"]) if row["year_mfr"] else None,
         )
 
     def get_stats(self) -> StatsResponse:
@@ -81,9 +86,7 @@ class Database:
         cursor = self.conn.execute("SELECT COUNT(*) as cnt FROM master")
         count = cursor.fetchone()["cnt"]
 
-        cursor = self.conn.execute(
-            "SELECT value FROM metadata WHERE key = 'last_updated'"
-        )
+        cursor = self.conn.execute("SELECT value FROM metadata WHERE key = 'last_updated'")
         row = cursor.fetchone()
         last_updated = row["value"] if row else None
 

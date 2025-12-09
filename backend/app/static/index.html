@@ -161,14 +161,14 @@
     async function singleLookup() {
       const tail = tailInput.value.trim();
       if (!tail) return;
-      
+
       lookupBtn.disabled = true;
       lookupBtn.textContent = 'Looking up...';
-      
+
       try {
         const res = await fetch(`${API}/aircraft/${encodeURIComponent(tail)}`);
         const data = await res.json();
-        
+
         if (res.ok) {
           singleResults.innerHTML = renderCard(data);
         } else {
@@ -193,10 +193,10 @@
     async function bulkLookup() {
       const tails = bulkInput.value.split('\n').map(t => t.trim()).filter(Boolean);
       if (!tails.length) return;
-      
+
       bulkBtn.disabled = true;
       bulkBtn.textContent = `Looking up ${tails.length}...`;
-      
+
       try {
         const res = await fetch(`${API}/aircraft/bulk`, {
           method: 'POST',
@@ -204,7 +204,7 @@
           body: JSON.stringify({ tail_numbers: tails.slice(0, 50) })
         });
         const data = await res.json();
-        
+
         let html = '<div class="results">';
         for (const result of data.results) {
           if (result.error) {
@@ -232,9 +232,9 @@
           <div class="tail">${a.tail_number}</div>
           <div class="aircraft-info">${a.manufacturer} ${a.model}${a.series ? ' ' + a.series : ''}</div>
           <div class="meta">
-            ${a.aircraft_type} · ${a.engine_type} · 
-            ${a.num_engines || '?'} engine${a.num_engines !== 1 ? 's' : ''} · 
-            ${a.num_seats || '?'} seats · 
+            ${a.aircraft_type} · ${a.engine_type} ·
+            ${a.num_engines || '?'} engine${a.num_engines !== 1 ? 's' : ''} ·
+            ${a.num_seats || '?'} seats ·
             ${a.year_mfr || 'Year unknown'}
           </div>
         </div>`;

@@ -218,7 +218,8 @@ This document tracks planned features and improvements for the TrueHour. Items a
 ## Technical Debt & Behind-the-Scenes
 
 ### Items Not Listed Here
-This TODO focuses on customer-facing features. Technical items like infrastructure improvements, CI/CD enhancements, monitoring, and security updates are tracked separately and handled as part of ongoing maintenance.
+This TODO focuses on customer-facing features. Technical items like infrastructure improvements, CI/CD enhancements,
+monitoring, and security updates are tracked separately and handled as part of ongoing maintenance.
 
 ---
 
