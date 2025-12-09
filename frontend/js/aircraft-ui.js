@@ -1431,7 +1431,7 @@ async function lookupSingleAircraftFAA() {
     const modelField = document.getElementById('aircraftModel');
     const yearField = document.getElementById('aircraftYear');
     const typeField = document.getElementById('aircraftType');
-    const statusDiv = document.getElementById('faaLookupStatus');
+    const statusDiv = document.getElementById('singleFaaLookupStatus');
     const button = document.getElementById('singleLookupButton');
 
     const registration = registrationField.value.trim();

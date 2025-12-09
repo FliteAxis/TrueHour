@@ -1,7 +1,7 @@
 name: Close inactive issues
 
 permissions:
-  contents: write # only for delete-branch option
+  contents: write  # only for delete-branch option
   issues: write
   pull-requests: write
 

@@ -4,7 +4,8 @@ This guide explains how to migrate the wiki documentation from the repository to
 
 ## Overview
 
-The flight-budget wiki documentation is currently stored in the `/wiki` directory of the repository. GitHub Wiki is a separate Git repository that can be cloned, edited, and pushed independently.
+The flight-budget wiki documentation is currently stored in the `/wiki` directory of the repository. GitHub Wiki is a
+separate Git repository that can be cloned, edited, and pushed independently.
 
 ## Why Migrate to GitHub Wiki?
 

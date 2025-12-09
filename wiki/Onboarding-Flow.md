@@ -2,7 +2,8 @@
 
 ## Summary
 
-Implemented a comprehensive onboarding wizard system that guides new users through setting up their TrueHour. The wizard provides three pathways: manual entry, ForeFlight CSV import, and loading saved budgets.
+Implemented a comprehensive onboarding wizard system that guides new users through setting up their TrueHour. The wizard
+provides three pathways: manual entry, ForeFlight CSV import, and loading saved budgets.
 
 **Completed**: 2025-11-29
 

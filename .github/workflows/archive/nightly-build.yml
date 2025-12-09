@@ -80,17 +80,17 @@ jobs:
           name: "FAA Data - ${{ steps.info.outputs.date }}"
           body: |
             ## FAA Aircraft Registration Database
-            
+
             **Date:** ${{ steps.info.outputs.date }}
             **Records:** ${{ steps.info.outputs.records }}
             **DB Size:** ${{ steps.info.outputs.size }}
-            
+
             **Docker Image:**
             ```
             docker pull ryakel/tail-lookup:${{ steps.info.outputs.date }}
             docker pull ryakel/tail-lookup:latest
             ```
-            
+
             Source: [FAA Releasable Aircraft Database](https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download)
           files: data/aircraft.db
           prerelease: false

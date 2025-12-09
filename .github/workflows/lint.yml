@@ -158,17 +158,7 @@ jobs:
 
       - name: Run yamllint
         run: |
-          yamllint -d '{
-            extends: default,
-            rules: {
-              line-length: {max: 120},
-              comments: {min-spaces-from-content: 2},
-              document-start: disable,
-              truthy: {
-                allowed-values: ["true", "false", "on", "off"]
-              }
-            }
-          }' .github/workflows/ infrastructure/
+          yamllint .github/workflows/ infrastructure/
 
   # Markdown linting
   markdown-lint:
