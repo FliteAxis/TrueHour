@@ -8,7 +8,7 @@ on:
       - 'backend/Dockerfile'
       - 'infrastructure/Dockerfile.frontend'
   pull_request:
-    branches: [main, develop]
+    types: [opened, synchronize, reopened]
   release:
     types: [published]
   schedule:
@@ -41,9 +41,9 @@ jobs:
 
       - name: Generate CycloneDX SBOM
         run: |
-          cyclonedx-py requirements \
-            -i backend/requirements.txt \
-            -o backend-sbom-cyclonedx.json
+          cd backend && cyclonedx-py requirements \
+            -i requirements.txt \
+            -o ../backend-sbom-cyclonedx.json
 
       - name: Generate SPDX SBOM with syft
         uses: anchore/sbom-action@v0

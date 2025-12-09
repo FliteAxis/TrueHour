@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException, Query
@@ -27,8 +27,8 @@ class UserAircraftCreate(BaseModel):
     is_high_performance: bool = False
     is_simulator: bool = False
     category: Optional[str] = Field(None, description="owned, club, or rental")
-    hourly_rate_wet: Optional[condecimal(max_digits=10, decimal_places=2)] = None
-    hourly_rate_dry: Optional[condecimal(max_digits=10, decimal_places=2)] = None
+    hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: bool = True
 
@@ -49,8 +49,8 @@ class UserAircraftUpdate(BaseModel):
     is_high_performance: Optional[bool] = None
     is_simulator: Optional[bool] = None
     category: Optional[str] = None
-    hourly_rate_wet: Optional[condecimal(max_digits=10, decimal_places=2)] = None
-    hourly_rate_dry: Optional[condecimal(max_digits=10, decimal_places=2)] = None
+    hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
 

@@ -3,7 +3,7 @@
 from datetime import date as date_type
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Annotated, List, Optional
 
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException, Query
@@ -19,7 +19,7 @@ class ExpenseCreate(BaseModel):
     category: str = Field(..., description="Expense category (fuel, insurance, maintenance, etc.)")
     subcategory: Optional[str] = None
     description: Optional[str] = None
-    amount: condecimal(max_digits=10, decimal_places=2) = Field(..., gt=0)
+    amount: Annotated[Decimal, condecimal(max_digits=10, decimal_places=2), Field(gt=0)]
     date: date_type
     is_recurring: bool = False
     recurrence_interval: Optional[str] = Field(None, description="monthly, quarterly, or annual")
@@ -36,7 +36,7 @@ class ExpenseUpdate(BaseModel):
     category: Optional[str] = None
     subcategory: Optional[str] = None
     description: Optional[str] = None
-    amount: Optional[condecimal(max_digits=10, decimal_places=2)] = Field(None, gt=0)
+    amount: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2), Field(gt=0)]] = None
     date: Optional[date_type] = None
     is_recurring: Optional[bool] = None
     recurrence_interval: Optional[str] = None

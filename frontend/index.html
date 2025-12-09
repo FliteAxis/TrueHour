@@ -552,12 +552,12 @@
                 <div class="input-row" style="padding: 10px; background: #f8fafc; border-radius: 8px; margin-top: 10px;">
                     <label id="faaLookupLabel" style="display: flex; align-items: center; gap: 10px; cursor: not-allowed; font-size: 0.9em; opacity: 0.5;">
                         <input type="checkbox" id="enableFAALookup" onchange="toggleFAALookup()" style="width: auto;" disabled>
-                        <span>
-                            Enable FAA Aircraft Lookup (US aircraft only)
+                        <div>
+                            <div>Enable FAA Aircraft Lookup (US aircraft only)</div>
                             <div style="color: #64748b; font-size: 0.85em; margin-top: 2px;">
                                 Automatically looks up aircraft details from FAA registry for N-numbers. Data is cached for 24 hours.
                             </div>
-                        </span>
+                        </div>
                     </label>
                     <div id="faaLookupStatus" style="display: block; margin-top: 8px; padding: 8px; border-radius: 6px; font-size: 0.85em; background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1;">
                         ℹ <strong>Checking availability...</strong><br>Verifying if FAA lookup is enabled in this deployment.

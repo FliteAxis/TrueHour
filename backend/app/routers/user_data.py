@@ -16,7 +16,7 @@ class UserSettings(BaseModel):
     """User settings model."""
 
     auto_save_enabled: bool = True
-    auto_save_interval: int = Field(3000, ge=1000, le=10000)
+    auto_save_interval: int = Field(default=3000, ge=1000, le=10000)
     default_aircraft_id: Optional[int] = None
     timezone: str = "America/New_York"
     budget_state: Optional[Dict[str, Any]] = None  # Phase 3: certification, hours, settings

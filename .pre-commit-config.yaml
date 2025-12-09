@@ -26,6 +26,15 @@ repos:
         files: ^backend/
         args: ["--max-line-length=120", "--extend-ignore=E203,W503"]
 
+  # Python type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^backend/
+        args: ["--config-file=backend/mypy.ini", "--ignore-missing-imports", "--no-strict-optional"]
+        additional_dependencies: [pydantic, fastapi, asyncpg]
+
   # Python security checks
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.10
@@ -65,6 +74,14 @@ repos:
     hooks:
       - id: hadolint-docker
         args: ["--ignore", "DL3008", "--ignore", "DL3013"]
+
+  # HTML validation
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-nodejs
+    rev: v1.1.2
+    hooks:
+      - id: htmlhint
+        files: ^frontend/.*\.html$
+        args: ["--config", ".htmlhintrc"]
 
   # Secret scanning
   - repo: https://github.com/gitleaks/gitleaks
