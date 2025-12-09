@@ -42,8 +42,8 @@ jobs:
       - name: Generate CycloneDX SBOM
         run: |
           cyclonedx-py requirements \
-            --input backend/requirements.txt \
-            --output backend-sbom-cyclonedx.json \
+            -i backend/requirements.txt \
+            -o backend-sbom-cyclonedx.json \
             --format json
 
       - name: Generate SPDX SBOM with syft

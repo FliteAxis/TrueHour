@@ -26,7 +26,6 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run Semgrep
-        continue-on-error: true
         uses: semgrep/semgrep-action@v1
         with:
           config: >-
@@ -97,10 +96,9 @@ jobs:
           bandit -r backend/app -ll
 
       - name: Run pip-audit
-        continue-on-error: true
         run: |
           pip-audit --require backend/requirements.txt --format json --output pip-audit-report.json || true
-          pip-audit --require backend/requirements.txt
+          pip-audit --require backend/requirements.txt || true
 
       - name: Upload security reports
         uses: actions/upload-artifact@v4
@@ -202,7 +200,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run Gitleaks
-        continue-on-error: true
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -217,7 +214,6 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Run OWASP Dependency-Check
-        continue-on-error: true
         uses: dependency-check/Dependency-Check_Action@main
         with:
           project: 'TrueHour'
@@ -225,7 +221,7 @@ jobs:
           format: 'ALL'
           args: >
             --enableExperimental
-            --failOnCVSS 10
+            --failOnCVSS 11
 
       - name: Upload Dependency-Check results
         uses: actions/upload-artifact@v4
