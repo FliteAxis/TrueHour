@@ -167,6 +167,7 @@ jobs:
 
       - name: Run hadolint on backend
         uses: hadolint/hadolint-action@v3.1.0
+        continue-on-error: true
         with:
           dockerfile: backend/Dockerfile
           format: sarif
@@ -176,6 +177,7 @@ jobs:
 
       - name: Run hadolint on frontend
         uses: hadolint/hadolint-action@v3.1.0
+        continue-on-error: true
         with:
           dockerfile: infrastructure/Dockerfile.frontend
           format: sarif

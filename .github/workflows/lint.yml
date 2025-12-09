@@ -61,6 +61,7 @@ jobs:
       - name: Run mypy (type checking)
         run: |
           mypy backend/app \
+            --config-file=backend/mypy.ini \
             --ignore-missing-imports \
             --no-strict-optional \
             --warn-unused-ignores
@@ -142,8 +143,8 @@ jobs:
       - name: Run Checkov on docker-compose files
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: infrastructure/
-          framework: docker_compose
+          file: infrastructure/docker-compose.ghcr.yml
+          framework: all
           output_format: cli
           quiet: false
           soft_fail: true

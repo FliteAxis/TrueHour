@@ -48,7 +48,7 @@ jobs:
       - name: Generate SPDX SBOM with syft
         uses: anchore/sbom-action@v0
         with:
-          path: backend/requirements.txt
+          path: backend/
           format: spdx-json
           output-file: backend-sbom-spdx.json
 
