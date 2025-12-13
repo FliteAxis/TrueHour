@@ -42,6 +42,16 @@
   },
   "packageRules": [
     {
+      "description": "Pin Python to 3.12.x - asyncpg not compatible with 3.13+",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "python"
+      ],
+      "allowedVersions": "3.12"
+    },
+    {
       "description": "Group Docker base images",
       "matchDatasources": [
         "docker"
