@@ -519,6 +519,246 @@ class PostgresDatabase:
             result = await conn.execute("DELETE FROM budget_entries WHERE id = $1", entry_id)
             return result == "DELETE 1"
 
+    # Budget Card Operations
+
+    async def get_budget_cards(
+        self, status: Optional[str] = None, category: Optional[str] = None, month: Optional[date] = None
+    ) -> List[Dict[str, Any]]:
+        """Get list of budget cards with optional filtering."""
+        async with self.acquire() as conn:
+            query = """
+                SELECT
+                    bc.*,
+                    COALESCE(SUM(ebl.amount), 0) as actual_amount,
+                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount
+                FROM budget_cards bc
+                LEFT JOIN expense_budget_links ebl ON bc.id = ebl.budget_card_id
+                WHERE 1=1
+            """
+            params = []
+            param_count = 1
+
+            if status:
+                query += f" AND bc.status = ${param_count}"
+                params.append(status)
+                param_count += 1
+
+            if category:
+                query += f" AND bc.category = ${param_count}"
+                params.append(category)
+                param_count += 1
+
+            if month:
+                query += f" AND DATE_TRUNC('month', bc.when_date) = DATE_TRUNC('month', ${param_count}::date)"
+                params.append(month)
+                param_count += 1
+
+            query += " GROUP BY bc.id ORDER BY bc.when_date DESC, bc.id"
+
+            rows = await conn.fetch(query, *params)
+            return [dict(row) for row in rows]
+
+    async def get_budget_card(self, card_id: int) -> Optional[Dict[str, Any]]:
+        """Get single budget card by ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                SELECT
+                    bc.*,
+                    COALESCE(SUM(ebl.amount), 0) as actual_amount,
+                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount
+                FROM budget_cards bc
+                LEFT JOIN expense_budget_links ebl ON bc.id = ebl.budget_card_id
+                WHERE bc.id = $1
+                GROUP BY bc.id
+            """,
+                card_id,
+            )
+            return dict(row) if row else None
+
+    async def create_budget_card(self, data: Dict[str, Any]) -> int:
+        """Create new budget card and return its ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO budget_cards (
+                    name, category, frequency, when_date, budgeted_amount,
+                    notes, associated_hours, status
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING id
+            """,
+                data["name"],
+                data["category"],
+                data["frequency"],
+                data["when_date"],
+                data["budgeted_amount"],
+                data.get("notes"),
+                data.get("associated_hours"),
+                data.get("status", "active"),
+            )
+            return row["id"]
+
+    async def update_budget_card(self, card_id: int, data: Dict[str, Any]) -> bool:
+        """Update budget card."""
+        if not data:
+            return False
+
+        async with self.acquire() as conn:
+            # Build dynamic UPDATE query
+            set_clauses = []
+            params = []
+            param_count = 1
+
+            for field in [
+                "name",
+                "category",
+                "frequency",
+                "when_date",
+                "budgeted_amount",
+                "notes",
+                "associated_hours",
+                "status",
+            ]:
+                if field in data:
+                    set_clauses.append(f"{field} = ${param_count}")
+                    params.append(data[field])
+                    param_count += 1
+
+            if not set_clauses:
+                return False
+
+            set_clauses.append("updated_at = NOW()")
+            params.append(card_id)
+
+            query = f"""
+                UPDATE budget_cards
+                SET {", ".join(set_clauses)}
+                WHERE id = ${param_count}
+            """
+
+            result = await conn.execute(query, *params)
+            return result == "UPDATE 1"
+
+    async def delete_budget_card(self, card_id: int) -> bool:
+        """Delete budget card."""
+        async with self.acquire() as conn:
+            result = await conn.execute("DELETE FROM budget_cards WHERE id = $1", card_id)
+            return result == "DELETE 1"
+
+    async def get_monthly_budget_summary(self, year: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get monthly budget summary."""
+        async with self.acquire() as conn:
+            query = """
+                SELECT
+                    DATE_TRUNC('month', bc.when_date)::date as month,
+                    SUM(bc.budgeted_amount) as total_budgeted,
+                    SUM(COALESCE(ebl_sum.actual, 0)) as total_actual,
+                    SUM(bc.budgeted_amount - COALESCE(ebl_sum.actual, 0)) as total_remaining
+                FROM budget_cards bc
+                LEFT JOIN (
+                    SELECT budget_card_id, SUM(amount) as actual
+                    FROM expense_budget_links
+                    GROUP BY budget_card_id
+                ) ebl_sum ON bc.id = ebl_sum.budget_card_id
+                WHERE bc.status = 'active'
+            """
+            params = []
+            if year:
+                query += " AND EXTRACT(YEAR FROM bc.when_date) = $1"
+                params.append(year)
+
+            query += " GROUP BY DATE_TRUNC('month', bc.when_date) ORDER BY month"
+
+            rows = await conn.fetch(query, *params)
+            return [dict(row) for row in rows]
+
+    async def get_category_budget_summary(self, year: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get budget summary by category."""
+        async with self.acquire() as conn:
+            query = """
+                SELECT
+                    bc.category,
+                    SUM(bc.budgeted_amount) as total_budgeted,
+                    SUM(COALESCE(ebl_sum.actual, 0)) as total_actual,
+                    SUM(bc.budgeted_amount - COALESCE(ebl_sum.actual, 0)) as total_remaining,
+                    COUNT(bc.id) as card_count
+                FROM budget_cards bc
+                LEFT JOIN (
+                    SELECT budget_card_id, SUM(amount) as actual
+                    FROM expense_budget_links
+                    GROUP BY budget_card_id
+                ) ebl_sum ON bc.id = ebl_sum.budget_card_id
+                WHERE bc.status = 'active'
+            """
+            params = []
+            if year:
+                query += " AND EXTRACT(YEAR FROM bc.when_date) = $1"
+                params.append(year)
+
+            query += " GROUP BY bc.category ORDER BY total_budgeted DESC"
+
+            rows = await conn.fetch(query, *params)
+            return [dict(row) for row in rows]
+
+    async def get_annual_budget_summary(self, year: int) -> Dict[str, Any]:
+        """Get complete annual budget summary."""
+        monthly = await self.get_monthly_budget_summary(year)
+        by_category = await self.get_category_budget_summary(year)
+
+        total_budgeted = sum(m["total_budgeted"] for m in monthly)
+        total_actual = sum(m["total_actual"] for m in monthly)
+
+        # Get cards for each month
+        for month_summary in monthly:
+            cards = await self.get_budget_cards(month=month_summary["month"])
+            month_summary["cards"] = cards
+
+        return {
+            "year": year,
+            "total_budgeted": total_budgeted,
+            "total_actual": total_actual,
+            "total_remaining": total_budgeted - total_actual,
+            "by_month": monthly,
+            "by_category": by_category,
+        }
+
+    # Expense-Budget Card Links
+
+    async def create_expense_budget_link(self, data: Dict[str, Any]) -> int:
+        """Create expense-budget card link and return its ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO expense_budget_links (expense_id, budget_card_id, amount)
+                VALUES ($1, $2, $3)
+                RETURNING id
+            """,
+                data["expense_id"],
+                data["budget_card_id"],
+                data["amount"],
+            )
+            return row["id"]
+
+    async def get_expense_budget_link(self, link_id: int) -> Optional[Dict[str, Any]]:
+        """Get expense-budget link by ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM expense_budget_links WHERE id = $1",
+                link_id,
+            )
+            return dict(row) if row else None
+
+    async def delete_expense_budget_link(self, expense_id: int, budget_card_id: int) -> bool:
+        """Delete expense-budget card link."""
+        async with self.acquire() as conn:
+            result = await conn.execute(
+                "DELETE FROM expense_budget_links WHERE expense_id = $1 AND budget_card_id = $2",
+                expense_id,
+                budget_card_id,
+            )
+            return result == "DELETE 1"
+
 
 # Global database instance
 postgres_db = PostgresDatabase()

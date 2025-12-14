@@ -187,3 +187,126 @@ class BudgetStatusResponse(BaseModel):
     is_over_budget: bool
 
     model_config = {"from_attributes": True}
+
+
+# Budget Card Models (new outcome-based system)
+
+
+class BudgetCardBase(BaseModel):
+    """Base budget card fields."""
+
+    name: str = Field(..., description="Budget item name (e.g., 'Blue Sky Flight Club', 'CIAS IFR Training')")
+    category: str = Field(..., description="Category: Administrative, Training, Family, etc.")
+    frequency: str = Field(..., description="Frequency: once, monthly, annual")
+    when_date: date = Field(..., description="The date this budget applies to (use first of month for monthly)")
+    budgeted_amount: Decimal = Field(..., gt=0, description="Budgeted amount")
+    notes: Optional[str] = Field(None, description="Additional notes (flight details, hours breakdown, etc.)")
+    associated_hours: Optional[Decimal] = Field(None, description="Training hours associated with this budget item")
+    status: str = Field(default="active", description="Status: active, completed, cancelled")
+
+
+class BudgetCardCreate(BudgetCardBase):
+    """Create budget card request."""
+
+    pass
+
+
+class BudgetCardUpdate(BaseModel):
+    """Update budget card request (all fields optional)."""
+
+    name: Optional[str] = None
+    category: Optional[str] = None
+    frequency: Optional[str] = None
+    when_date: Optional[date] = None
+    budgeted_amount: Optional[Decimal] = Field(None, gt=0)
+    notes: Optional[str] = None
+    associated_hours: Optional[Decimal] = None
+    status: Optional[str] = None
+
+
+class BudgetCardResponse(BudgetCardBase):
+    """Budget card response."""
+
+    id: int
+    actual_amount: Decimal = Field(description="Auto-calculated sum of linked expenses")
+    remaining_amount: Decimal = Field(description="Calculated: budgeted_amount - actual_amount")
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
+            "example": {
+                "id": 1,
+                "name": "CIAS IFR Training",
+                "category": "Training",
+                "frequency": "monthly",
+                "when_date": "2026-01-01",
+                "budgeted_amount": 2760.00,
+                "actual_amount": 245.00,
+                "remaining_amount": 2515.00,
+                "notes": "2x | 2 hrs / week + Ground * 4 weeks",
+                "associated_hours": 12.0,
+                "status": "active",
+                "created_at": "2025-12-14T00:00:00Z",
+                "updated_at": "2025-12-14T00:00:00Z",
+            }
+        },
+    }
+
+
+class ExpenseBudgetLinkBase(BaseModel):
+    """Base expense-budget link fields."""
+
+    expense_id: int = Field(..., description="ID of the expense")
+    budget_card_id: int = Field(..., description="ID of the budget card")
+    amount: Decimal = Field(..., gt=0, description="Amount to allocate to this budget card")
+
+
+class ExpenseBudgetLinkCreate(ExpenseBudgetLinkBase):
+    """Create expense-budget link request."""
+
+    pass
+
+
+class ExpenseBudgetLinkResponse(ExpenseBudgetLinkBase):
+    """Expense-budget link response."""
+
+    id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# Budget Card Aggregations
+
+
+class MonthlyBudgetSummary(BaseModel):
+    """Monthly budget summary."""
+
+    month: date = Field(description="First day of month")
+    total_budgeted: Decimal
+    total_actual: Decimal
+    total_remaining: Decimal
+    cards: List[BudgetCardResponse]
+
+
+class CategoryBudgetSummary(BaseModel):
+    """Budget summary by category."""
+
+    category: str
+    total_budgeted: Decimal
+    total_actual: Decimal
+    total_remaining: Decimal
+    card_count: int
+
+
+class AnnualBudgetSummary(BaseModel):
+    """Annual budget summary."""
+
+    year: int
+    total_budgeted: Decimal
+    total_actual: Decimal
+    total_remaining: Decimal
+    by_month: List[MonthlyBudgetSummary]
+    by_category: List[CategoryBudgetSummary]
