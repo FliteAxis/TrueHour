@@ -839,6 +839,7 @@ async function saveImportHistory(flightCount, hours, fileName, actualFlights, si
                 recent_instrument: hours.recentInstrument,
                 complex: hours.complexTime,
                 ir_250nm_xc: hours.ir250nmXC,
+                night: hours.nightTime,
                 actual_flights: actualFlights || 0,
                 simulator_flights: simFlights || 0
             }
@@ -854,6 +855,26 @@ async function saveImportHistory(flightCount, hours, fileName, actualFlights, si
             const result = await response.json();
             console.log('[Import History] ✓ Saved import record:', result.id);
             showToast(`Import history saved: ${flightCount} flights, ${hours.totalTime.toFixed(1)} hours`, 'success');
+
+            // Update training widget with new import data
+            if (typeof TrainingWidget !== 'undefined' && TrainingWidget.onImportComplete) {
+                const hoursData = {
+                    total: hours.totalTime,
+                    pic: hours.picTime,
+                    crossCountry: hours.xcTime,
+                    instrumentTotal: hours.instrumentTotal,
+                    night: hours.nightTime || 0,
+                    simTime: hours.simTime,
+                    actualInstrument: hours.actualInstrument,
+                    simulatedInstrument: hours.simulatedInstrument
+                };
+                const importInfo = {
+                    fileName: fileName,
+                    flightCount: flightCount,
+                    importDate: result.import_date
+                };
+                TrainingWidget.onImportComplete(hoursData, importInfo);
+            }
         } else {
             const errorText = await response.text();
             console.error('[Import History] ✗ Failed:', response.status, errorText);
@@ -891,6 +912,7 @@ function processLogbook(data, actualFlights, simFlights) {
         var simulated = row.SimulatedInstrument || 0;
         var simulator = row.SimulatedFlight || 0;
         var complex = row['[Hours]Complex'] || 0;
+        var night = row.Night || 0;
         var aircraftId = row.AircraftID || '';
 
         currentHours.totalTime += totalTime;
@@ -898,6 +920,7 @@ function processLogbook(data, actualFlights, simFlights) {
         currentHours.xcTime += xc;
         currentHours.dualReceived += dual;
         currentHours.complexTime += complex;
+        currentHours.nightTime += night;
 
         var isSimulator = false;
         var isBATD = false;

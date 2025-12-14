@@ -2263,3 +2263,269 @@ select.input-field {
 .toast-close:hover {
     color: #1e293b;
 }
+/* Training Progress Widget */
+.training-progress-widget {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin: 0 0 30px 0;
+    overflow: hidden;
+}
+
+.widget-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 30px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    color: white;
+}
+
+.widget-title-section {
+    flex: 1;
+}
+
+.widget-title {
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: white;
+}
+
+.widget-subtitle {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.9);
+    margin: 0;
+}
+
+.widget-content {
+    padding: 30px;
+}
+
+.hours-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.hours-card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.hours-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+.hours-card-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+}
+
+.hours-card-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.hours-card-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.hours-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.hours-card-unit {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+
+.cert-progress-section {
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.section-heading {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 20px;
+}
+
+.cert-progress-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cert-progress-item {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.cert-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.cert-progress-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.cert-progress-values {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.cert-progress-bar-container {
+    background: #e2e8f0;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.cert-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6 0%, #1e40af 100%);
+    border-radius: 4px;
+    transition: width 0.6s ease;
+}
+
+.cert-progress-bar-fill.complete {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.widget-import-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #eff6ff;
+    border-radius: 8px;
+    border-left: 4px solid #3b82f6;
+    margin-top: 20px;
+}
+
+.import-info-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.import-info-content {
+    flex: 1;
+}
+
+.import-info-text {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.6;
+}
+
+.import-info-text strong {
+    color: #1e293b;
+}
+
+/* Widget Import Modal */
+.widget-import-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.widget-import-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.widget-import-modal-header {
+    padding: 24px 30px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.widget-import-modal-header h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 8px;
+}
+
+.widget-import-modal-header p {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
+}
+
+.widget-import-modal-body {
+    padding: 30px;
+}
+
+.widget-import-modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hours-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .widget-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .widget-header .btn-primary {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .hours-summary-grid {
+        grid-template-columns: 1fr;
+    }
+}

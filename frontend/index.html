@@ -498,6 +498,104 @@
             <input type="file" id="budgetFileInput" class="hidden-file-input" accept=".json">
         </div>
 
+        <!-- Training Progress Widget -->
+        <div class="training-progress-widget" id="trainingProgressWidget" style="display: none;">
+            <div class="widget-header">
+                <div class="widget-title-section">
+                    <h2 class="widget-title">Training Progress</h2>
+                    <p class="widget-subtitle">Track your hours and certification requirements</p>
+                </div>
+                <button class="btn-primary" onclick="TrainingWidget.showImportModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Import Logbook
+                </button>
+            </div>
+
+            <div class="widget-content">
+                <!-- Hours Summary Cards -->
+                <div class="hours-summary-grid">
+                    <div class="hours-card">
+                        <div class="hours-card-icon">✈️</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">Total Time</div>
+                            <div class="hours-card-value" id="widget-total-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+
+                    <div class="hours-card">
+                        <div class="hours-card-icon">👨‍✈️</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">PIC</div>
+                            <div class="hours-card-value" id="widget-pic-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+
+                    <div class="hours-card">
+                        <div class="hours-card-icon">🗺️</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">Cross Country</div>
+                            <div class="hours-card-value" id="widget-xc-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+
+                    <div class="hours-card">
+                        <div class="hours-card-icon">☁️</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">Instrument</div>
+                            <div class="hours-card-value" id="widget-instrument-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+
+                    <div class="hours-card">
+                        <div class="hours-card-icon">🌙</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">Night</div>
+                            <div class="hours-card-value" id="widget-night-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+
+                    <div class="hours-card">
+                        <div class="hours-card-icon">🎮</div>
+                        <div class="hours-card-content">
+                            <div class="hours-card-label">Simulator</div>
+                            <div class="hours-card-value" id="widget-sim-hours">0.0</div>
+                            <div class="hours-card-unit">hours</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Certification Progress -->
+                <div class="cert-progress-section" id="widget-cert-progress" style="display: none;">
+                    <h3 class="section-heading">Certification Progress</h3>
+                    <div class="cert-progress-grid" id="cert-progress-container">
+                        <!-- Progress bars will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Import Info -->
+                <div class="widget-import-info" id="widget-import-info" style="display: none;">
+                    <div class="import-info-icon">ℹ️</div>
+                    <div class="import-info-content">
+                        <div class="import-info-text">
+                            <strong>Last Import:</strong> <span id="widget-import-date">Never</span>
+                        </div>
+                        <div class="import-info-text" id="widget-import-summary">
+                            <span id="widget-import-details">No imports yet</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="grid-layout">
             <div class="panel">
                 <h2>1. Plan Your Training</h2>
@@ -1251,6 +1349,7 @@
     <script src="js/aircraft-ui.js"></script>
     <script src="js/user-data.js"></script>
     <script src="js/budget.js"></script>
+    <script src="js/training-widget.js"></script>
     <script src="js/app.js"></script>
     <script src="js/onboarding.js"></script>
 </body>
