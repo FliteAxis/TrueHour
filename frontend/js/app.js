@@ -140,7 +140,7 @@ function loadBudget(event) {
                     document.getElementById('summarySimulatedInstrument').textContent = currentHours.simulatedInstrument.toFixed(1);
 
                     var simTimeElement = document.getElementById('summarySimTime');
-                    simTimeElement.textContent = currentHours.simInstrumentTime.toFixed(1);
+                    simTimeElement.textContent = currentHours.simTime.toFixed(1);
 
                     var container = document.getElementById('summarySimTimeContainer');
                     if (container && !container.querySelector('.sim-max-text')) {
@@ -322,6 +322,11 @@ function init() {
 
     document.getElementById('aircraftList').addEventListener('input', calculate);
     calculate();
+
+    // Initialize Budget Manager
+    if (typeof BudgetManager !== 'undefined') {
+        BudgetManager.init();
+    }
 }
 
 function exportToPDF() {
@@ -354,8 +359,6 @@ function exportToPDF() {
 }
 
 function addAircraft(defaults) {
-    console.log('[addAircraft] Called with defaults:', defaults);
-
     defaults = defaults || null;
     var newItem = document.createElement('div');
     newItem.className = 'aircraft-item';
@@ -367,7 +370,6 @@ function addAircraft(defaults) {
     var registration = '';
 
     if (defaults && defaults.id && typeof AircraftAPI !== 'undefined') {
-        console.log('[addAircraft] Looking up aircraft in AircraftAPI with id:', defaults.id);
         // Try to find this aircraft in AircraftAPI by matching registration or type
         var allAircraft = AircraftAPI.getAllAircraft();
         var matchedAircraft = allAircraft.find(function(ac) {
@@ -375,25 +377,19 @@ function addAircraft(defaults) {
         });
 
         if (matchedAircraft) {
-            console.log('[addAircraft] Found match in AircraftAPI:', matchedAircraft);
             // Extract make and model from type (format: "Make Model")
             var typeParts = (matchedAircraft.type || '').split(' ');
             make = typeParts[0] || '';
             model = typeParts.slice(1).join(' ') || '';
             registration = matchedAircraft.registration || '';
             aircraftId = matchedAircraft.id;
-        } else {
-            console.log('[addAircraft] No match found in AircraftAPI');
         }
     } else if (defaults && defaults.make && defaults.model) {
-        console.log('[addAircraft] Using direct make/model/registration from defaults');
         // Direct make/model/registration provided
         make = defaults.make;
         model = defaults.model;
         registration = defaults.registration || '';
     }
-
-    console.log('[addAircraft] Final values - make:', make, 'model:', model, 'registration:', registration);
 
     var rateType = defaults ? defaults.type : 'wet';
     var baseRate = defaults ? defaults.rate : 120;
@@ -459,12 +455,7 @@ function addAircraft(defaults) {
     newItem.innerHTML = html;
 
     var aircraftListElement = document.getElementById('aircraftList');
-    console.log('[addAircraft] About to append to aircraftList. Current children count:', aircraftListElement.children.length);
-
     aircraftListElement.appendChild(newItem);
-
-    console.log('[addAircraft] Appended aircraft item. New children count:', aircraftListElement.children.length);
-    console.log('[addAircraft] aircraftList display style:', aircraftListElement.style.display);
 
     if (showRemove) {
         newItem.querySelector('.aircraft-remove').addEventListener('click', function() {
@@ -620,6 +611,27 @@ function parseLogbook(event) {
     // Use shared parser
     parseForeFlight(file, {
         onSuccess: function(validFlights, aircraftTableData) {
+            // Populate global aircraftData from the parsed aircraft table
+            if (aircraftTableData && aircraftTableData.length > 0) {
+                console.log('[parseLogbook] Populating aircraftData from', aircraftTableData.length, 'aircraft');
+                for (var i = 0; i < aircraftTableData.length; i++) {
+                    var aircraft = aircraftTableData[i];
+                    if (aircraft.AircraftID) {
+                        aircraftData[aircraft.AircraftID] = {
+                            equipType: aircraft['equipType (FAA)'] || '',
+                            aircraftClass: aircraft['aircraftClass (FAA)'] || '',
+                            make: aircraft.Make || '',
+                            model: aircraft.Model || '',
+                            year: aircraft.Year || ''
+                        };
+                        console.log('[parseLogbook] Added aircraft:', aircraft.AircraftID, 'equipType:', aircraft['equipType (FAA)']);
+                    }
+                }
+                console.log('[parseLogbook] aircraftData populated with', Object.keys(aircraftData).length, 'aircraft');
+            } else {
+                console.warn('[parseLogbook] No aircraftTableData available');
+            }
+
             // Count actual vs simulator flights
             var actualFlights = 0;
             var simFlights = 0;
@@ -641,15 +653,73 @@ function parseLogbook(event) {
                 }
             }
 
-            processLogbook(validFlights);
+            // Get previous import data BEFORE processing new logbook
+            fetch('/api/import-history/latest')
+                .then(response => response.ok ? response.json() : null)
+                .then(previousImport => {
+                    // Process the new logbook (this will save new import history with flight counts)
+                    processLogbook(validFlights, actualFlights, simFlights);
 
-            // Create detailed message
-            var message = 'Processed ' + actualFlights + ' flight' + (actualFlights !== 1 ? 's' : '');
-            if (simFlights > 0) {
-                message += ' and ' + simFlights + ' simulator session' + (simFlights !== 1 ? 's' : '');
-            }
-            message += '.<br>Select a certification to auto-fill remaining hours needed.';
-            updateUploadCard('success', 'Logbook Imported: ' + file.name, message);
+                    // Build message showing delta from previous import
+                    var message = '';
+
+                    if (previousImport) {
+                        // Calculate deltas
+                        var flightDelta = validFlights.length - previousImport.flights_imported;
+                        var hourDelta = currentHours.totalTime - previousImport.hours_imported.total;
+
+                        if (flightDelta > 0) {
+                            // Use stored counts from previous import
+                            var prevActualFlights = previousImport.hours_imported.actual_flights || 0;
+                            var prevSimFlights = previousImport.hours_imported.simulator_flights || 0;
+
+                            var actualDelta = actualFlights - prevActualFlights;
+                            var simDelta = simFlights - prevSimFlights;
+
+                            if (actualDelta > 0 && simDelta > 0) {
+                                message = 'Added ' + actualDelta + ' flight' + (actualDelta !== 1 ? 's' : '') +
+                                         ' and ' + simDelta + ' simulator session' + (simDelta !== 1 ? 's' : '');
+                            } else if (actualDelta > 0) {
+                                message = 'Added ' + actualDelta + ' flight' + (actualDelta !== 1 ? 's' : '');
+                            } else if (simDelta > 0) {
+                                message = 'Added ' + simDelta + ' simulator session' + (simDelta !== 1 ? 's' : '');
+                            } else {
+                                message = 'Added ' + flightDelta + ' new flight' + (flightDelta !== 1 ? 's' : '');
+                            }
+                            message += ' (+' + hourDelta.toFixed(1) + ' hours)';
+                        } else if (flightDelta < 0) {
+                            message = 'Removed ' + Math.abs(flightDelta) + ' flight' + (Math.abs(flightDelta) !== 1 ? 's' : '') +
+                                     ' (' + hourDelta.toFixed(1) + ' hours)';
+                        } else {
+                            message = 'Re-imported ' + actualFlights + ' flight' + (actualFlights !== 1 ? 's' : '');
+                            if (simFlights > 0) {
+                                message += ' and ' + simFlights + ' simulator session' + (simFlights !== 1 ? 's' : '');
+                            }
+                            message += ' (no changes)';
+                        }
+                        message += '.<br>Total: ' + currentHours.totalTime.toFixed(1) + ' hours.';
+                    } else {
+                        // First import - show totals
+                        message = 'Processed ' + actualFlights + ' flight' + (actualFlights !== 1 ? 's' : '');
+                        if (simFlights > 0) {
+                            message += ' and ' + simFlights + ' simulator session' + (simFlights !== 1 ? 's' : '');
+                        }
+                        message += '.<br>Total: ' + currentHours.totalTime.toFixed(1) + ' hours.';
+                        message += '<br>Select a certification to auto-fill remaining hours needed.';
+                    }
+
+                    updateUploadCard('success', 'Logbook Imported: ' + file.name, message);
+                })
+                .catch(error => {
+                    // Fallback: process without showing delta
+                    processLogbook(validFlights);
+                    var message = 'Processed ' + actualFlights + ' flight' + (actualFlights !== 1 ? 's' : '');
+                    if (simFlights > 0) {
+                        message += ' and ' + simFlights + ' simulator session' + (simFlights !== 1 ? 's' : '');
+                    }
+                    message += '.<br>Select a certification to auto-fill remaining hours needed.';
+                    updateUploadCard('success', 'Logbook Imported: ' + file.name, message);
+                });
 
             // Prompt to import aircraft from CSV
             if (typeof showCSVImportModal === 'function') {
@@ -702,7 +772,103 @@ function confirmAircraftImport() {
     }
 }
 
-function processLogbook(data) {
+/**
+ * Show toast notification
+ */
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toastContainer');
+    if (!container) {
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        return;
+    }
+
+    const icons = {
+        success: '✓',
+        error: '✗',
+        warning: '⚠',
+        info: 'ℹ'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || icons.info}</div>
+        <div class="toast-message">${message}</div>
+        <button class="toast-close">×</button>
+    `;
+
+    container.appendChild(toast);
+
+    const closeBtn = toast.querySelector('.toast-close');
+    closeBtn.addEventListener('click', () => {
+        toast.style.animation = 'slideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    });
+
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.animation = 'slideIn 0.3s ease-out reverse';
+            setTimeout(() => toast.remove(), 300);
+        }
+    }, 4000);
+}
+
+/**
+ * Save import history to database for reconciliation tracking
+ */
+async function saveImportHistory(flightCount, hours, fileName, actualFlights, simFlights) {
+    console.log('[Import History] Saving import with', flightCount, 'flights');
+    try {
+        const payload = {
+            import_type: 'foreflight_csv',
+            file_name: fileName,
+            flights_imported: flightCount,
+            hours_imported: {
+                total: hours.totalTime,
+                pic: hours.picTime,
+                pic_xc: hours.picXC,
+                cross_country: hours.xcTime,
+                dual_received: hours.dualReceived,
+                instrument_total: hours.instrumentTotal,
+                actual_instrument: hours.actualInstrument,
+                simulated_instrument: hours.simulatedInstrument,
+                simulator_time: hours.simTime,
+                simulator_instrument: hours.simInstrumentTime,
+                batd_time: hours.batdTime,
+                instrument_dual_airplane: hours.instrumentDualAirplane,
+                recent_instrument: hours.recentInstrument,
+                complex: hours.complexTime,
+                ir_250nm_xc: hours.ir250nmXC,
+                actual_flights: actualFlights || 0,
+                simulator_flights: simFlights || 0
+            }
+        };
+
+        const response = await fetch('/api/import-history/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('[Import History] ✓ Saved import record:', result.id);
+            showToast(`Import history saved: ${flightCount} flights, ${hours.totalTime.toFixed(1)} hours`, 'success');
+        } else {
+            const errorText = await response.text();
+            console.error('[Import History] ✗ Failed:', response.status, errorText);
+            showToast('Failed to save import history', 'error');
+        }
+    } catch (error) {
+        console.error('[Import History] ✗ Exception:', error);
+        showToast('Error saving import history', 'error');
+    }
+}
+
+function processLogbook(data, actualFlights, simFlights) {
+    actualFlights = actualFlights || 0;
+    simFlights = simFlights || 0;
+
     currentHours = {
         totalTime: 0, picTime: 0, picXC: 0, xcTime: 0, dualReceived: 0,
         instrumentTotal: 0, actualInstrument: 0, simulatedInstrument: 0,
@@ -742,11 +908,22 @@ function processLogbook(data) {
         }
 
         if (isSimulator) {
-            currentHours.simTime += simulator;
+            // For simulators, use TotalTime if available, otherwise SimulatedFlight
+            var simTimeForRow = totalTime > 0 ? totalTime : simulator;
+            console.log('[processLogbook] Simulator flight:', {
+                aircraftId: aircraftId,
+                equipType: aircraftData[aircraftId] ? aircraftData[aircraftId].equipType : 'unknown',
+                totalTime: totalTime,
+                simulator: simulator,
+                simulated: simulated,
+                simTimeForRow: simTimeForRow,
+                currentSimTime: currentHours.simTime
+            });
+            currentHours.simTime += simTimeForRow;
             currentHours.simInstrumentTime += simulated;
 
-            if (isBATD && simulator > 0) {
-                currentHours.batdTime += simulator;
+            if (isBATD && simTimeForRow > 0) {
+                currentHours.batdTime += simTimeForRow;
             }
 
             currentHours.instrumentTotal += simulated;
@@ -819,8 +996,9 @@ function processLogbook(data) {
     document.getElementById('summaryActualInstrument').textContent = currentHours.actualInstrument.toFixed(1);
     document.getElementById('summarySimulatedInstrument').textContent = currentHours.simulatedInstrument.toFixed(1);
 
+    console.log('[processLogbook] Final simTime:', currentHours.simTime, 'simInstrumentTime:', currentHours.simInstrumentTime);
     var simTimeElement = document.getElementById('summarySimTime');
-    simTimeElement.textContent = currentHours.simInstrumentTime.toFixed(1);
+    simTimeElement.textContent = currentHours.simTime.toFixed(1);
 
     var container = document.getElementById('summarySimTimeContainer');
     if (container && !container.querySelector('.sim-max-text')) {
@@ -835,6 +1013,14 @@ function processLogbook(data) {
 
     document.getElementById('summaryInstrumentDualAirplane').textContent = currentHours.instrumentDualAirplane.toFixed(1);
     document.getElementById('summaryRecentInstrument').textContent = currentHours.recentInstrument.toFixed(1);
+
+    // Save import history to database
+    saveImportHistory(data.length, currentHours, 'foreflight_logbook_import.csv', actualFlights, simFlights);
+
+    // Initialize Budget Manager
+    if (typeof BudgetManager !== 'undefined') {
+        BudgetManager.init();
+    }
 
     updateDisplay();
 }

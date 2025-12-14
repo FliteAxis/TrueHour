@@ -9,10 +9,6 @@
   "branchPrefix": "renovate/",
   "username": "renovate[bot]",
   "gitAuthor": "Renovate Bot <bot@renovateapp.com>",
-  "platform": "github",
-  "repositories": [
-    "FliteAxis/TrueHour"
-  ],
   "labels": [
     "dependencies",
     "renovate"
@@ -157,37 +153,11 @@
       ]
     }
   ],
-  "pip_requirements": {
-    "managerFilePatterns": [
-      "/(^|/)requirements\\.txt$/"
-    ]
-  },
-  "dockerfile": {
-    "enabled": true
-  },
-  "docker-compose": {
-    "enabled": true,
-    "managerFilePatterns": [
-      "/(^|/)docker-compose.*\\.ya?ml$/"
-    ]
-  },
-  "github-actions": {
-    "enabled": true,
-    "managerFilePatterns": [
-      "/\\.github/workflows/.+\\.ya?ml$/"
-    ]
-  },
   "lockFileMaintenance": {
     "enabled": false
   },
   "minimumReleaseAge": "3 days",
   "prCreation": "not-pending",
-  "prNotPendingHours": 24,
-  "rebaseWhen": "behind-base-branch",
-  "enabledManagers": [
-    "pip_requirements",
-    "dockerfile",
-    "docker-compose",
-    "github-actions"
-  ]
+  "stabilityDays": 1,
+  "rebaseWhen": "behind-base-branch"
 }

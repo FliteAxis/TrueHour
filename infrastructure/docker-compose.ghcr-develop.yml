@@ -34,7 +34,7 @@ services:
       - .env
 
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       - POSTGRES_DB=truehour
       - POSTGRES_USER=truehour

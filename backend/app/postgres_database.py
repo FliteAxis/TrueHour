@@ -1,5 +1,6 @@
 """PostgreSQL database operations for user data."""
 
+import json
 import os
 from contextlib import asynccontextmanager
 from datetime import date
@@ -374,6 +375,149 @@ class PostgresDatabase:
                         flight[field] = flight[field].isoformat()
                 result.append(flight)
             return result
+
+    # Budget CRUD Operations
+
+    async def get_budgets(self, is_active: Optional[bool] = None) -> List[Dict[str, Any]]:
+        """Get list of budgets."""
+        async with self.acquire() as conn:
+            if is_active is None:
+                rows = await conn.fetch("SELECT * FROM budgets ORDER BY is_active DESC, created_at DESC")
+            else:
+                rows = await conn.fetch(
+                    "SELECT * FROM budgets WHERE is_active = $1 ORDER BY created_at DESC", is_active
+                )
+            # Parse categories JSON field
+            result = []
+            for row in rows:
+                budget = dict(row)
+                if budget.get("categories"):
+                    budget["categories"] = json.loads(budget["categories"])
+                result.append(budget)
+            return result
+
+    async def get_budget_by_id(self, budget_id: int) -> Optional[Dict[str, Any]]:
+        """Get single budget by ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM budgets WHERE id = $1", budget_id)
+            if row:
+                budget = dict(row)
+                if budget.get("categories"):
+                    budget["categories"] = json.loads(budget["categories"])
+                return budget
+            return None
+
+    async def create_budget(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create new budget."""
+        async with self.acquire() as conn:
+            categories_json = json.dumps(data.get("categories")) if data.get("categories") else None
+            row = await conn.fetchrow(
+                """
+                INSERT INTO budgets (
+                    name, budget_type, amount, start_date, end_date,
+                    categories, notes, is_active
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING *
+            """,
+                data["name"],
+                data["budget_type"],
+                data["amount"],
+                data.get("start_date"),
+                data.get("end_date"),
+                categories_json,
+                data.get("notes"),
+                data.get("is_active", True),
+            )
+            budget = dict(row)
+            if budget.get("categories"):
+                budget["categories"] = json.loads(budget["categories"])
+            return budget
+
+    async def update_budget(self, budget_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update budget."""
+        async with self.acquire() as conn:
+            categories_json = json.dumps(data.get("categories")) if "categories" in data else None
+            row = await conn.fetchrow(
+                """
+                UPDATE budgets
+                SET
+                    name = COALESCE($2, name),
+                    budget_type = COALESCE($3, budget_type),
+                    amount = COALESCE($4, amount),
+                    start_date = COALESCE($5, start_date),
+                    end_date = COALESCE($6, end_date),
+                    categories = COALESCE($7, categories),
+                    notes = COALESCE($8, notes),
+                    is_active = COALESCE($9, is_active),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING *
+            """,
+                budget_id,
+                data.get("name"),
+                data.get("budget_type"),
+                data.get("amount"),
+                data.get("start_date"),
+                data.get("end_date"),
+                categories_json,
+                data.get("notes"),
+                data.get("is_active"),
+            )
+            if row:
+                budget = dict(row)
+                if budget.get("categories"):
+                    budget["categories"] = json.loads(budget["categories"])
+                return budget
+            return None
+
+    async def delete_budget(self, budget_id: int) -> bool:
+        """Delete budget (cascade deletes entries)."""
+        async with self.acquire() as conn:
+            result = await conn.execute("DELETE FROM budgets WHERE id = $1", budget_id)
+            return result == "DELETE 1"
+
+    # Budget Entry CRUD Operations
+
+    async def get_budget_entries(self, budget_id: int) -> List[Dict[str, Any]]:
+        """Get all entries for a budget."""
+        async with self.acquire() as conn:
+            rows = await conn.fetch("SELECT * FROM budget_entries WHERE budget_id = $1 ORDER BY month DESC", budget_id)
+            return [dict(row) for row in rows]
+
+    async def get_budget_entry(self, budget_id: int, month: date) -> Optional[Dict[str, Any]]:
+        """Get single budget entry by budget ID and month."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT * FROM budget_entries WHERE budget_id = $1 AND month = $2", budget_id, month
+            )
+            return dict(row) if row else None
+
+    async def create_or_update_budget_entry(self, budget_id: int, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update budget entry (upsert)."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow(
+                """
+                INSERT INTO budget_entries (budget_id, month, allocated_amount, notes)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (budget_id, month)
+                DO UPDATE SET
+                    allocated_amount = EXCLUDED.allocated_amount,
+                    notes = EXCLUDED.notes
+                RETURNING *
+            """,
+                budget_id,
+                data["month"],
+                data["allocated_amount"],
+                data.get("notes"),
+            )
+            return dict(row)
+
+    async def delete_budget_entry(self, entry_id: int) -> bool:
+        """Delete budget entry."""
+        async with self.acquire() as conn:
+            result = await conn.execute("DELETE FROM budget_entries WHERE id = $1", entry_id)
+            return result == "DELETE 1"
 
 
 # Global database instance

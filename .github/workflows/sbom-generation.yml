@@ -112,7 +112,7 @@ jobs:
           output-file: ${{ matrix.image.name }}-sbom.txt
 
       - name: Scan SBOM with Grype
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v6
         with:
           image: ${{ matrix.image.name }}:sbom-scan
           fail-build: false
@@ -151,7 +151,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attest API SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-name: ghcr.io/fliteaxis/truehour-api
           subject-digest: ${{ github.sha }}
@@ -159,7 +159,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest Frontend SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-name: ghcr.io/fliteaxis/truehour-frontend
           subject-digest: ${{ github.sha }}

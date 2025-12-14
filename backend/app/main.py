@@ -7,7 +7,7 @@ from typing import List, Optional
 from app.database import Database
 from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
-from app.routers import aircraft, expenses, user_data
+from app.routers import aircraft, budgets, expenses, import_history, user_data
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
@@ -58,6 +58,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:8000",
+        "http://localhost:8181",
         "https://truehour.app",
         "https://www.truehour.app",
     ],
@@ -68,7 +69,9 @@ app.add_middleware(
 
 # Include routers
 app.include_router(aircraft.router)
+app.include_router(budgets.router)
 app.include_router(expenses.router)
+app.include_router(import_history.router)
 app.include_router(user_data.router)
 
 

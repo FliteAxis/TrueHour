@@ -941,6 +941,22 @@
                 </div>
             </div>
         </div>
+
+        <!-- Budget Tracking Section (Spans Full Width) -->
+        <div class="panel" style="margin-top: 30px; grid-column: 1 / -1;">
+            <h2>3. Budget Tracking</h2>
+            <p class="panel-subtitle">Track and compare your aviation budgets vs actual spending.</p>
+
+            <div class="budget-actions">
+                <button id="addBudgetBtn" class="btn-primary">
+                    <span>+ Create Budget</span>
+                </button>
+            </div>
+
+            <div id="budgetList" class="budget-list">
+                <!-- Budget cards will be inserted here by budget.js -->
+            </div>
+        </div>
     </div>
 
     <!-- Aircraft Management Modal -->
@@ -1038,6 +1054,180 @@
         </div>
     </div>
 
+    <!-- Budget Form Modal (Create/Edit Budget) -->
+    <div id="budgetFormModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="budgetFormTitle">Add Budget</h2>
+                <button class="modal-close" onclick="BudgetManager.closeModal('budgetFormModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="budgetForm">
+                    <div class="form-group">
+                        <label for="budgetNameInput">Budget Name <span style="color: #dc2626;">*</span></label>
+                        <input type="text" id="budgetNameInput" placeholder="e.g., 2025 PPL Training" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="budgetTypeSelect">Budget Type <span style="color: #dc2626;">*</span></label>
+                        <select id="budgetTypeSelect" required>
+                            <option value="">-- Select Type --</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual">Annual</option>
+                            <option value="goal">Goal-Based</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="budgetAmountInput">Total Amount <span style="color: #dc2626;">*</span></label>
+                        <input type="number" id="budgetAmountInput" placeholder="10000" min="0" step="0.01" required>
+                        <small>Total budget amount for this period</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="budgetStartDate">Start Date</label>
+                            <input type="date" id="budgetStartDate">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="budgetEndDate">End Date</label>
+                            <input type="date" id="budgetEndDate">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="budgetCategoriesInput">Categories (Optional)</label>
+                        <select id="budgetCategoriesInput" multiple>
+                            <option value="flight_training">Flight Training</option>
+                            <option value="aircraft_rental">Aircraft Rental</option>
+                            <option value="fuel">Fuel</option>
+                            <option value="maintenance">Maintenance</option>
+                            <option value="insurance">Insurance</option>
+                            <option value="subscriptions">Subscriptions</option>
+                            <option value="exams">Exams & Fees</option>
+                            <option value="equipment">Equipment</option>
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple. Leave blank to track all expenses.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="budgetNotesInput">Notes (Optional)</label>
+                        <textarea id="budgetNotesInput" placeholder="Optional notes about this budget"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="BudgetManager.closeModal('budgetFormModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Budget</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Detail Modal -->
+    <div id="budgetDetailModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="budgetName">Budget Details</h2>
+                <button class="modal-close" onclick="BudgetManager.closeModal('budgetDetailModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="budget-detail-info">
+                    <div class="budget-detail-info-item">
+                        <label>Type</label>
+                        <span id="budgetType">-</span>
+                    </div>
+                    <div class="budget-detail-info-item">
+                        <label>Date Range</label>
+                        <span id="budgetDates">-</span>
+                    </div>
+                    <div class="budget-detail-info-item">
+                        <label>Categories</label>
+                        <span id="budgetCategories">All</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3>Monthly Allocations</h3>
+                    <button class="btn-primary btn-sm" onclick="BudgetManager.showEntryModal()">+ Add Month</button>
+                </div>
+
+                <table class="budget-entries-table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>Allocated</th>
+                            <th>Actual</th>
+                            <th>Difference</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entriesTbody">
+                        <!-- Entries will be inserted here -->
+                    </tbody>
+                </table>
+
+                <div class="chart-container">
+                    <canvas id="budgetDetailChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Entry Modal (Add/Edit Monthly Entry) -->
+    <div id="entryFormModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2 id="entryFormTitle">Add Budget Entry</h2>
+                <button class="modal-close" onclick="BudgetManager.closeModal('entryFormModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="entryForm">
+                    <div class="form-group">
+                        <label for="entryMonth">Month <span style="color: #dc2626;">*</span></label>
+                        <input type="month" id="entryMonth" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entryAmount">Allocated Amount <span style="color: #dc2626;">*</span></label>
+                        <input type="number" id="entryAmount" placeholder="1000" min="0" step="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="entryNotes">Notes (Optional)</label>
+                        <textarea id="entryNotes" placeholder="Optional notes for this month"></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="BudgetManager.closeModal('entryFormModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Entry</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Confirm Action</h2>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage" style="margin: 0; line-height: 1.6;"></p>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <button id="confirmCancelBtn" class="modal-btn modal-btn-secondary">Cancel</button>
+                <button id="confirmOkBtn" class="modal-btn modal-btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Footer -->
     <footer class="app-footer">
         <div class="footer-container">
@@ -1060,7 +1250,8 @@
     <script src="js/aircraft-api.js"></script>
     <script src="js/aircraft-ui.js"></script>
     <script src="js/user-data.js"></script>
-    <script src="js/onboarding.js"></script>
+    <script src="js/budget.js"></script>
     <script src="js/app.js"></script>
+    <script src="js/onboarding.js"></script>
 </body>
 </html>

@@ -190,6 +190,33 @@ CREATE TABLE user_sessions (
     expires_at TIMESTAMPTZ
 );
 
+-- Import history (track ForeFlight imports for reconciliation)
+CREATE TABLE import_history (
+    id SERIAL PRIMARY KEY,
+    import_type TEXT NOT NULL,  -- 'foreflight_csv', 'manual_entry'
+    file_name TEXT,
+    flights_imported INTEGER DEFAULT 0,
+    hours_imported JSONB,  -- {total: 120.5, pic: 100.0, instrument: 8.5, ...}
+    import_date TIMESTAMPTZ DEFAULT NOW(),
+    notes TEXT
+);
+
+-- Training goals (link certification goals to budgets)
+CREATE TABLE training_goals (
+    id SERIAL PRIMARY KEY,
+    certification TEXT NOT NULL,  -- 'ir', 'cpl', 'cfi'
+    budget_id INTEGER REFERENCES budgets(id) ON DELETE SET NULL,
+    target_hours JSONB NOT NULL,  -- {total: 50, instrument: 50, cross_country: 0}
+    current_hours JSONB,  -- Snapshot from last import
+    hours_remaining JSONB,  -- Calculated field
+    start_date DATE,
+    target_completion_date DATE,
+    lessons_per_week DECIMAL(3,1) DEFAULT 2.0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX idx_flights_date ON flights(date DESC);
 CREATE INDEX idx_flights_aircraft ON flights(aircraft_id);
@@ -197,6 +224,8 @@ CREATE INDEX idx_expenses_date ON expenses(date DESC);
 CREATE INDEX idx_expenses_category ON expenses(category);
 CREATE INDEX idx_reminders_due ON reminders(due_date) WHERE is_completed = false;
 CREATE INDEX idx_user_sessions_session_id ON user_sessions(session_id);
+CREATE INDEX idx_import_history_date ON import_history(import_date DESC);
+CREATE INDEX idx_training_goals_active ON training_goals(is_active) WHERE is_active = true;
 
 -- Comments for documentation
 COMMENT ON TABLE aircraft IS 'User aircraft list - can include owned, club, and rental aircraft';
@@ -212,3 +241,6 @@ COMMENT ON TABLE user_sessions IS 'Session tracking for auto-save and data persi
 COMMENT ON COLUMN flights.simulated_instrument_time IS 'Hood/foggles time in REAL aircraft';
 COMMENT ON COLUMN flights.simulated_flight_time IS 'Time in simulator device (AATD/BATD) - NOT flight time';
 COMMENT ON COLUMN aircraft.is_simulator IS 'TRUE if this is a simulator device, not an actual aircraft';
+
+COMMENT ON TABLE import_history IS 'Tracks ForeFlight CSV imports for hour reconciliation and progress tracking';
+COMMENT ON TABLE training_goals IS 'Training goals linked to budgets for progress tracking and cost estimation';

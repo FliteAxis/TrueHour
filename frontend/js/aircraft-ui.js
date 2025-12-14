@@ -1067,7 +1067,14 @@ function importSelectedAircraft() {
         // Add aircraft cards to the budget calculator DOM
         const aircraftList = document.getElementById('aircraftList');
         if (aircraftList && typeof addAircraft === 'function') {
-            console.log('[showCSVImportModal] Adding aircraft cards to DOM');
+            // Clear existing aircraft cards to prevent duplicates
+            try {
+                const existingCards = aircraftList.querySelectorAll('.aircraft-item');
+                existingCards.forEach(card => card.remove());
+            } catch (error) {
+                console.error('[showCSVImportModal] Error clearing cards:', error);
+            }
+
             aircraftList.style.display = 'block';
 
             const allAircraft = AircraftAPI.getAllAircraft();

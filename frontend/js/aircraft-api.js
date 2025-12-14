@@ -125,6 +125,17 @@ const AircraftAPI = (function() {
             throw new Error('Aircraft with this ID already exists');
         }
 
+        // Check for duplicate tail number/registration
+        if (aircraft.registration && aircraft.registration.trim()) {
+            const normalizedNewReg = aircraft.registration.trim().toUpperCase();
+            const duplicate = config.aircraft.find(a =>
+                a.registration && a.registration.trim().toUpperCase() === normalizedNewReg
+            );
+            if (duplicate) {
+                throw new Error(`Aircraft with tail number ${aircraft.registration} already exists`);
+            }
+        }
+
         // Add required fields
         const newAircraft = {
             id: aircraft.id,
@@ -167,6 +178,19 @@ const AircraftAPI = (function() {
         const aircraft = getAircraft(id);
         if (!aircraft) {
             throw new Error('Aircraft not found');
+        }
+
+        // If updating registration, check for conflicts
+        if (updates.registration && updates.registration.trim()) {
+            const normalizedNewReg = updates.registration.trim().toUpperCase();
+            const duplicate = config.aircraft.find(a =>
+                a.id !== id &&
+                a.registration &&
+                a.registration.trim().toUpperCase() === normalizedNewReg
+            );
+            if (duplicate) {
+                throw new Error(`Aircraft with tail number ${updates.registration} already exists`);
+            }
         }
 
         // Update fields

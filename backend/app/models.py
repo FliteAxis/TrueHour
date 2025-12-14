@@ -1,5 +1,7 @@
 """Pydantic models for TrueHour FAA lookup API responses."""
 
+from datetime import date, datetime
+from decimal import Decimal
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -99,3 +101,89 @@ class StatsResponse(BaseModel):
 
     record_count: int
     last_updated: Optional[str] = None
+
+
+# Budget Models
+
+
+class BudgetBase(BaseModel):
+    """Base budget fields."""
+
+    name: str = Field(..., description="Budget name (e.g., '2025 Annual Flying Budget')")
+    budget_type: str = Field(..., description="Budget type: monthly, annual, or goal")
+    amount: Decimal = Field(..., gt=0, description="Total budget amount")
+    start_date: Optional[date] = Field(None, description="Budget period start date")
+    end_date: Optional[date] = Field(None, description="Budget period end date")
+    categories: Optional[List[str]] = Field(None, description="Expense categories to track (empty = all)")
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+class BudgetCreate(BudgetBase):
+    """Create budget request."""
+
+    pass
+
+
+class BudgetUpdate(BaseModel):
+    """Update budget request (all fields optional)."""
+
+    name: Optional[str] = None
+    budget_type: Optional[str] = None
+    amount: Optional[Decimal] = Field(None, gt=0)
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    categories: Optional[List[str]] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class BudgetResponse(BudgetBase):
+    """Budget response."""
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BudgetEntryBase(BaseModel):
+    """Base budget entry fields."""
+
+    month: date = Field(..., description="First day of month (e.g., 2025-01-01)")
+    allocated_amount: Decimal = Field(..., gt=0, description="Allocated amount for this month")
+    notes: Optional[str] = None
+
+
+class BudgetEntryCreate(BudgetEntryBase):
+    """Create budget entry request."""
+
+    pass
+
+
+class BudgetEntryResponse(BudgetEntryBase):
+    """Budget entry response."""
+
+    id: int
+    budget_id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BudgetStatusResponse(BaseModel):
+    """Budget vs actual status for a specific month."""
+
+    budget_id: int
+    budget_name: str
+    month: date
+    allocated: Decimal
+    actual_expenses: Decimal
+    actual_flight_costs: Decimal
+    total_actual: Decimal
+    difference: Decimal
+    percentage_used: float
+    is_over_budget: bool
+
+    model_config = {"from_attributes": True}

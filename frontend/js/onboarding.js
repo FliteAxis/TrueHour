@@ -1546,6 +1546,8 @@ const OnboardingManager = {
         let soloLongXC = 0;
         let longXC = 0;
         let ir250nmXC = 0;
+        let actualFlights = 0;
+        let simFlights = 0;
 
         // Calculate date threshold for recent instrument (last 2 months)
         const twoMonthsAgo = new Date();
@@ -1597,15 +1599,19 @@ const OnboardingManager = {
 
             // Handle simulator vs real aircraft instrument time
             if (isSimulator) {
-                simulatorTime += simulator;
+                // For simulators, use TotalTime if available, otherwise SimulatedFlight
+                const simTimeForRow = total > 0 ? total : simulator;
+                simulatorTime += simTimeForRow;
                 simInstrumentTime += simulated;
+                simFlights++;
 
-                if (isBATD && simulator > 0) {
-                    batdTime += simulator;
+                if (isBATD && simTimeForRow > 0) {
+                    batdTime += simTimeForRow;
                 }
             } else {
                 actualInstrument += actual;
                 simulatedInstrument += simulated;
+                actualFlights++;
             }
 
             // Calculate PIC XC (intersection of PIC and XC)
@@ -1757,6 +1763,11 @@ const OnboardingManager = {
         });
 
         console.log('[Onboarding] Detected', this.wizardData.detectedAircraft.length, 'unique aircraft');
+
+        // Save import history to database
+        if (typeof saveImportHistory === 'function') {
+            saveImportHistory(data.length, currentHours, 'foreflight_logbook_import.csv', actualFlights, simFlights);
+        }
     },
 
     /**
