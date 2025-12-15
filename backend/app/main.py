@@ -7,7 +7,7 @@ from typing import List, Optional
 from app.database import Database
 from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
-from app.routers import aircraft, budget_cards, budgets, expenses, import_history, user_data
+from app.routers import aircraft, budget_cards, budgets, expense_budget_links, expenses, import_history, user_data
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
@@ -72,6 +72,7 @@ app.include_router(aircraft.router)
 app.include_router(budget_cards.router)
 app.include_router(budgets.router)
 app.include_router(expenses.router)
+app.include_router(expense_budget_links.router)
 app.include_router(import_history.router)
 app.include_router(user_data.router)
 

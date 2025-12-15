@@ -1353,3 +1353,49 @@ function updateBudgetChart(training, family, gear, exams, subs, contingency) {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+
+// Global modal functions for error and confirmation dialogs
+function showErrorModal(title, message) {
+    // For now, use alert as fallback until we implement proper error modal
+    alert(`${title}\n\n${message}`);
+}
+
+function showConfirmModal(title, message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirmModal');
+        const titleEl = document.getElementById('confirmTitle');
+        const messageEl = document.getElementById('confirmMessage');
+        const okBtn = document.getElementById('confirmOkBtn');
+        const cancelBtn = document.getElementById('confirmCancelBtn');
+
+        if (!modal || !titleEl || !messageEl || !okBtn || !cancelBtn) {
+            // Fallback to browser confirm if modal elements don't exist
+            resolve(confirm(`${title}\n\n${message}`));
+            return;
+        }
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        modal.style.display = 'flex';
+
+        const handleConfirm = () => {
+            modal.style.display = 'none';
+            cleanup();
+            resolve(true);
+        };
+
+        const handleCancel = () => {
+            modal.style.display = 'none';
+            cleanup();
+            resolve(false);
+        };
+
+        const cleanup = () => {
+            okBtn.removeEventListener('click', handleConfirm);
+            cancelBtn.removeEventListener('click', handleCancel);
+        };
+
+        okBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+    });
+}

@@ -1059,7 +1059,7 @@
         <!-- Budget Tracking Section (Spans Full Width) -->
         <div class="panel" style="margin-top: 30px; grid-column: 1 / -1;">
             <h2>3. Budget Tracking</h2>
-            <p class="panel-subtitle">Track your planned vs actual aviation spending with budget cards.</p>
+            <p class="panel-subtitle">Plan your aviation spending with outcome-based budget cards.</p>
 
             <!-- Budget Summary Cards -->
             <div id="budgetSummary" class="budget-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
@@ -1095,6 +1095,52 @@
             <!-- Legacy Budget List (Hidden by default) -->
             <div id="budgetList" class="budget-list" style="display: none;">
                 <!-- Legacy budget cards will be inserted here by budget.js -->
+            </div>
+        </div>
+
+        <!-- Expense Tracking Section (Spans Full Width) -->
+        <div class="panel" style="margin-top: 30px; grid-column: 1 / -1;">
+            <h2>4. Expense Tracking</h2>
+            <p class="panel-subtitle">Track your aviation expenses and link them to budget cards.</p>
+
+            <!-- Expense Summary Cards -->
+            <div id="expenseSummary" class="budget-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                <!-- Summary cards will be inserted here by expenses.js -->
+            </div>
+
+            <!-- Expense Actions and Filters -->
+            <div class="budget-actions" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <button id="addExpenseBtn" class="btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Add Expense</span>
+                </button>
+
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <label style="font-size: 0.9em; color: #64748b;">Filter:</label>
+                    <select id="expenseMonthFilter" class="input-field" style="width: auto; min-width: 150px;">
+                        <option value="">All Months</option>
+                    </select>
+                    <select id="expenseCategoryFilter" class="input-field" style="width: auto; min-width: 150px;">
+                        <option value="">All Categories</option>
+                        <option value="Fuel">Fuel</option>
+                        <option value="Instructor">Instructor</option>
+                        <option value="Rental">Rental</option>
+                        <option value="Insurance">Insurance</option>
+                        <option value="Maintenance">Maintenance</option>
+                        <option value="Subscription">Subscription</option>
+                        <option value="Membership">Membership</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Expenses List -->
+            <div id="expensesList" class="expenses-container">
+                <!-- Expenses will be inserted here by expenses.js -->
             </div>
         </div>
     </div>
@@ -1360,7 +1406,7 @@
                 <form id="budgetCardForm">
                     <div class="form-group">
                         <label for="budgetCardName">Budget Name <span style="color: #dc2626;">*</span></label>
-                        <input type="text" id="budgetCardName" placeholder="e.g., Blue Sky Flight Club" required>
+                        <input type="text" id="budgetCardName" placeholder="e.g., ACME Flight Club" required>
                         <small>Descriptive name for this budget item</small>
                     </div>
 
@@ -1457,6 +1503,110 @@
         </div>
     </div>
 
+    <!-- Expense Form Modal -->
+    <div id="expenseFormModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2 id="expenseFormTitle">Add Expense</h2>
+                <button class="modal-close" onclick="ExpenseManager.closeModal('expenseFormModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="expenseForm" onsubmit="event.preventDefault(); ExpenseManager.saveExpense();">
+                    <div class="form-group">
+                        <label for="expenseCategory">Category <span style="color: #dc2626;">*</span></label>
+                        <select id="expenseCategory" required>
+                            <option value="">-- Select Category --</option>
+                            <option value="Fuel">Fuel</option>
+                            <option value="Instructor">Instructor</option>
+                            <option value="Rental">Rental</option>
+                            <option value="Insurance">Insurance</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="Subscription">Subscription</option>
+                            <option value="Membership">Membership</option>
+                            <option value="Supplies">Supplies</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseDescription">Description</label>
+                        <input type="text" id="expenseDescription" placeholder="e.g., 1.5 hour lesson with CFI">
+                        <small>Optional notes about this expense</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="expenseAmount">Amount <span style="color: #dc2626;">*</span></label>
+                            <input type="number" id="expenseAmount" min="0.01" step="0.01" required placeholder="0.00">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="expenseDate">Date <span style="color: #dc2626;">*</span></label>
+                            <input type="date" id="expenseDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseVendor">Vendor</label>
+                        <input type="text" id="expenseVendor" placeholder="e.g., ACME Flight Club">
+                        <small>The business or person you paid</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseSubcategory">Subcategory</label>
+                        <input type="text" id="expenseSubcategory" placeholder="Optional">
+                        <small>Additional categorization (e.g., "100LL", "Dual Instruction")</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="expenseIsRecurring" style="width: auto; margin: 0;">
+                            <span>Recurring Expense</span>
+                        </label>
+                        <small>Check if this expense repeats regularly</small>
+                    </div>
+
+                    <div class="form-group" id="recurrenceIntervalGroup" style="display: none;">
+                        <label for="expenseRecurrenceInterval">Recurrence Interval</label>
+                        <select id="expenseRecurrenceInterval">
+                            <option value="">-- Select --</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="annual">Annual</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                            <input type="checkbox" id="expenseIsTaxDeductible" style="width: auto; margin: 0;">
+                            <span>Tax Deductible</span>
+                        </label>
+                        <small>Mark if this expense may be tax deductible</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expenseBudgetCard">Link to Budget Card (Optional)</label>
+                        <select id="expenseBudgetCard">
+                            <option value="">-- Don't link now --</option>
+                            <!-- Options populated by ExpenseManager.showCreateModal() -->
+                        </select>
+                        <small>Optionally link this expense to a budget card immediately</small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" onclick="ExpenseManager.closeModal('expenseFormModal')">Cancel</button>
+                        <button type="submit" class="btn-primary">Save Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Link Modal -->
+    <div id="budgetLinkModal" class="modal" style="display: none;">
+        <!-- Content will be dynamically generated by expenses.js -->
+    </div>
+
     <!-- Footer -->
     <footer class="app-footer">
         <div class="footer-container">
@@ -1479,6 +1629,7 @@
     <script src="js/aircraft-api.js"></script>
     <script src="js/aircraft-ui.js"></script>
     <script src="js/user-data.js"></script>
+    <script src="js/expenses.js"></script>
     <script src="js/budget.js"></script>
     <script src="js/budget-cards.js"></script>
     <script src="js/training-widget.js"></script>

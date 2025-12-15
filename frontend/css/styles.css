@@ -2138,6 +2138,74 @@ select.input-field {
     border-top: 1px solid #e5e7eb;
 }
 
+/* Expense Form Modal (same styles as Budget Card Form Modal) */
+#expenseFormModal .form-group {
+    margin-bottom: 20px;
+}
+
+#expenseFormModal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95em;
+}
+
+#expenseFormModal input[type="text"],
+#expenseFormModal input[type="number"],
+#expenseFormModal input[type="date"],
+#expenseFormModal select,
+#expenseFormModal textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    transition: border-color 0.2s;
+}
+
+#expenseFormModal input:focus,
+#expenseFormModal select:focus,
+#expenseFormModal textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#expenseFormModal textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+#expenseFormModal input::placeholder,
+#expenseFormModal textarea::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+}
+
+#expenseFormModal small {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 0.85em;
+}
+
+#expenseFormModal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+#expenseFormModal .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
 #budgetCardFormModal .input-wrapper {
     position: relative;
     display: flex;
@@ -2997,3 +3065,270 @@ select.input-field {
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 }
+
+/* Expense Tracking Styles */
+.expense-month-section {
+    margin-bottom: 30px;
+}
+
+.expense-month-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #f8fafc;
+    border-radius: 8px 8px 0 0;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.expense-month-header h3 {
+    margin: 0;
+    font-size: 1.2em;
+    color: #1e293b;
+}
+
+.expense-month-total {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.expense-list {
+    background: white;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+}
+
+.expense-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background 0.2s;
+}
+
+.expense-item:last-child {
+    border-bottom: none;
+}
+
+.expense-item:hover {
+    background: #f8fafc;
+}
+
+.expense-item-left {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    min-width: 200px;
+}
+
+.expense-date {
+    font-size: 0.9em;
+    color: #64748b;
+    min-width: 80px;
+}
+
+.expense-category {
+    min-width: 100px;
+}
+
+.expense-item-center {
+    flex: 1;
+    padding: 0 20px;
+}
+
+.expense-description {
+    font-weight: 500;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+.expense-vendor {
+    font-size: 0.85em;
+    color: #64748b;
+}
+
+.expense-item-right {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.expense-amount {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #0f172a;
+    min-width: 100px;
+    text-align: right;
+}
+
+.expense-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    padding: 6px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.btn-icon.btn-danger:hover {
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.category-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+/* Budget Link Modal Styles */
+.expense-link-info {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.expense-link-info div {
+    margin-bottom: 8px;
+}
+
+.expense-link-info div:last-child {
+    margin-bottom: 0;
+}
+
+.existing-links {
+    margin-bottom: 25px;
+    padding: 15px;
+    background: #fef3c7;
+    border-radius: 6px;
+}
+
+.existing-links h3 {
+    margin-bottom: 15px;
+    font-size: 1em;
+    color: #92400e;
+}
+
+.link-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.link-item:last-child {
+    margin-bottom: 0;
+}
+
+.new-link-form {
+    padding: 15px;
+    background: #f0fdf4;
+    border-radius: 6px;
+}
+
+.new-link-form h3 {
+    margin-bottom: 15px;
+    font-size: 1em;
+    color: #166534;
+}
+
+/* Empty State */
+.expenses-container .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 1.1em;
+    background: white;
+    border-radius: 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .expense-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .expense-item-left,
+    .expense-item-center,
+    .expense-item-right {
+        width: 100%;
+    }
+
+    .expense-item-right {
+        justify-content: space-between;
+    }
+
+    .expense-actions {
+        margin-left: auto;
+    }
+}
+
+/* Budget Link Modal (dynamically generated) */
+#budgetLinkModal .form-group {
+    margin-bottom: 20px;
+}
+
+#budgetLinkModal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95em;
+}
+
+#budgetLinkModal input[type="number"],
+#budgetLinkModal select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    transition: border-color 0.2s;
+}
+
+#budgetLinkModal input:focus,
+#budgetLinkModal select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#budgetLinkModal .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#budgetLinkModal .link-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #f9fafb;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+

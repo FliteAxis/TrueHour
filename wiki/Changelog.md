@@ -4,6 +4,50 @@ All notable changes to the TrueHour are documented here.
 
 ## Latest Changes
 
+### Phase 4: Expense Tracking & Budget Integration Complete (2025-12-14)
+- **Expense Management**: Full CRUD for aviation expenses
+  - 9 expense categories (Fuel, Instructor, Rental, Insurance, Maintenance, Subscription, Membership, Supplies, Other)
+  - Track vendor, date, amount, description, subcategory
+  - Recurring expense support (monthly, quarterly, annual)
+  - Tax deductible flag
+  - `POST /api/expenses` - Create expense
+  - `GET /api/expenses` - List with filtering (month, category, date range)
+  - `PUT /api/expenses/{id}` - Update expense
+  - `DELETE /api/expenses/{id}` - Delete expense
+  - `GET /api/expenses/summary` - Aggregated statistics
+- **Expense-Budget Linking**: Connect expenses to budget cards
+  - Split expenses across multiple budget cards
+  - `POST /api/expense-budget-links` - Create link
+  - `GET /api/expense-budget-links/expense/{id}` - Get links for expense
+  - `GET /api/expense-budget-links/budget-card/{id}` - Get expenses for budget
+  - `DELETE /api/expense-budget-links/{id}` - Remove link
+  - Validates amount doesn't exceed expense total
+  - Prevents duplicate links with unique constraint
+- **Budget Card Actual Amounts**: Real-time spending tracking
+  - Budget cards auto-calculate actual_amount from linked expenses
+  - SQL query with LEFT JOIN for efficient aggregation
+  - Progress bars show budget utilization percentage
+  - Over-budget warnings when actual > budgeted
+- **Frontend Expense UI**: Comprehensive expense tracking interface
+  - Month-grouped expense list with totals
+  - Color-coded category badges
+  - Filter by month and category
+  - Summary cards (total count, total amount, average)
+  - Link expenses to budget cards via modal dialog
+  - Visual indication of existing links and remaining unlocked amount
+  - Edit/delete actions with confirmation
+  - Responsive design for mobile
+- **Integration & Auto-save**: Seamless budget updates
+  - Budget cards reload automatically after expense changes
+  - UserDataManager.triggerAutoSave() called on all expense actions
+  - No page refresh needed for budget updates
+- **New files**:
+  - `backend/app/routers/expense_budget_links.py` (135 lines)
+  - `frontend/js/expenses.js` (650 lines)
+  - Expense section and modals in index.html
+  - Expense tracking CSS styles
+- **Documentation**: [Expense Tracking Wiki](wiki/Expense-Tracking.md)
+
 ### Phase 3: Data Persistence 100% Complete (2025-12-04)
 - **Save/Load API endpoints**: Complete user data management
   - `POST /api/user/save` - Persist all aircraft and budget state to PostgreSQL
