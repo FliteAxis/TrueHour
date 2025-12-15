@@ -1,14 +1,141 @@
+// Data Store Abstraction - Supports both static file mode and Docker mode
+const DataStore = {
+    mode: null, // 'database' or 'localStorage'
+
+    async init() {
+        // Detect if backend is available
+        try {
+            const response = await fetch('/api/health', {
+                method: 'GET',
+                cache: 'no-cache'
+            });
+            this.mode = response.ok ? 'database' : 'localStorage';
+        } catch (error) {
+            // Backend not available - use localStorage
+            this.mode = 'localStorage';
+        }
+        console.log(`[DataStore] Running in ${this.mode} mode`);
+        return this.mode;
+    },
+
+    async saveHours(hours) {
+        if (this.mode === 'database') {
+            // Use import_history table via API
+            try {
+                await fetch('/api/import-history/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        import_type: 'manual_update',
+                        file_name: 'widget_update',
+                        flights_imported: 0,
+                        hours_imported: {
+                            total: hours.total || 0,
+                            pic: hours.pic || 0,
+                            pic_xc: hours.picXC || 0,
+                            cross_country: hours.crossCountry || 0,
+                            instrument_total: hours.instrumentTotal || 0,
+                            instrument_dual_airplane: hours.instrumentDualAirplane || 0,
+                            recent_instrument: hours.recentInstrument || 0,
+                            ir_250nm_xc: hours.ir250nmXC || 0,
+                            night: hours.night || 0,
+                            simulator_time: hours.simTime || 0,
+                            actual_instrument: hours.actualInstrument || 0,
+                            simulated_instrument: hours.simulatedInstrument || 0
+                        }
+                    })
+                });
+                console.log('[DataStore] Hours saved to database');
+            } catch (error) {
+                console.error('[DataStore] Failed to save to database, falling back to localStorage:', error);
+                localStorage.setItem('currentHours', JSON.stringify(hours));
+            }
+        } else {
+            // Static file mode - use localStorage
+            localStorage.setItem('currentHours', JSON.stringify(hours));
+            console.log('[DataStore] Hours saved to localStorage');
+        }
+    },
+
+    async loadHours() {
+        if (this.mode === 'database') {
+            try {
+                const response = await fetch('/api/import-history/latest');
+                if (response.ok) {
+                    const data = await response.json();
+                    // Convert snake_case from API to camelCase
+                    const hours = data.hours_imported;
+                    return {
+                        total: hours.total || 0,
+                        pic: hours.pic || 0,
+                        picXC: hours.pic_xc || 0,
+                        crossCountry: hours.cross_country || 0,
+                        instrumentTotal: hours.instrument_total || 0,
+                        instrumentDualAirplane: hours.instrument_dual_airplane || 0,
+                        recentInstrument: hours.recent_instrument || 0,
+                        ir250nmXC: hours.ir_250nm_xc || 0,
+                        night: hours.night || 0,
+                        simTime: hours.simulator_time || 0,
+                        actualInstrument: hours.actual_instrument || 0,
+                        simulatedInstrument: hours.simulated_instrument || 0
+                    };
+                }
+            } catch (error) {
+                console.error('[DataStore] Failed to load from database, trying localStorage:', error);
+            }
+        }
+
+        // Fall back to localStorage (or if in static file mode)
+        const data = localStorage.getItem('currentHours');
+        return data ? JSON.parse(data) : null;
+    }
+};
+
 // Training Progress Widget
 const TrainingWidget = {
     // Initialize the widget
-    init: function() {
+    init: async function() {
         console.log('[TrainingWidget] Initializing...');
-        this.loadLatestImport();
+
+        // Initialize DataStore first
+        await DataStore.init();
+
+        // Load hours from appropriate source
+        await this.loadHours();
 
         // Show widget if data exists
         const hasData = this.checkForExistingData();
         if (hasData) {
             this.show();
+        }
+
+        // Setup certification selector
+        this.setupCertificationSelector();
+    },
+
+    // Setup certification selector event listener
+    setupCertificationSelector: function() {
+        const selector = document.getElementById('cert-selector');
+        if (selector) {
+            selector.addEventListener('change', async (e) => {
+                const selectedCert = e.target.value;
+                localStorage.setItem('selectedCertification', selectedCert);
+
+                // Reload hours from DataStore to update display immediately
+                const hours = await DataStore.loadHours();
+                if (hours) {
+                    this.updateDisplayFromHours(hours);
+                } else {
+                    // If no hours data, just show the empty state
+                    this.updateCertificationProgress({});
+                }
+            });
+
+            // Load previously selected certification
+            const savedCert = localStorage.getItem('selectedCertification');
+            if (savedCert) {
+                selector.value = savedCert;
+            }
         }
     },
 
@@ -35,67 +162,54 @@ const TrainingWidget = {
         }
     },
 
-    // Load latest import data
-    loadLatestImport: async function() {
+    // Load hours using DataStore
+    loadHours: async function() {
         try {
-            const response = await fetch('/api/import-history/latest');
-            if (response.ok) {
-                const data = await response.json();
-                if (data) {
-                    console.log('[TrainingWidget] Latest import:', data);
-                    this.updateDisplay(data);
-                    this.show();
-                }
-            }
-        } catch (error) {
-            console.error('[TrainingWidget] Error loading latest import:', error);
-            // Try to load from localStorage as fallback
-            this.loadFromLocalStorage();
-        }
-    },
-
-    // Load from localStorage (fallback)
-    loadFromLocalStorage: function() {
-        const hoursData = localStorage.getItem('currentHours');
-        if (hoursData) {
-            try {
-                const hours = JSON.parse(hoursData);
-                console.log('[TrainingWidget] Loaded from localStorage:', hours);
+            const hours = await DataStore.loadHours();
+            if (hours) {
+                console.log('[TrainingWidget] Loaded hours:', hours);
                 this.updateDisplayFromHours(hours);
                 this.show();
-            } catch (error) {
-                console.error('[TrainingWidget] Error parsing localStorage data:', error);
             }
+        } catch (error) {
+            console.error('[TrainingWidget] Error loading hours:', error);
         }
     },
 
-    // Update display from import history data
+    // Update display from import history data (converts snake_case from API to camelCase)
     updateDisplay: function(importData) {
         const hours = importData.hours_imported;
 
+        // Convert snake_case from API to camelCase for consistency
+        const normalizedHours = {
+            total: hours.total || 0,
+            pic: hours.pic || 0,
+            crossCountry: hours.cross_country || 0,
+            instrumentTotal: hours.instrument_total || 0,
+            night: hours.night || 0,
+            simTime: hours.simulator_time || 0,
+            actualInstrument: hours.actual_instrument || 0,
+            simulatedInstrument: hours.simulated_instrument || 0
+        };
+
         // Update hour cards
-        this.setHourValue('widget-total-hours', hours.total || 0);
-        this.setHourValue('widget-pic-hours', hours.pic || 0);
-        this.setHourValue('widget-xc-hours', hours.cross_country || 0);
-        this.setHourValue('widget-instrument-hours', hours.instrument_total || 0);
-        this.setHourValue('widget-night-hours', hours.night || 0);
-        this.setHourValue('widget-sim-hours', hours.sim_time || 0);
+        this.updateDisplayFromHours(normalizedHours);
 
         // Update import info
         this.updateImportInfo(importData);
-
-        // Update certification progress if we have requirement data
-        this.updateCertificationProgress(hours);
     },
 
-    // Update display from hours object
-    updateDisplayFromHours: function(hours) {
+    // Update display from hours object (expects camelCase)
+    updateDisplayFromHours: async function(hours) {
         this.setHourValue('widget-total-hours', hours.total || 0);
         this.setHourValue('widget-pic-hours', hours.pic || 0);
         this.setHourValue('widget-xc-hours', hours.crossCountry || 0);
         this.setHourValue('widget-instrument-hours', hours.instrumentTotal || 0);
         this.setHourValue('widget-night-hours', hours.night || 0);
         this.setHourValue('widget-sim-hours', hours.simTime || 0);
+
+        // Save using DataStore (handles both localStorage and database modes)
+        await DataStore.saveHours(hours);
 
         this.updateCertificationProgress(hours);
     },
@@ -147,68 +261,236 @@ const TrainingWidget = {
         }
     },
 
-    // Update certification progress bars
+    // Update certification progress with collapsible panels
     updateCertificationProgress: function(hours) {
         const container = document.getElementById('cert-progress-container');
         const section = document.getElementById('widget-cert-progress');
+        const selector = document.getElementById('cert-selector');
 
         if (!container || !section) return;
 
+        // Always show the section so user can select a certification
+        section.style.display = 'block';
+
         // Check if we have selected certification requirements
         const selectedCert = localStorage.getItem('selectedCertification');
-        if (!selectedCert) return;
+        if (!selectedCert || selectedCert === '') {
+            container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">Select a certification above to view requirements</p>';
+            return;
+        }
+
+        // Update selector to match
+        if (selector) {
+            selector.value = selectedCert;
+        }
 
         // Get requirements based on certification
         const requirements = this.getCertificationRequirements(selectedCert);
-        if (!requirements) return;
+        if (!requirements) {
+            container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">No requirements defined for this certification</p>';
+            return;
+        }
 
-        // Clear existing progress bars
+        // Clear existing panels
         container.innerHTML = '';
 
-        // Create progress bars for each requirement
-        requirements.forEach(req => {
+        // Create collapsible panel for each requirement
+        requirements.forEach((req, index) => {
             const currentHours = hours[req.hoursKey] || 0;
             const requiredHours = req.required;
             const progress = Math.min((currentHours / requiredHours) * 100, 100);
             const isComplete = currentHours >= requiredHours;
+            const remaining = Math.max(requiredHours - currentHours, 0);
 
-            const progressItem = document.createElement('div');
-            progressItem.className = 'cert-progress-item';
-            progressItem.innerHTML = `
-                <div class="cert-progress-header">
-                    <div class="cert-progress-label">${req.label}</div>
-                    <div class="cert-progress-values">${currentHours.toFixed(1)} / ${requiredHours} hrs</div>
-                </div>
-                <div class="cert-progress-bar-container">
-                    <div class="cert-progress-bar-fill ${isComplete ? 'complete' : ''}" style="width: ${progress}%"></div>
-                </div>
-            `;
-            container.appendChild(progressItem);
+            const panel = document.createElement('div');
+            panel.className = 'cert-requirement-panel';
+
+            // Special handling for non-hour requirements
+            if (req.isSpecial) {
+                panel.innerHTML = `
+                    <div class="cert-requirement-panel-header ${isComplete ? 'complete' : ''}" onclick="TrainingWidget.togglePanel(${index})">
+                        <div class="cert-requirement-panel-title">
+                            <span class="status-icon">${isComplete ? '✅' : '⏳'}</span>
+                            <span>${req.label}</span>
+                        </div>
+                        <div class="cert-requirement-panel-values">
+                            <span class="current-value">${isComplete ? 'Completed' : 'Not completed'}</span>
+                            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="cert-requirement-panel-body" id="cert-panel-${index}">
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 12px;">
+                            <strong>Special flight requirement</strong>
+                        </div>
+                        ${req.notes ? `<p style="font-size: 13px; color: #475569; line-height: 1.5;">${req.notes}</p>` : ''}
+                    </div>
+                `;
+            } else {
+                panel.innerHTML = `
+                    <div class="cert-requirement-panel-header ${isComplete ? 'complete' : ''}" onclick="TrainingWidget.togglePanel(${index})">
+                        <div class="cert-requirement-panel-title">
+                            <span class="status-icon">${isComplete ? '✅' : '⏳'}</span>
+                            <span>${req.label}</span>
+                        </div>
+                        <div class="cert-requirement-panel-values">
+                            <span class="current-value">${currentHours.toFixed(1)} hrs</span>
+                            <span class="required-value">/ ${requiredHours} hrs</span>
+                            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="cert-requirement-panel-body" id="cert-panel-${index}">
+                        <div class="cert-progress-bar-container" style="margin-bottom: 12px;">
+                            <div class="cert-progress-bar-fill ${isComplete ? 'complete' : ''}" style="width: ${progress}%"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b;">
+                            <span>${isComplete ? 'Requirement met!' : `${remaining.toFixed(1)} hours remaining`}</span>
+                            <span>${progress.toFixed(0)}% complete</span>
+                        </div>
+                        ${req.notes ? `<p style="margin-top: 12px; font-size: 13px; color: #475569; line-height: 1.5;">${req.notes}</p>` : ''}
+                    </div>
+                `;
+            }
+            container.appendChild(panel);
         });
+    },
 
-        section.style.display = 'block';
+    // Toggle collapsible panel
+    togglePanel: function(index) {
+        const body = document.getElementById(`cert-panel-${index}`);
+        const chevron = body.previousElementSibling.querySelector('.chevron');
+
+        if (body.classList.contains('expanded')) {
+            body.classList.remove('expanded');
+            chevron.classList.remove('expanded');
+        } else {
+            body.classList.add('expanded');
+            chevron.classList.add('expanded');
+        }
+    },
+
+    // Toggle entire certification section
+    toggleCertSection: function() {
+        const body = document.getElementById('cert-section-body');
+        const chevron = document.getElementById('cert-section-chevron');
+
+        if (body.classList.contains('expanded')) {
+            body.classList.remove('expanded');
+            chevron.classList.remove('expanded');
+        } else {
+            body.classList.add('expanded');
+            chevron.classList.add('expanded');
+        }
     },
 
     // Get certification requirements
     getCertificationRequirements: function(certType) {
         const requirements = {
             'private': [
-                { label: 'Total Flight Time', required: 40, hoursKey: 'total' },
-                { label: 'PIC Time', required: 10, hoursKey: 'pic' },
-                { label: 'Cross Country PIC', required: 5, hoursKey: 'crossCountry' },
-                { label: 'Instrument Training', required: 3, hoursKey: 'instrumentTotal' },
-                { label: 'Night Training', required: 3, hoursKey: 'night' }
+                {
+                    label: 'Total Flight Time',
+                    required: 40,
+                    hoursKey: 'total',
+                    notes: 'Minimum 40 hours total time including dual and solo flight training.'
+                },
+                {
+                    label: 'PIC Time',
+                    required: 10,
+                    hoursKey: 'pic',
+                    notes: 'At least 10 hours of solo flight time including cross-country and night solo.'
+                },
+                {
+                    label: 'Cross Country PIC',
+                    required: 5,
+                    hoursKey: 'crossCountry',
+                    notes: '5 hours of solo cross-country flight time including one flight of at least 150nm with full-stop landings at 3 points.'
+                },
+                {
+                    label: 'Instrument Training',
+                    required: 3,
+                    hoursKey: 'instrumentTotal',
+                    notes: '3 hours of flight training in preparation for the practical test within 2 months of the test.'
+                },
+                {
+                    label: 'Night Training',
+                    required: 3,
+                    hoursKey: 'night',
+                    notes: '3 hours of night flight training including one cross-country over 100nm and 10 takeoffs and landings.'
+                }
             ],
             'instrument': [
-                { label: 'Total Instrument Time', required: 40, hoursKey: 'instrumentTotal' },
-                { label: 'Instrument XC', required: 50, hoursKey: 'crossCountry' }
+                {
+                    label: '50 hours PIC cross country',
+                    required: 50,
+                    hoursKey: 'picXC',
+                    notes: '50 hours of cross-country flight time as pilot in command.'
+                },
+                {
+                    label: '10 hours PIC XC in airplanes',
+                    required: 10,
+                    hoursKey: 'picXC',
+                    notes: '10 hours of PIC cross-country time in airplanes for an instrument-airplane rating.'
+                },
+                {
+                    label: '40 hours actual or simulated instrument',
+                    required: 40,
+                    hoursKey: 'instrumentTotal',
+                    notes: '40 hours of actual or simulated instrument time. Your total includes actual instrument, simulated instrument (hood/foggles), and simulator time (up to 20 hours of BATD).'
+                },
+                {
+                    label: '15 hours instrument training from instructor',
+                    required: 15,
+                    hoursKey: 'instrumentDualAirplane',
+                    notes: '15 hours of instrument flight training from an authorized instructor in the aircraft category for the rating.'
+                },
+                {
+                    label: 'One 250nm XC: 3 approaches, 3 approach types',
+                    required: 1,
+                    hoursKey: 'ir250nmXC',
+                    notes: 'One cross-country flight in an airplane under IFR of at least 250nm along airways or ATC-directed routing with an instrument approach at each airport and three different kinds of approaches.',
+                    isSpecial: true
+                },
+                {
+                    label: '3 hours instrument training (last 2 months)',
+                    required: 3,
+                    hoursKey: 'recentInstrument',
+                    notes: '3 hours of instrument training from an authorized instructor within 2 calendar months before the practical test in preparation for the test.'
+                }
             ],
             'commercial': [
-                { label: 'Total Flight Time', required: 250, hoursKey: 'total' },
-                { label: 'PIC Time', required: 100, hoursKey: 'pic' },
-                { label: 'Cross Country', required: 50, hoursKey: 'crossCountry' },
-                { label: 'Instrument Time', required: 10, hoursKey: 'instrumentTotal' },
-                { label: 'Night Time', required: 5, hoursKey: 'night' }
+                {
+                    label: 'Total Flight Time',
+                    required: 250,
+                    hoursKey: 'total',
+                    notes: '250 hours total time as a pilot including specific training requirements.'
+                },
+                {
+                    label: 'PIC Time',
+                    required: 100,
+                    hoursKey: 'pic',
+                    notes: '100 hours as pilot in command including 50 hours in airplanes and 50 hours of cross-country.'
+                },
+                {
+                    label: 'Cross Country',
+                    required: 50,
+                    hoursKey: 'crossCountry',
+                    notes: '50 hours of cross-country PIC time including one flight of at least 300nm with landings at 3 points.'
+                },
+                {
+                    label: 'Instrument Time',
+                    required: 10,
+                    hoursKey: 'instrumentTotal',
+                    notes: '10 hours of instrument training including at least 5 hours in a single engine airplane.'
+                },
+                {
+                    label: 'Night Time',
+                    required: 5,
+                    hoursKey: 'night',
+                    notes: '5 hours of night flight time including 10 takeoffs and 10 landings.'
+                }
             ]
         };
 

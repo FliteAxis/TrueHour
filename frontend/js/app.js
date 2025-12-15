@@ -133,7 +133,7 @@ function loadBudget(event) {
                     document.getElementById('logbookSummary').style.display = 'block';
                     document.getElementById('summaryTotalTime').textContent = currentHours.totalTime.toFixed(1);
                     document.getElementById('summaryPICTime').textContent = currentHours.picTime.toFixed(1);
-                    document.getElementById('summaryXCTime').textContent = currentHours.picXC.toFixed(1);
+                    document.getElementById('summaryXCTime').textContent = (currentHours.xcTime || 0).toFixed(1);
                     document.getElementById('summaryDualTime').textContent = currentHours.dualReceived.toFixed(1);
                     document.getElementById('summaryInstrumentTime').textContent = currentHours.instrumentTotal.toFixed(1);
                     document.getElementById('summaryActualInstrument').textContent = currentHours.actualInstrument.toFixed(1);
@@ -861,17 +861,18 @@ async function saveImportHistory(flightCount, hours, fileName, actualFlights, si
                 const hoursData = {
                     total: hours.totalTime,
                     pic: hours.picTime,
-                    crossCountry: hours.xcTime,
+                    crossCountry: hours.xcTime,  // camelCase for updateDisplayFromHours
                     instrumentTotal: hours.instrumentTotal,
                     night: hours.nightTime || 0,
-                    simTime: hours.simTime,
+                    simTime: hours.simTime || 0,  // camelCase for updateDisplayFromHours
                     actualInstrument: hours.actualInstrument,
                     simulatedInstrument: hours.simulatedInstrument
                 };
                 const importInfo = {
                     fileName: fileName,
                     flightCount: flightCount,
-                    importDate: result.import_date
+                    importDate: result.import_date,
+                    hours_imported: payload.hours_imported  // Include full hours for updateImportInfo
                 };
                 TrainingWidget.onImportComplete(hoursData, importInfo);
             }
@@ -1012,7 +1013,7 @@ function processLogbook(data, actualFlights, simFlights) {
     document.getElementById('logbookSummary').style.display = 'block';
     document.getElementById('summaryTotalTime').textContent = currentHours.totalTime.toFixed(1);
     document.getElementById('summaryPICTime').textContent = currentHours.picTime.toFixed(1);
-    document.getElementById('summaryXCTime').textContent = currentHours.picXC.toFixed(1);
+    document.getElementById('summaryXCTime').textContent = (currentHours.xcTime || 0).toFixed(1);
     document.getElementById('summaryDualTime').textContent = currentHours.dualReceived.toFixed(1);
 
     document.getElementById('summaryInstrumentTime').textContent = currentHours.instrumentTotal.toFixed(1);

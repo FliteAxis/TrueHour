@@ -2070,6 +2070,104 @@ select.input-field {
     border-top: 1px solid #e5e7eb;
 }
 
+/* Budget Card Form Modal (same styles as Budget Form Modal) */
+#budgetCardFormModal .form-group {
+    margin-bottom: 20px;
+}
+
+#budgetCardFormModal .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #374151;
+    font-size: 0.95em;
+}
+
+#budgetCardFormModal input[type="text"],
+#budgetCardFormModal input[type="number"],
+#budgetCardFormModal input[type="date"],
+#budgetCardFormModal select,
+#budgetCardFormModal textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.95em;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    transition: border-color 0.2s;
+}
+
+#budgetCardFormModal input:focus,
+#budgetCardFormModal select:focus,
+#budgetCardFormModal textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+#budgetCardFormModal textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+#budgetCardFormModal input::placeholder,
+#budgetCardFormModal textarea::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+}
+
+#budgetCardFormModal small {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 0.85em;
+}
+
+#budgetCardFormModal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+#budgetCardFormModal .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#budgetCardFormModal .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+#budgetCardFormModal .input-wrapper .input-unit {
+    position: absolute;
+    right: 12px;
+    color: #6b7280;
+    font-size: 0.9em;
+    pointer-events: none;
+}
+
+#budgetCardFormModal .input-wrapper input[type="number"] {
+    padding-right: 60px;
+}
+
+#budgetCardFormModal .input-wrapper span:first-child {
+    position: absolute;
+    left: 12px;
+    color: #6b7280;
+    font-size: 0.9em;
+    pointer-events: none;
+}
+
+#budgetCardFormModal .input-wrapper:has(span:first-child) input {
+    padding-left: 30px;
+}
+
 /* Budget Detail Modal */
 #budgetDetailModal .modal-content {
     max-width: 900px;
@@ -2367,11 +2465,152 @@ select.input-field {
     border-top: 1px solid #e2e8f0;
 }
 
+.cert-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    padding: 12px 0;
+    user-select: none;
+}
+
+.cert-section-header:hover {
+    opacity: 0.8;
+}
+
+.section-chevron {
+    transition: transform 0.2s ease;
+    color: #64748b;
+}
+
+.section-chevron.expanded {
+    transform: rotate(180deg);
+}
+
+.cert-section-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.cert-section-body.expanded {
+    max-height: 5000px;
+}
+
+.cert-selector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
 .section-heading {
     font-size: 18px;
     font-weight: 700;
     color: #1e293b;
-    margin-bottom: 20px;
+    margin: 0;
+}
+
+.cert-selector-dropdown {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    min-width: 200px;
+}
+
+.cert-selector-dropdown:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.cert-selector-dropdown option:disabled {
+    color: #9ca3af;
+}
+
+.cert-requirements-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cert-requirement-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.cert-requirement-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    cursor: pointer;
+    background: #f8fafc;
+    transition: background 0.2s;
+}
+
+.cert-requirement-panel-header:hover {
+    background: #f1f5f9;
+}
+
+.cert-requirement-panel-header.complete {
+    background: #ecfdf5;
+}
+
+.cert-requirement-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.cert-requirement-panel-title .status-icon {
+    font-size: 18px;
+}
+
+.cert-requirement-panel-values {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.cert-requirement-panel-values .current-value {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.cert-requirement-panel-values .required-value {
+    color: #64748b;
+}
+
+.cert-requirement-panel-values .chevron {
+    transition: transform 0.2s;
+    color: #94a3b8;
+}
+
+.cert-requirement-panel-values .chevron.expanded {
+    transform: rotate(180deg);
+}
+
+.cert-requirement-panel-body {
+    padding: 16px;
+    border-top: 1px solid #e2e8f0;
+    display: none;
+}
+
+.cert-requirement-panel-body.expanded {
+    display: block;
 }
 
 .cert-progress-grid {
@@ -2527,5 +2766,234 @@ select.input-field {
 @media (max-width: 480px) {
     .hours-summary-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Budget Cards Styles */
+.budget-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.summary-card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.summary-label {
+    font-size: 0.9em;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+.summary-value {
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.summary-value.over-budget {
+    color: #dc2626;
+}
+
+.budget-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.budget-month-section {
+    margin-bottom: 30px;
+}
+
+.budget-month-header {
+    font-size: 1.4em;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.budget-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.budget-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.budget-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.budget-card.over-budget {
+    border-left: 4px solid #dc2626;
+}
+
+.budget-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.budget-card-title {
+    flex: 1;
+}
+
+.budget-card-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #1e293b;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.budget-card-category {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.budget-card-category.badge-administrative {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.budget-card-category.badge-training {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.budget-card-category.badge-family {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.budget-card-category.badge-maintenance {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.budget-card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    color: #64748b;
+    transition: background 0.2s, color 0.2s;
+}
+
+.btn-icon:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.budget-card-amounts {
+    margin-bottom: 15px;
+}
+
+.budget-amount-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.budget-amount-row.total {
+    border-top: 2px solid #e2e8f0;
+    border-bottom: none;
+    margin-top: 5px;
+    padding-top: 12px;
+    font-weight: 600;
+}
+
+.budget-label {
+    font-size: 0.9em;
+    color: #64748b;
+}
+
+.budget-value {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.budget-value.over-budget {
+    color: #dc2626;
+}
+
+.budget-progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.budget-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1e40af);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.budget-progress-fill.over-budget {
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.budget-progress-label {
+    font-size: 0.85em;
+    color: #64748b;
+    text-align: center;
+}
+
+.budget-card-notes {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-size: 0.9em;
+    color: #475569;
+    line-height: 1.5;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #94a3b8;
+    font-size: 1.1em;
+}
+
+/* Responsive adjustments for budget cards */
+@media (max-width: 768px) {
+    .budget-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .budget-summary-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     }
 }

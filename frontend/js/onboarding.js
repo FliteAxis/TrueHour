@@ -1167,6 +1167,26 @@ const OnboardingManager = {
             if (typeof updateDisplay === 'function') {
                 updateDisplay();
             }
+
+            // Update training widget with current hours (using camelCase format)
+            if (typeof TrainingWidget !== 'undefined' && TrainingWidget.updateDisplayFromHours && currentHours) {
+                console.log('[Onboarding] Updating training widget with hours:', currentHours);
+                const hoursData = {
+                    total: currentHours.totalTime || 0,
+                    pic: currentHours.picTime || 0,
+                    picXC: currentHours.picXC || 0,
+                    crossCountry: currentHours.xcTime || 0,  // Total XC
+                    instrumentTotal: currentHours.instrumentTotal || 0,
+                    instrumentDualAirplane: currentHours.instrumentDualAirplane || 0,
+                    recentInstrument: currentHours.recentInstrument || 0,
+                    ir250nmXC: currentHours.ir250nmXC || 0,
+                    night: currentHours.nightTime || 0,
+                    simTime: currentHours.simTime || 0,
+                    actualInstrument: currentHours.actualInstrument || 0,
+                    simulatedInstrument: currentHours.simulatedInstrument || 0
+                };
+                TrainingWidget.updateDisplayFromHours(hoursData);
+            }
         }, 150);
     },
 
@@ -1691,7 +1711,7 @@ const OnboardingManager = {
         const totalInstrument = actualInstrument + simulatedInstrument + simInstrumentTime;
 
         console.log('[Onboarding] Calculated totals:');
-        console.log('  Total:', totalTime, 'PIC:', picTime, 'PIC XC:', picXC);
+        console.log('  Total:', totalTime, 'PIC:', picTime, 'PIC XC:', picXC, 'Total XC:', xcTime);
         console.log('  Actual Instrument:', actualInstrument, 'Simulated Instrument (hood):', simulatedInstrument);
         console.log('  Simulator:', simulatorTime, 'Sim Instrument:', simInstrumentTime);
         console.log('  Dual:', dualReceived, 'Complex:', complexTime);
@@ -1704,10 +1724,12 @@ const OnboardingManager = {
             totalTime: totalTime,
             picTime: picTime,
             picXC: picXC,
+            xcTime: xcTime,  // Add total cross country time
             instrumentTotal: totalInstrument,
             dualReceived: dualReceived || (totalTime - picTime),
             actualInstrument: actualInstrument,
             simulatedInstrument: simulatedInstrument,
+            simTime: simulatorTime,  // Add simulator time
             simInstrumentTime: simInstrumentTime,
             batdTime: batdTime,
             instrumentDualAirplane: instrumentDualAirplane,
