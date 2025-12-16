@@ -1878,6 +1878,21 @@ select.input-field {
     background: #e5e7eb;
 }
 
+.modal-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.modal-btn-primary:hover {
+    background: linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%);
+}
+
+.modal-btn-primary:disabled {
+    background: #d1d5db;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
 .modal-btn-danger {
     background: #dc2626;
     color: white;
@@ -2947,9 +2962,34 @@ select.input-field {
     color: #92400e;
 }
 
+.budget-card-category.badge-certifications {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.budget-card-category.badge-equipment {
+    background: #f3e8ff;
+    color: #6b21a8;
+}
+
+.budget-card-category.badge-gear {
+    background: #fce7f3;
+    color: #9f1239;
+}
+
+.budget-card-category.badge-subscriptions {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
 .budget-card-category.badge-family {
     background: #dcfce7;
     color: #166534;
+}
+
+.budget-card-category.badge-personal {
+    background: #d1fae5;
+    color: #065f46;
 }
 
 .budget-card-category.badge-maintenance {
@@ -3330,5 +3370,56 @@ select.input-field {
     background: #f9fafb;
     border-radius: 6px;
     margin-bottom: 8px;
+}
+
+/* ==================== Budget Card Templates ==================== */
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.template-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.template-card:hover {
+    border-color: #1e40af;
+    background: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.template-icon {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.template-name {
+    font-weight: 600;
+    font-size: 1em;
+    margin-bottom: 8px;
+    color: #1e293b;
+}
+
+.template-amount {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 8px;
+}
+
+.template-description {
+    font-size: 0.85em;
+    color: #64748b;
+    line-height: 1.4;
 }
 

@@ -305,9 +305,12 @@ async def delete_all_user_data(
     try:
         async with postgres_db.acquire() as conn:
             # Delete all user data (cascading deletes will handle related records)
+            # Order matters: delete child tables before parent tables due to foreign keys
             await conn.execute("DELETE FROM chat_history")
+            await conn.execute("DELETE FROM expense_budget_links")  # Links first (has FKs to both)
             await conn.execute("DELETE FROM budget_entries")
             await conn.execute("DELETE FROM budgets")
+            await conn.execute("DELETE FROM budget_cards")  # Budget cards
             await conn.execute("DELETE FROM reminders")
             await conn.execute("DELETE FROM flights")
             await conn.execute("DELETE FROM expenses")

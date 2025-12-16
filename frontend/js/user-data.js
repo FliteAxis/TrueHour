@@ -99,20 +99,9 @@ const UserDataManager = (function() {
             }
 
             // Collect training settings
+            // Note: Static cost inputs removed in Phase 3+4 - now using Budget Cards
             data.budget_state.settings = {
                 lessonsPerWeek: parseFloat(document.getElementById('lessonsPerWeek')?.value) || 2,
-                instructorRate: parseFloat(document.getElementById('instructorRate')?.value) || 60,
-                simulatorRate: parseFloat(document.getElementById('simulatorRate')?.value) || 105,
-                groundHours: parseFloat(document.getElementById('groundHours')?.value) || 0,
-                headsetCost: parseFloat(document.getElementById('headsetCost')?.value) || 0,
-                booksCost: parseFloat(document.getElementById('booksCost')?.value) || 0,
-                bagCost: parseFloat(document.getElementById('bagCost')?.value) || 0,
-                medicalCost: parseFloat(document.getElementById('medicalCost')?.value) || 300,
-                knowledgeCost: parseFloat(document.getElementById('knowledgeCost')?.value) || 250,
-                checkrideCost: parseFloat(document.getElementById('checkrideCost')?.value) || 1000,
-                insuranceCost: parseFloat(document.getElementById('insuranceCost')?.value) || 1150,
-                foreflightCost: parseFloat(document.getElementById('foreflightCost')?.value) || 275,
-                onlineSchoolCost: parseFloat(document.getElementById('onlineSchoolCost')?.value) || 0,
                 contingencyPercent: parseFloat(document.getElementById('contingencyPercent')?.value) || 20
             };
 
@@ -617,11 +606,10 @@ const UserDataManager = (function() {
             console.warn('[UserData] targetCert element not found');
         }
 
-        // Add auto-save triggers for all settings inputs
+        // Add auto-save triggers for remaining settings inputs
+        // Note: Static cost inputs removed in Phase 3+4 - now using Budget Cards
         const settingsInputIds = [
-            'lessonsPerWeek', 'instructorRate', 'simulatorRate', 'groundHours',
-            'headsetCost', 'booksCost', 'bagCost', 'medicalCost', 'knowledgeCost',
-            'checkrideCost', 'insuranceCost', 'foreflightCost', 'onlineSchoolCost',
+            'lessonsPerWeek',
             'contingencyPercent'
         ];
 

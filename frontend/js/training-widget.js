@@ -5,7 +5,7 @@ const DataStore = {
     async init() {
         // Detect if backend is available
         try {
-            const response = await fetch('/api/health', {
+            const response = await fetch('/api/v1/health', {
                 method: 'GET',
                 cache: 'no-cache'
             });
@@ -63,25 +63,30 @@ const DataStore = {
                 const response = await fetch('/api/import-history/latest');
                 if (response.ok) {
                     const data = await response.json();
-                    // Convert snake_case from API to camelCase
-                    const hours = data.hours_imported;
-                    return {
-                        total: hours.total || 0,
-                        pic: hours.pic || 0,
-                        picXC: hours.pic_xc || 0,
-                        crossCountry: hours.cross_country || 0,
-                        instrumentTotal: hours.instrument_total || 0,
-                        instrumentDualAirplane: hours.instrument_dual_airplane || 0,
-                        recentInstrument: hours.recent_instrument || 0,
-                        ir250nmXC: hours.ir_250nm_xc || 0,
-                        night: hours.night || 0,
-                        simTime: hours.simulator_time || 0,
-                        actualInstrument: hours.actual_instrument || 0,
-                        simulatedInstrument: hours.simulated_instrument || 0
-                    };
+                    // Check if data exists (null on fresh database)
+                    if (data && data.hours_imported) {
+                        // Convert snake_case from API to camelCase
+                        const hours = data.hours_imported;
+                        return {
+                            total: hours.total || 0,
+                            pic: hours.pic || 0,
+                            picXC: hours.pic_xc || 0,
+                            crossCountry: hours.cross_country || 0,
+                            instrumentTotal: hours.instrument_total || 0,
+                            instrumentDualAirplane: hours.instrument_dual_airplane || 0,
+                            recentInstrument: hours.recent_instrument || 0,
+                            ir250nmXC: hours.ir_250nm_xc || 0,
+                            night: hours.night || 0,
+                            simTime: hours.simulator_time || 0,
+                            actualInstrument: hours.actual_instrument || 0,
+                            simulatedInstrument: hours.simulated_instrument || 0
+                        };
+                    }
+                    // No import history yet - fall through to localStorage
                 }
             } catch (error) {
-                console.error('[DataStore] Failed to load from database, trying localStorage:', error);
+                // Database error - fall through to localStorage
+                console.warn('[DataStore] Database error, using localStorage:', error.message);
             }
         }
 

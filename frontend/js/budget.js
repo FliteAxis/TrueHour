@@ -26,16 +26,14 @@ const BudgetManager = {
     setupEventListeners() {
         console.log('[BudgetManager] Setting up event listeners...');
         const addBudgetBtn = document.getElementById('addBudgetBtn');
-        console.log('[BudgetManager] Found addBudgetBtn:', addBudgetBtn);
         if (addBudgetBtn) {
             addBudgetBtn.addEventListener('click', () => {
                 console.log('[BudgetManager] Add Budget button clicked!');
                 this.showBudgetModal();
             });
-            console.log('[BudgetManager] Event listener attached to button');
-        } else {
-            console.error('[BudgetManager] ERROR: addBudgetBtn not found in DOM!');
+            console.log('[BudgetManager] Event listener attached to addBudgetBtn');
         }
+        // Note: addBudgetBtn may not exist on onboarding screen - this is expected
 
         const budgetFormEl = document.getElementById('budgetForm');
         if (budgetFormEl) {

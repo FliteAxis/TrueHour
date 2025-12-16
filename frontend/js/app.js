@@ -327,6 +327,13 @@ function init() {
     if (typeof BudgetManager !== 'undefined') {
         BudgetManager.init();
     }
+
+    // Initialize Budget Cards and calculate summary
+    if (typeof BudgetCards !== 'undefined') {
+        BudgetCards.init().then(() => {
+            calculateBudgetSummary();
+        });
+    }
 }
 
 function exportToPDF() {
@@ -1191,11 +1198,119 @@ function updateDisplay() {
     }
 }
 
+/**
+ * Calculate budget summary from Budget Cards
+ * Maps budget card categories to display sections
+ */
+async function calculateBudgetSummary() {
+    console.log('[calculateBudgetSummary] Starting calculation...');
+
+    // Get active budget cards
+    let cards = [];
+    if (typeof BudgetCards !== 'undefined' && BudgetCards.cards) {
+        cards = BudgetCards.cards.filter(c => c.status === 'active');
+    } else {
+        // Fallback: fetch directly if BudgetCards not loaded
+        try {
+            const response = await fetch('/api/budget-cards/?status=active');
+            if (response.ok) {
+                cards = await response.json();
+            }
+        } catch (error) {
+            console.error('[calculateBudgetSummary] Failed to fetch cards:', error);
+        }
+    }
+
+    console.log('[calculateBudgetSummary] Active cards:', cards.length);
+
+    // Category mapping
+    const categoryMap = {
+        flightTraining: ['Training', 'Instruction', 'Aircraft Rental'],
+        personalFlying: ['Family', 'Personal'],
+        gearSupplies: ['Equipment', 'Gear'],
+        examsFees: ['Certifications', 'Medical', 'Tests', 'Administrative'],
+        subscriptions: ['Subscriptions']
+    };
+
+    // Aggregate budgeted amounts by display section
+    const budgetTotals = {
+        flightTraining: 0,
+        personalFlying: 0,
+        gearSupplies: 0,
+        examsFees: 0,
+        subscriptions: 0
+    };
+
+    cards.forEach(card => {
+        const budgeted = parseFloat(card.budgeted_amount || 0);
+
+        // Find which display section this card belongs to
+        for (const [section, categories] of Object.entries(categoryMap)) {
+            if (categories.includes(card.category)) {
+                budgetTotals[section] += budgeted;
+                break;
+            }
+        }
+    });
+
+    console.log('[calculateBudgetSummary] Budget totals:', budgetTotals);
+
+    // Calculate subtotal and contingency
+    const subtotal = Object.values(budgetTotals).reduce((sum, val) => sum + val, 0);
+    const contingencyPercent = parseFloat(document.getElementById('contingencyPercent')?.value) || 0;
+    const contingency = subtotal * (contingencyPercent / 100);
+    const grandTotal = subtotal + contingency;
+
+    // Update Section 2 displays
+    document.getElementById('flightTrainingCost').textContent = '$' + budgetTotals.flightTraining.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('familyFlightCost').textContent = '$' + budgetTotals.personalFlying.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('gearCost').textContent = '$' + budgetTotals.gearSupplies.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('examsCost').textContent = '$' + budgetTotals.examsFees.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('subscriptionsCost').textContent = '$' + budgetTotals.subscriptions.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('subtotalCost').textContent = '$' + subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('contingencyCost').textContent = '$' + contingency.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    document.getElementById('totalCost').textContent = '$' + grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    // Calculate monthly budget (training only, excludes personal flying)
+    const lessonsPerWeek = Math.max(parseFloat(document.getElementById('lessonsPerWeek')?.value) || 2, 0.1);
+    const totalDualHours = parseFloat(document.getElementById('dualHours')?.value) || 0;
+    const totalSoloHours = parseFloat(document.getElementById('soloHours')?.value) || 0;
+    const totalTrainingHours = totalDualHours + totalSoloHours;
+    const avgHoursPerLesson = 1.5;
+
+    if (totalTrainingHours > 0 && lessonsPerWeek > 0) {
+        const weeksToComplete = totalTrainingHours / (lessonsPerWeek * avgHoursPerLesson);
+        const monthsToComplete = weeksToComplete / 4.33;
+
+        const trainingBudget = budgetTotals.flightTraining + budgetTotals.gearSupplies + budgetTotals.examsFees + budgetTotals.subscriptions;
+        const trainingContingency = trainingBudget * (contingencyPercent / 100);
+        const totalTrainingBudget = trainingBudget + trainingContingency;
+        const monthlyBudget = totalTrainingBudget / monthsToComplete;
+
+        document.getElementById('estimatedMonths').textContent = '~ ' + Math.ceil(monthsToComplete) + ' Months';
+        document.getElementById('monthlyBudget').textContent = '$' + monthlyBudget.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    } else {
+        document.getElementById('estimatedMonths').textContent = '~ 0 Months';
+        document.getElementById('monthlyBudget').textContent = '$0.00';
+    }
+
+    // Update chart
+    updateBudgetChart(
+        budgetTotals.flightTraining,
+        budgetTotals.personalFlying,
+        budgetTotals.gearSupplies,
+        budgetTotals.examsFees,
+        budgetTotals.subscriptions,
+        contingency
+    );
+
+    console.log('[calculateBudgetSummary] Calculation complete');
+}
+
 function calculate() {
-    var groundHours = parseFloat(document.getElementById('groundHours').value) || 0;
-    var instructorRate = parseFloat(document.getElementById('instructorRate').value) || 0;
-    var totalFlightTrainingCost = 0;
-    var totalFamilyFlightCost = 0;
+    // Legacy calculator - now only handles aircraft hour calculations
+    // Budget totals are driven by Budget Cards via calculateBudgetSummary()
+
     var totalDualHours = 0;
     var totalSoloHours = 0;
     var totalFamilyHours = 0;
@@ -1216,85 +1331,48 @@ function calculate() {
         var soloHours = parseFloat(item.querySelector('.aircraft-solo-hours').value) || 0;
         var familyHours = parseFloat(item.querySelector('.aircraft-family-hours').value) || 0;
 
-        var dualCost = dualHours * (aircraftRate + instructorRate);
-        var soloCost = soloHours * aircraftRate;
-        var familyCost = familyHours * aircraftRate;
-        var aircraftTotal = dualCost + soloCost + familyCost;
+        // Note: Cost calculations per aircraft are still shown but not used in totals
+        // Users should create Budget Cards for flight training costs
+        item.querySelector('.aircraft-dual-cost').textContent = '$0';
+        item.querySelector('.aircraft-solo-cost').textContent = '$0';
+        item.querySelector('.aircraft-family-cost').textContent = '$0';
+        item.querySelector('.aircraft-total-cost').textContent = '$0';
 
-        item.querySelector('.aircraft-dual-cost').textContent = '$' + dualCost.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        item.querySelector('.aircraft-solo-cost').textContent = '$' + soloCost.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        item.querySelector('.aircraft-family-cost').textContent = '$' + familyCost.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        item.querySelector('.aircraft-total-cost').textContent = '$' + aircraftTotal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-        totalFlightTrainingCost += dualCost + soloCost;
-        totalFamilyFlightCost += familyCost;
         totalDualHours += dualHours;
         totalSoloHours += soloHours;
         totalFamilyHours += familyHours;
     }
 
-    var groundCost = groundHours * instructorRate;
-    var flightTrainingTotal = totalFlightTrainingCost + groundCost;
-
     document.getElementById('dualHours').value = totalDualHours.toFixed(1);
     document.getElementById('soloHours').value = totalSoloHours.toFixed(1);
     document.getElementById('familyHours').value = totalFamilyHours.toFixed(1);
 
-    var headsetCost = parseFloat(document.getElementById('headsetCost').value) || 0;
-    var booksCost = parseFloat(document.getElementById('booksCost').value) || 0;
-    var bagCost = parseFloat(document.getElementById('bagCost').value) || 0;
-    var gearTotal = headsetCost + booksCost + bagCost;
-
-    var medicalCost = parseFloat(document.getElementById('medicalCost').value) || 0;
-    var knowledgeCost = parseFloat(document.getElementById('knowledgeCost').value) || 0;
-    var checkrideCost = parseFloat(document.getElementById('checkrideCost').value) || 0;
-    var insuranceCost = parseFloat(document.getElementById('insuranceCost').value) || 0;
-    var examsTotal = medicalCost + knowledgeCost + checkrideCost + insuranceCost;
-
-    var foreflightCost = parseFloat(document.getElementById('foreflightCost').value) || 0;
-    var onlineSchoolCost = parseFloat(document.getElementById('onlineSchoolCost').value) || 0;
-    var subscriptionsTotal = foreflightCost + onlineSchoolCost;
-
-    var subtotal = flightTrainingTotal + totalFamilyFlightCost + gearTotal + examsTotal + subscriptionsTotal;
-    var contingencyPercent = parseFloat(document.getElementById('contingencyPercent').value) || 0;
-    var contingency = subtotal * (contingencyPercent / 100);
-    var grandTotal = subtotal + contingency;
-
-    document.getElementById('flightTrainingCost').textContent = '$' + flightTrainingTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('familyFlightCost').textContent = '$' + totalFamilyFlightCost.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('gearCost').textContent = '$' + gearTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('examsCost').textContent = '$' + examsTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('subscriptionsCost').textContent = '$' + subscriptionsTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('subtotalCost').textContent = '$' + subtotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('contingencyCost').textContent = '$' + contingency.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    document.getElementById('totalCost').textContent = '$' + grandTotal.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    var lessonsPerWeek = parseFloat(document.getElementById('lessonsPerWeek').value) || 2;
-    var totalTrainingHours = totalDualHours + totalSoloHours;
-    var avgHoursPerLesson = 1.5;
-
-    if (totalTrainingHours > 0) {
-        var weeksToComplete = totalTrainingHours / (lessonsPerWeek * avgHoursPerLesson);
-        var monthsToComplete = weeksToComplete / 4.33;
-
-        var trainingBudget = flightTrainingTotal + gearTotal + examsTotal + subscriptionsTotal;
-        var trainingContingency = trainingBudget * (contingencyPercent / 100);
-        var totalTrainingBudget = trainingBudget + trainingContingency;
-        var monthlyBudget = totalTrainingBudget / monthsToComplete;
-
-        document.getElementById('estimatedMonths').textContent = '~ ' + Math.ceil(monthsToComplete) + ' Months';
-        document.getElementById('monthlyBudget').textContent = '$' + monthlyBudget.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-    } else {
-        document.getElementById('estimatedMonths').textContent = '~ 0 Months';
-        document.getElementById('monthlyBudget').textContent = '$0.00';
+    // Trigger Budget Card aggregation
+    if (typeof calculateBudgetSummary === 'function') {
+        calculateBudgetSummary();
     }
-
-    updateBudgetChart(flightTrainingTotal, totalFamilyFlightCost, gearTotal, examsTotal, subscriptionsTotal, contingency);
 }
 
 function updateBudgetChart(training, family, gear, exams, subs, contingency) {
     var ctx = document.getElementById('budgetChart');
     if (!ctx) return;
+
+    // Calculate total to check if chart is empty
+    var total = training + family + gear + exams + subs + contingency;
+    var emptyState = document.getElementById('chartEmptyState');
+    var legendDiv = document.getElementById('chartLegend');
+
+    // Show empty state if total is 0
+    if (total === 0) {
+        if (emptyState) emptyState.style.display = 'block';
+        if (legendDiv) legendDiv.style.display = 'none';
+        ctx.style.display = 'none';
+        return;
+    } else {
+        if (emptyState) emptyState.style.display = 'none';
+        if (legendDiv) legendDiv.style.display = 'block';
+        ctx.style.display = 'block';
+    }
 
     var chartData = {
         labels: ['Flight Training', 'Personal', 'Gear', 'Exams', 'Subscriptions', 'Contingency'],
@@ -1324,7 +1402,7 @@ function updateBudgetChart(training, family, gear, exams, subs, contingency) {
                                 for (var i = 0; i < context.dataset.data.length; i++) {
                                     total += context.dataset.data[i];
                                 }
-                                var pct = ((context.parsed / total) * 100).toFixed(1);
+                                var pct = total > 0 ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
                                 return context.label + ': $' + context.parsed.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' (' + pct + '%)';
                             }
                         }
@@ -1344,7 +1422,7 @@ function updateBudgetChart(training, family, gear, exams, subs, contingency) {
     var html = '';
     for (var i = 0; i < chartData.labels.length; i++) {
         var value = chartData.datasets[0].data[i];
-        var pct = ((value / total) * 100).toFixed(1);
+        var pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
         html += '<div class="legend-item"><div class="legend-color" style="background:' + colors[i] + '"></div>';
         html += '<div class="legend-label">' + chartData.labels[i] + '</div>';
         html += '<div class="legend-value">$' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + ' (' + pct + '%)</div></div>';
@@ -1356,11 +1434,30 @@ window.addEventListener('DOMContentLoaded', init);
 
 // Global modal functions for error and confirmation dialogs
 function showErrorModal(title, message) {
-    // For now, use alert as fallback until we implement proper error modal
-    alert(`${title}\n\n${message}`);
+    const modal = document.getElementById('errorModal');
+    const titleEl = document.getElementById('errorTitle');
+    const messageEl = document.getElementById('errorMessage');
+    const okBtn = document.getElementById('errorOkBtn');
+
+    if (!modal || !titleEl || !messageEl || !okBtn) {
+        // Fallback to browser alert if modal elements don't exist
+        alert(`${title}\n\n${message}`);
+        return;
+    }
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    modal.style.display = 'flex';
+
+    const handleClose = () => {
+        modal.style.display = 'none';
+        okBtn.removeEventListener('click', handleClose);
+    };
+
+    okBtn.addEventListener('click', handleClose);
 }
 
-function showConfirmModal(title, message) {
+function showConfirmModal(title, message, confirmText = 'Confirm', isDangerous = false) {
     return new Promise((resolve) => {
         const modal = document.getElementById('confirmModal');
         const titleEl = document.getElementById('confirmTitle');
@@ -1376,6 +1473,11 @@ function showConfirmModal(title, message) {
 
         titleEl.textContent = title;
         messageEl.textContent = message;
+        okBtn.textContent = confirmText;
+
+        // Set button style based on action type
+        okBtn.className = 'modal-btn ' + (isDangerous ? 'modal-btn-danger' : 'modal-btn-primary');
+
         modal.style.display = 'flex';
 
         const handleConfirm = () => {
