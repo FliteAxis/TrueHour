@@ -155,6 +155,25 @@ function loadBudget(event) {
 
                     document.getElementById('summaryInstrumentDualAirplane').textContent = currentHours.instrumentDualAirplane.toFixed(1);
                     document.getElementById('summaryRecentInstrument').textContent = currentHours.recentInstrument.toFixed(1);
+
+                    // Update Training Widget with loaded hours (Phase 10 integration)
+                    if (typeof TrainingWidget !== 'undefined' && TrainingWidget.updateDisplayFromHours) {
+                        const widgetHours = {
+                            total: currentHours.totalTime || 0,
+                            pic: currentHours.picTime || 0,
+                            crossCountry: currentHours.xcTime || 0,
+                            instrumentTotal: currentHours.instrumentTotal || 0,
+                            night: currentHours.nightTime || 0,
+                            simTime: currentHours.simTime || 0,
+                            actualInstrument: currentHours.actualInstrument || 0,
+                            simulatedInstrument: currentHours.simulatedInstrument || 0,
+                            picXC: currentHours.picXC || 0,
+                            instrumentDualAirplane: currentHours.instrumentDualAirplane || 0,
+                            recentInstrument: currentHours.recentInstrument || 0,
+                            ir250nmXC: currentHours.ir250nmXC || 0
+                        };
+                        TrainingWidget.updateDisplayFromHours(widgetHours);
+                    }
                 }
             } else {
                 currentHours = {};
@@ -255,17 +274,28 @@ function init() {
     document.getElementById('logbookFile').addEventListener('change', parseLogbook);
     document.getElementById('targetCert').addEventListener('change', updateDisplay);
 
-    // Hamburger menu
-    document.getElementById('hamburgerMenu').addEventListener('click', toggleMenu);
-
-    // Close menu when clicking outside
-    document.addEventListener('click', function(e) {
-        var menu = document.getElementById('menuDropdown');
-        var hamburger = document.getElementById('hamburgerMenu');
-        if (!menu.contains(e.target) && !hamburger.contains(e.target)) {
-            menu.classList.remove('open');
+    // Initialize certification button state
+    var initialCert = document.getElementById('targetCert').value || '';
+    var buttons = document.querySelectorAll('.cert-btn');
+    buttons.forEach(function(btn) {
+        if (btn.getAttribute('data-cert') === initialCert) {
+            btn.classList.add('active');
         }
     });
+
+    // Hamburger menu (if it exists)
+    var hamburgerMenu = document.getElementById('hamburgerMenu');
+    if (hamburgerMenu) {
+        hamburgerMenu.addEventListener('click', toggleMenu);
+
+        // Close menu when clicking outside
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('menuDropdown');
+            if (menu && !menu.contains(e.target) && !hamburgerMenu.contains(e.target)) {
+                menu.classList.remove('open');
+            }
+        });
+    }
 
     var instrumentHeader = document.getElementById('instrumentDetailsHeader');
     if (instrumentHeader) {
@@ -868,10 +898,14 @@ async function saveImportHistory(flightCount, hours, fileName, actualFlights, si
                 const hoursData = {
                     total: hours.totalTime,
                     pic: hours.picTime,
-                    crossCountry: hours.xcTime,  // camelCase for updateDisplayFromHours
+                    picXC: hours.picXC,
+                    crossCountry: hours.xcTime,
                     instrumentTotal: hours.instrumentTotal,
+                    instrumentDualAirplane: hours.instrumentDualAirplane,
+                    recentInstrument: hours.recentInstrument,
+                    ir250nmXC: hours.ir250nmXC,
                     night: hours.nightTime || 0,
-                    simTime: hours.simTime || 0,  // camelCase for updateDisplayFromHours
+                    simTime: hours.simTime || 0,
                     actualInstrument: hours.actualInstrument,
                     simulatedInstrument: hours.simulatedInstrument
                 };
@@ -1045,6 +1079,25 @@ function processLogbook(data, actualFlights, simFlights) {
     document.getElementById('summaryInstrumentDualAirplane').textContent = currentHours.instrumentDualAirplane.toFixed(1);
     document.getElementById('summaryRecentInstrument').textContent = currentHours.recentInstrument.toFixed(1);
 
+    // Update Training Widget with new hours (Phase 10 integration)
+    if (typeof TrainingWidget !== 'undefined' && TrainingWidget.updateDisplayFromHours) {
+        const widgetHours = {
+            total: currentHours.totalTime || 0,
+            pic: currentHours.picTime || 0,
+            crossCountry: currentHours.xcTime || 0,
+            instrumentTotal: currentHours.instrumentTotal || 0,
+            night: currentHours.nightTime || 0,
+            simTime: currentHours.simTime || 0,
+            actualInstrument: currentHours.actualInstrument || 0,
+            simulatedInstrument: currentHours.simulatedInstrument || 0,
+            picXC: currentHours.picXC || 0,
+            instrumentDualAirplane: currentHours.instrumentDualAirplane || 0,
+            recentInstrument: currentHours.recentInstrument || 0,
+            ir250nmXC: currentHours.ir250nmXC || 0
+        };
+        TrainingWidget.updateDisplayFromHours(widgetHours);
+    }
+
     // Save import history to database
     saveImportHistory(data.length, currentHours, 'foreflight_logbook_import.csv', actualFlights, simFlights);
 
@@ -1054,6 +1107,40 @@ function processLogbook(data, actualFlights, simFlights) {
     }
 
     updateDisplay();
+}
+
+function selectCertification(certValue) {
+    console.log('[selectCertification] Selecting cert:', certValue);
+
+    // Update hidden select
+    document.getElementById('targetCert').value = certValue;
+
+    // Sync with Summary tab cert-selector dropdown
+    const certSelector = document.getElementById('cert-selector');
+    if (certSelector) {
+        certSelector.value = certValue;
+
+        // Trigger the change event to update TrainingWidget display
+        // (TrainingWidget will save to database)
+        const event = new Event('change', { bubbles: true });
+        certSelector.dispatchEvent(event);
+    }
+
+    // Update active state on buttons
+    var buttons = document.querySelectorAll('.cert-btn');
+    buttons.forEach(function(btn) {
+        if (btn.getAttribute('data-cert') === certValue) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+
+    // Trigger display update
+    updateDisplay();
+
+    // Calculate and populate planned training hours
+    certificationChanged();
 }
 
 function updateDisplay() {
@@ -1421,7 +1508,7 @@ function updateBudgetChart(training, family, gear, exams, subs, contingency) {
 
     var html = '';
     for (var i = 0; i < chartData.labels.length; i++) {
-        var value = chartData.datasets[0].data[i];
+        var value = chartData.datasets[0].data[i] || 0;
         var pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
         html += '<div class="legend-item"><div class="legend-color" style="background:' + colors[i] + '"></div>';
         html += '<div class="legend-label">' + chartData.labels[i] + '</div>';
@@ -1500,4 +1587,213 @@ function showConfirmModal(title, message, confirmText = 'Confirm', isDangerous =
         okBtn.addEventListener('click', handleConfirm);
         cancelBtn.addEventListener('click', handleCancel);
     });
+}
+
+// ===================================================================
+// PHASE 10: TAB NAVIGATION & HAMBURGER MENU
+// ===================================================================
+
+/**
+ * Toggle hamburger menu open/closed
+ */
+function toggleHamburgerMenu() {
+    const menu = document.getElementById('hamburger-menu');
+    if (!menu) return;
+
+    const isOpen = menu.classList.contains('open');
+
+    if (isOpen) {
+        menu.classList.remove('open');
+        document.body.classList.remove('menu-open');
+    } else {
+        menu.classList.add('open');
+        document.body.classList.add('menu-open');
+    }
+}
+
+/**
+ * Switch between tabs
+ */
+function switchTab(tabName) {
+    console.log('[switchTab] Switching to:', tabName);
+
+    // Update tab buttons
+    document.querySelectorAll('.nav-tab').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    const activeContent = document.getElementById(`tab-${tabName}`);
+    if (activeContent) {
+        activeContent.classList.add('active');
+    }
+
+    // Save active tab to localStorage
+    localStorage.setItem('activeTab', tabName);
+
+    // Trigger any tab-specific initialization
+    if (tabName === 'summary') {
+        // Recalculate budget summary
+        if (typeof calculateBudgetSummary === 'function') {
+            calculateBudgetSummary();
+        }
+        // Update chart if needed
+        if (typeof updateBudgetChart === 'function') {
+            updateBudgetChart();
+        }
+    } else if (tabName === 'flight') {
+        // Update certification display
+        if (typeof updateDisplay === 'function') {
+            updateDisplay();
+        }
+        // Render aircraft cards
+        if (typeof renderAircraftCards === 'function') {
+            renderAircraftCards();
+        }
+    } else if (tabName === 'budget') {
+        // Reload budget cards (chart will auto-render via MutationObserver)
+        if (typeof BudgetCards !== 'undefined' && BudgetCards.loadCards) {
+            BudgetCards.loadCards();
+        }
+        // Reload expenses
+        if (typeof ExpenseTracker !== 'undefined' && ExpenseTracker.loadExpenses) {
+            ExpenseTracker.loadExpenses();
+        }
+    }
+}
+
+/**
+ * Initialize tabs on page load
+ */
+function initTabs() {
+    console.log('[initTabs] Initializing tab navigation');
+
+    // Restore last active tab or default to summary
+    const activeTab = localStorage.getItem('activeTab') || 'summary';
+    switchTab(activeTab);
+}
+
+/**
+ * Open settings (placeholder for future)
+ */
+function openSettings() {
+    // TODO: Implement settings modal/page in future phase
+    alert('Settings coming in a future update!');
+}
+
+// Close hamburger menu on escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const menu = document.getElementById('hamburger-menu');
+        if (menu && menu.classList.contains('open')) {
+            toggleHamburgerMenu();
+        }
+    }
+});
+
+/**
+ * Calculate and populate planned training hours based on selected certification and current hours
+ */
+function certificationChanged() {
+    const certSelect = document.getElementById('targetCert');
+    const dualHoursInput = document.getElementById('dualHours');
+    const soloHoursInput = document.getElementById('soloHours');
+
+    if (!certSelect || !dualHoursInput || !soloHoursInput) return;
+
+    const selectedCert = certSelect.value;
+
+    // If no certification selected, reset to 0
+    if (!selectedCert) {
+        dualHoursInput.value = 0;
+        soloHoursInput.value = 0;
+        return;
+    }
+
+    // Get requirements for selected certification
+    const requirements = TrainingWidget.getCertificationRequirements(selectedCert);
+    if (!requirements) {
+        dualHoursInput.value = 0;
+        soloHoursInput.value = 0;
+        return;
+    }
+
+    // Get current hours from DataStore or currentHours global
+    let currentHoursData = null;
+    if (typeof currentHours !== 'undefined' && currentHours && currentHours.totalTime) {
+        // Convert from camelCase format (currentHours) to the format needed
+        currentHoursData = {
+            total: currentHours.totalTime || 0,
+            pic: currentHours.picTime || 0,
+            picXC: currentHours.picXC || 0,
+            crossCountry: currentHours.xcTime || currentHours.crossCountry || 0,
+            instrumentTotal: currentHours.instrumentTotal || 0,
+            night: currentHours.nightTime || currentHours.night || 0,
+            simTime: currentHours.simTime || 0,
+            actualInstrument: currentHours.actualInstrument || 0,
+            simulatedInstrument: currentHours.simulatedInstrument || 0,
+            instrumentDualAirplane: currentHours.instrumentDualAirplane || 0,
+            recentInstrument: currentHours.recentInstrument || 0,
+            ir250nmXC: currentHours.ir250nmXC || 0
+        };
+    } else {
+        // No hours yet - use zeros
+        currentHoursData = {
+            total: 0,
+            pic: 0,
+            picXC: 0,
+            crossCountry: 0,
+            instrumentTotal: 0,
+            night: 0,
+            simTime: 0
+        };
+    }
+
+    console.log('[certificationChanged] Selected cert:', selectedCert);
+    console.log('[certificationChanged] Current hours:', currentHoursData);
+    console.log('[certificationChanged] Requirements:', requirements);
+
+    // Calculate remaining hours for each requirement
+    let totalDualNeeded = 0;
+    let totalSoloNeeded = 0;
+
+    requirements.forEach(req => {
+        if (req.isSpecial) return; // Skip non-hour requirements
+
+        const currentValue = currentHoursData[req.hoursKey] || 0;
+        const remaining = Math.max(0, req.required - currentValue);
+
+        console.log(`[certificationChanged] ${req.label}: current=${currentValue}, required=${req.required}, remaining=${remaining}`);
+
+        // Categorize into dual vs solo hours
+        // Solo hours: PIC, Solo, Cross-Country (when solo)
+        // Dual hours: Instrument, Dual Received, etc.
+        if (req.hoursKey === 'pic' || req.label.toLowerCase().includes('solo')) {
+            totalSoloNeeded += remaining;
+        } else {
+            totalDualNeeded += remaining;
+        }
+    });
+
+    console.log('[certificationChanged] Total dual needed:', totalDualNeeded);
+    console.log('[certificationChanged] Total solo needed:', totalSoloNeeded);
+
+    // Update the planned hours fields
+    dualHoursInput.value = totalDualNeeded.toFixed(1);
+    soloHoursInput.value = totalSoloNeeded.toFixed(1);
+}
+
+// Initialize tabs when DOM is loaded
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTabs);
+} else {
+    // DOM already loaded
+    initTabs();
 }

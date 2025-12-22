@@ -45,8 +45,31 @@ const OnboardingManager = {
         // This ensures we check for aircraft after database load completes
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Check if user has completed onboarding before
-        const hasCompletedOnboarding = localStorage.getItem('truehour-onboarding-completed');
+        // Check if user has completed onboarding - check database first, then localStorage fallback
+        let hasCompletedOnboarding = false;
+
+        try {
+            // Try to get onboarding status from database
+            const response = await fetch('/api/user/settings');
+            if (response.ok) {
+                const settings = await response.json();
+                hasCompletedOnboarding = settings.onboarding_completed || false;
+                console.log('[Onboarding] Database says onboarding completed:', hasCompletedOnboarding);
+
+                // Sync localStorage with database
+                if (hasCompletedOnboarding) {
+                    localStorage.setItem('truehour-onboarding-completed', 'true');
+                }
+            } else {
+                // Fallback to localStorage if API fails
+                hasCompletedOnboarding = localStorage.getItem('truehour-onboarding-completed') === 'true';
+                console.log('[Onboarding] Using localStorage fallback:', hasCompletedOnboarding);
+            }
+        } catch (error) {
+            console.error('[Onboarding] Failed to check database, using localStorage:', error);
+            hasCompletedOnboarding = localStorage.getItem('truehour-onboarding-completed') === 'true';
+        }
+
         const hasAircraft = AircraftAPI.getAllAircraft().length > 0;
         const urlParams = new URLSearchParams(window.location.search);
         const forceOnboarding = urlParams.get('onboarding') === 'true';
@@ -386,82 +409,78 @@ const OnboardingManager = {
             }
 
             return `
-            <div class="csv-aircraft-item aircraft-item" style="padding: 20px; background: white; border: 1px solid #e5e7eb; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); transition: all 0.2s ease; margin-bottom: 16px;">
+            <div class="csv-aircraft-item aircraft-item" style="padding: 24px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); margin-bottom: 20px;">
                 <!-- Header Section -->
-                <div class="aircraft-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                        <input type="checkbox" class="csv-aircraft-checkbox" id="wizard-csv-check-${index}" checked style="width: 18px; height: 18px; cursor: pointer;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <input type="checkbox" class="csv-aircraft-checkbox" id="wizard-csv-check-${index}" checked style="width: 20px; height: 20px; cursor: pointer; accent-color: #60a5fa;">
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 1.1em; color: #1e293b;">${a.registration}</div>
-                            ${a.totalTime ? '<div style="font-size: 0.875em; color: #64748b; margin-top: 2px;">' + a.totalTime.toFixed(1) + ' hours logged</div>' : ''}
+                            <div style="font-weight: 700; font-size: 1.25em; color: #f1f5f9;">${a.registration}</div>
+                            ${a.totalTime ? '<div style="font-size: 0.9em; color: #94a3b8; margin-top: 4px;">' + a.totalTime.toFixed(1) + ' hours logged</div>' : ''}
                         </div>
                     </div>
                     ${sourceBadge}
                 </div>
 
                 <!-- Aircraft Info Grid -->
-                <div class="aircraft-info-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
-                    <div class="aircraft-field">
-                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Tail Number</label>
-                        <input type="text" class="input-field" id="wizard-csv-tail-${index}" value="${a.registration}" placeholder="e.g., N12345" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+                    <div>
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Tail Number</label>
+                        <input type="text" class="input-field" id="wizard-csv-tail-${index}" value="${a.registration}" placeholder="e.g., N12345" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #0f172a; color: #f1f5f9; box-sizing: border-box; transition: border-color 0.2s;">
                     </div>
-                    <div class="aircraft-field">
-                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Year</label>
-                        <input type="text" class="input-field" id="wizard-csv-year-${index}" value="${displayYear}" placeholder="e.g., 1981" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    <div>
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Year</label>
+                        <input type="text" class="input-field" id="wizard-csv-year-${index}" value="${displayYear}" placeholder="e.g., 1981" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #0f172a; color: #f1f5f9; box-sizing: border-box; transition: border-color 0.2s;">
                     </div>
-                    <div class="aircraft-field">
-                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Make</label>
-                        <input type="text" class="input-field" id="wizard-csv-make-${index}" value="${displayMake}" placeholder="e.g., Cessna" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    <div>
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Make</label>
+                        <input type="text" class="input-field" id="wizard-csv-make-${index}" value="${displayMake}" placeholder="e.g., Cessna" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #0f172a; color: #f1f5f9; box-sizing: border-box; transition: border-color 0.2s;">
                     </div>
-                    <div class="aircraft-field">
-                        <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">Model</label>
-                        <input type="text" class="input-field" id="wizard-csv-model-${index}" value="${displayModel}" placeholder="e.g., 172 Skyhawk" style="width: 100%; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; box-sizing: border-box;">
+                    <div>
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Model</label>
+                        <input type="text" class="input-field" id="wizard-csv-model-${index}" value="${displayModel}" placeholder="e.g., 172 Skyhawk" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #0f172a; color: #f1f5f9; box-sizing: border-box; transition: border-color 0.2s;">
                     </div>
                 </div>
 
-                <!-- Rate Configuration Panel -->
-                <div class="aircraft-item-row2" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-                    <div class="aircraft-rate-config">
+                <!-- Rate Configuration Section -->
+                <div style="background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 10px;">Rate Type</label>
                         <div class="rate-type-toggle" data-aircraft-index="${index}">
                             <button type="button" class="rate-type-btn active" data-type="wet" data-aircraft-index="${index}">Wet</button>
                             <button type="button" class="rate-type-btn" data-type="dry" data-aircraft-index="${index}">Dry</button>
                         </div>
-                        <div class="rate-value" id="wizard-csv-rate-value-${index}">
-                            <span class="currency">$</span>
-                            <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="150" min="0" style="width:80px;font-size:1em;font-weight:600;">
-                            <span class="unit">/hr</span>
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Hourly Rate</label>
+                        <div class="rate-value" id="wizard-csv-rate-value-${index}" style="display: flex; align-items: center; gap: 8px;">
+                            <span style="color: #94a3b8; font-weight: 600; font-size: 1.1em;">$</span>
+                            <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="150" min="0" style="flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1.1em; font-weight: 600; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">
+                            <span style="color: #94a3b8; font-size: 0.95em; white-space: nowrap;">/hr</span>
                         </div>
                     </div>
 
-                    <div class="csv-aircraft-rates">
-                        <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="120" min="0" style="width:80px;font-size:1em;font-weight:600;display:none;">
-
-                        <div id="wizard-csv-fuel-section-${index}" class="fuel-inputs hidden" style="margin-top: 12px;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                                <div>
-                                    <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Price</label>
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <span style="color: #64748b; font-weight: 600; font-size: 1em;">$</span>
-                                        <input type="number" class="input-field" id="wizard-csv-fuel-price-${index}" value="6" min="0" step="0.10" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; background: white; box-sizing: border-box;">
-                                        <span style="color: #64748b; font-size: 0.85em; white-space: nowrap;">/gal</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="aircraft-field-label" style="font-size: 0.75em; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Burn</label>
-                                    <div style="display: flex; align-items: center; gap: 6px;">
-                                        <input type="number" class="input-field" id="wizard-csv-fuel-burn-${index}" value="8" min="0" step="0.5" style="flex: 1; padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 0.95em; background: white; box-sizing: border-box;">
-                                        <span style="color: #64748b; font-size: 0.85em; white-space: nowrap;">gal/hr</span>
-                                    </div>
-                                </div>
+                    <div id="wizard-csv-fuel-section-${index}" class="fuel-inputs hidden">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Price ($/gal)</label>
+                                <input type="number" class="input-field" id="wizard-csv-fuel-price-${index}" value="6" min="0" step="0.10" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">
+                            </div>
+                            <div>
+                                <label style="font-size: 0.75em; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px;">Fuel Burn (gal/hr)</label>
+                                <input type="number" class="input-field" id="wizard-csv-fuel-burn-${index}" value="8" min="0" step="0.5" style="width: 100%; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1em; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Default Aircraft Checkbox -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="wizard-csv-default-${index}" ${index === 0 ? 'checked' : ''} data-aircraft-index="${index}" style="width: 16px; height: 16px; cursor: pointer;">
-                    <label for="wizard-csv-default-${index}" style="font-size: 0.875em; color: #64748b; cursor: pointer; user-select: none;">★ Set as default aircraft</label>
+                <div style="display: flex; align-items: center; gap: 10px; padding: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px;">
+                    <input type="checkbox" id="wizard-csv-default-${index}" ${index === 0 ? 'checked' : ''} data-aircraft-index="${index}" style="width: 18px; height: 18px; cursor: pointer; accent-color: #60a5fa;">
+                    <label for="wizard-csv-default-${index}" style="font-size: 0.95em; color: #f1f5f9; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px;">
+                        <span style="color: #fbbf24; font-size: 1.1em;">★</span> Set as default aircraft
+                    </label>
                 </div>
             </div>
             `;
@@ -531,33 +550,37 @@ const OnboardingManager = {
 
         if (rateType === 'wet') {
             // Show wet input in the rate-value div
-            const currentValue = wetInput.value;
+            const currentValue = wetInput ? wetInput.value : '150';
             rateValueDiv.innerHTML = `
-                <span class="currency">$</span>
-                <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${currentValue}" min="0" style="width:80px;font-size:1em;font-weight:600;">
-                <span class="unit">/hr</span>
+                <span style="color: #94a3b8; font-weight: 600; font-size: 1.1em;">$</span>
+                <input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${currentValue}" min="0" style="flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1.1em; font-weight: 600; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">
+                <span style="color: #94a3b8; font-size: 0.95em; white-space: nowrap;">/hr</span>
             `;
+            // Keep dry input hidden but accessible for data storage
+            const currentDryValue = dryInput ? dryInput.value : '120';
+            const hiddenDry = document.getElementById(`wizard-csv-dry-${index}`);
+            if (!hiddenDry) {
+                rateValueDiv.insertAdjacentHTML('beforeend', `<input type="number" class="input-field" id="wizard-csv-dry-${index}" value="${currentDryValue}" min="0" style="flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1.1em; font-weight: 600; display: none; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">`);
+            }
             if (fuelSection) {
                 fuelSection.classList.add('hidden');
-                fuelSection.style.display = 'none';
             }
         } else {
             // Show dry input in the rate-value div
-            const currentValue = dryInput.value;
+            const currentValue = dryInput ? dryInput.value : '120';
             rateValueDiv.innerHTML = `
-                <span class="currency">$</span>
-                <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="${currentValue}" min="0" style="width:80px;font-size:1em;font-weight:600;">
-                <span class="unit">/hr</span>
+                <span style="color: #94a3b8; font-weight: 600; font-size: 1.1em;">$</span>
+                <input type="number" class="input-field" id="wizard-csv-dry-${index}" value="${currentValue}" min="0" style="flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1.1em; font-weight: 600; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">
+                <span style="color: #94a3b8; font-size: 0.95em; white-space: nowrap;">/hr</span>
             `;
             // Keep wet input hidden but accessible for data storage
+            const currentWetValue = wetInput ? wetInput.value : '150';
             const hiddenWet = document.getElementById(`wizard-csv-wet-${index}`);
             if (!hiddenWet) {
-                const wetValue = wetInput ? wetInput.value : '150';
-                rateValueDiv.insertAdjacentHTML('beforeend', `<input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${wetValue}" min="0" style="width:80px;font-size:1em;font-weight:600;display:none;">`);
+                rateValueDiv.insertAdjacentHTML('beforeend', `<input type="number" class="input-field" id="wizard-csv-wet-${index}" value="${currentWetValue}" min="0" style="flex: 1; padding: 12px; border: 1px solid #334155; border-radius: 8px; font-size: 1.1em; font-weight: 600; display: none; background: #1e293b; color: #f1f5f9; box-sizing: border-box;">`);
             }
             if (fuelSection) {
                 fuelSection.classList.remove('hidden');
-                fuelSection.style.display = 'block';
             }
         }
 
@@ -629,6 +652,56 @@ const OnboardingManager = {
      */
     setupLoadFileStep: function() {
         console.log('[Onboarding] Setting up load file step');
+    },
+
+    /**
+     * Update certification display when user selects a certification
+     */
+    updateCertificationDisplay: function(selectId, containerId) {
+        const select = document.getElementById(selectId);
+        const container = document.getElementById(containerId);
+        const listContainer = document.getElementById(containerId + '-list');
+
+        if (!select || !container || !listContainer) return;
+
+        const certValue = select.value;
+
+        // Hide if no certification selected
+        if (!certValue) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Get requirements from TrainingWidget
+        const requirements = TrainingWidget.getCertificationRequirements(certValue);
+
+        if (!requirements || requirements.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Build requirements list
+        let html = '';
+        requirements.forEach(req => {
+            if (!req.isSpecial) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #334155;">
+                        <span style="color: #cbd5e1;">${req.label}</span>
+                        <span style="color: #60a5fa; font-weight: 600;">${req.required} hours</span>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div style="padding: 10px 0; border-bottom: 1px solid #334155;">
+                        <div style="color: #cbd5e1; margin-bottom: 5px;">${req.label}</div>
+                        <div style="color: #94a3b8; font-size: 0.9em;">${req.notes || ''}</div>
+                    </div>
+                `;
+            }
+        });
+
+        listContainer.innerHTML = html;
+        container.style.display = 'block';
     },
 
     /**
@@ -934,6 +1007,9 @@ const OnboardingManager = {
                 // Set in main app
                 document.getElementById('targetCert').value = this.wizardData.certification;
                 document.getElementById('lessonsPerWeek').value = this.wizardData.lessonsPerWeek;
+
+                // Certification will be saved to database on completion
+                console.log('[Onboarding] Certification set:', this.wizardData.certification);
                 break;
         }
 
@@ -1010,11 +1086,42 @@ const OnboardingManager = {
     /**
      * Complete onboarding
      */
-    completeOnboarding: function() {
+    completeOnboarding: async function() {
         console.log('[Onboarding] Completing onboarding');
 
-        // Mark onboarding as complete
+        // Mark onboarding as complete in localStorage
         localStorage.setItem('truehour-onboarding-completed', 'true');
+
+        // Save onboarding completion AND certification to database
+        try {
+            console.log('[Onboarding] Saving onboarding completion to database');
+            const response = await fetch('/api/user/settings', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    auto_save_enabled: true,
+                    auto_save_interval: 3000,
+                    timezone: 'America/New_York',
+                    onboarding_completed: true,
+                    target_certification: this.wizardData.certification || null
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save onboarding status');
+            }
+
+            console.log('[Onboarding] Successfully saved to database (including certification:', this.wizardData.certification, ')');
+
+            // Also save any data collected during onboarding
+            if (typeof UserDataManager !== 'undefined') {
+                await UserDataManager.saveToDatabase();
+            }
+        } catch (error) {
+            console.error('[Onboarding] Failed to save to database:', error);
+        }
 
         // Clear progress
         localStorage.removeItem('truehour-onboarding-progress');
@@ -1032,93 +1139,170 @@ const OnboardingManager = {
         }
 
         // Show main app
-        this.showMainApp();
+        await this.showMainApp();
 
-        // Update URL
-        window.location.hash = '';
+        // Re-initialize TrainingWidget to load the certification we just saved
+        if (typeof TrainingWidget !== 'undefined' && TrainingWidget.setupCertificationSelector) {
+            console.log('[Onboarding] Re-initializing TrainingWidget to load saved certification');
+            await TrainingWidget.setupCertificationSelector();
+        }
+
+        // Clear URL query params and hash
+        if (window.location.search || window.location.hash) {
+            console.log('[Onboarding] Clearing URL after completion');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     },
 
     /**
      * Skip onboarding
      */
-    skipOnboarding: function() {
-        console.log('[Onboarding] Skipping onboarding');
+    skipOnboarding: async function() {
+        console.log('[Onboarding] Skipping onboarding - user has completed onboarding');
 
-        // Hide landing and wizard
+        // Clear URL query parameters AND hash IMMEDIATELY
+        if (window.location.search || window.location.hash) {
+            console.log('[Onboarding] Clearing URL params:', window.location.search, window.location.hash);
+            // Use history.replaceState to remove query params without reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        // Hide landing and wizard IMMEDIATELY
         const landing = document.getElementById('landing-screen');
         if (landing) {
             landing.style.display = 'none';
+            console.log('[Onboarding] Hid landing screen');
         }
 
         const wizard = document.getElementById('onboarding-wizard');
         if (wizard) {
             wizard.style.display = 'none';
+            console.log('[Onboarding] Hid wizard');
+        }
+
+        // Show main app container explicitly
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.style.display = 'block';
+            console.log('[Onboarding] Showed main container');
         }
 
         // Show main app
-        this.showMainApp();
+        await this.showMainApp();
+        console.log('[Onboarding] Skip onboarding complete');
     },
 
     /**
      * Show main app
      */
-    showMainApp: function() {
+    showMainApp: async function() {
+        // Show main app container (Phase 10 UI)
         const mainContainer = document.querySelector('.main-container');
         if (mainContainer) {
             mainContainer.style.display = 'block';
         }
 
+        // Initialize tabs
+        if (typeof initTabs === 'function') {
+            initTabs();
+        }
+
         // Ensure currentHours is set (needed for updateDisplay to work)
         if (typeof currentHours === 'undefined' || !currentHours || !currentHours.totalTime) {
-            console.log('[Onboarding] Initializing currentHours from wizard data or defaults');
-            if (this.wizardData.hours) {
-                // Manual path - use wizard data
-                currentHours = {
-                    totalTime: this.wizardData.hours.total || 0,
-                    picTime: this.wizardData.hours.pic || 0,
-                    picXC: this.wizardData.hours.xc || 0,
-                    instrumentTotal: this.wizardData.hours.instrument || 0,
-                    simInstrumentTime: this.wizardData.hours.simulator || 0,
-                    dualReceived: (this.wizardData.hours.total || 0) - (this.wizardData.hours.pic || 0),
-                    actualInstrument: (this.wizardData.hours.instrument || 0) * 0.2,
-                    simulatedInstrument: (this.wizardData.hours.instrument || 0) * 0.8,
-                    batdTime: 0,
-                    instrumentDualAirplane: 0,
-                    recentInstrument: 0,
-                    complexTime: 0,
-                    dayXC: 0,
-                    nightXC: 0,
-                    soloLongXC: 0,
-                    nightTime: 0,
-                    longXC: 0,
-                    ir250nmXC: 0
-                };
-            } else if (!currentHours || !currentHours.totalTime) {
-                // ForeFlight path should already have set currentHours, but ensure it has all fields
-                currentHours = {
-                    totalTime: currentHours?.totalTime || 0,
-                    picTime: currentHours?.picTime || 0,
-                    picXC: currentHours?.picXC || 0,
-                    instrumentTotal: currentHours?.instrumentTotal || 0,
-                    simInstrumentTime: currentHours?.simInstrumentTime || 0,
-                    dualReceived: currentHours?.dualReceived || 0,
-                    actualInstrument: currentHours?.actualInstrument || 0,
-                    simulatedInstrument: currentHours?.simulatedInstrument || 0,
-                    batdTime: currentHours?.batdTime || 0,
-                    instrumentDualAirplane: currentHours?.instrumentDualAirplane || 0,
-                    recentInstrument: currentHours?.recentInstrument || 0,
-                    complexTime: currentHours?.complexTime || 0,
-                    dayXC: currentHours?.dayXC || 0,
-                    nightXC: currentHours?.nightXC || 0,
-                    soloLongXC: currentHours?.soloLongXC || 0,
-                    nightTime: currentHours?.nightTime || 0,
-                    longXC: currentHours?.longXC || 0,
-                    ir250nmXC: currentHours?.ir250nmXC || 0
-                };
+            console.log('[Onboarding] Initializing currentHours - checking database first');
+
+            // Try loading from database first (for returning users after hard refresh)
+            try {
+                const response = await fetch('/api/import-history/latest');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.hours_imported && data.hours_imported.total > 0) {
+                        console.log('[Onboarding] Loaded hours from database:', data.hours_imported);
+                        const hours = data.hours_imported;
+                        currentHours = {
+                            totalTime: hours.total || 0,
+                            picTime: hours.pic || 0,
+                            picXC: hours.pic_xc || 0,
+                            xcTime: hours.cross_country || 0,
+                            instrumentTotal: hours.instrument_total || 0,
+                            dualReceived: hours.dual_received || 0,
+                            actualInstrument: hours.actual_instrument || 0,
+                            simulatedInstrument: hours.simulated_instrument || 0,
+                            simTime: hours.simulator_time || 0,
+                            simInstrumentTime: hours.sim_instrument_time || 0,
+                            batdTime: hours.batd_time || 0,
+                            instrumentDualAirplane: hours.instrument_dual_airplane || 0,
+                            recentInstrument: hours.recent_instrument || 0,
+                            complexTime: hours.complex || 0,
+                            dayXC: hours.day_xc || 0,
+                            nightXC: hours.night_xc || 0,
+                            soloLongXC: hours.solo_long_xc || 0,
+                            nightTime: hours.night || 0,
+                            longXC: hours.long_xc || 0,
+                            ir250nmXC: hours.ir_250nm_xc || 0
+                        };
+                    }
+                }
+            } catch (error) {
+                console.log('[Onboarding] Could not load from database, using wizard data or defaults:', error);
+            }
+
+            // Fallback to wizard data if database had nothing
+            if (!currentHours || !currentHours.totalTime) {
+                console.log('[Onboarding] Using wizard data or defaults');
+                if (this.wizardData.hours) {
+                    // Manual path - use wizard data
+                    currentHours = {
+                        totalTime: this.wizardData.hours.total || 0,
+                        picTime: this.wizardData.hours.pic || 0,
+                        picXC: this.wizardData.hours.xc || 0,
+                        instrumentTotal: this.wizardData.hours.instrument || 0,
+                        simInstrumentTime: this.wizardData.hours.simulator || 0,
+                        dualReceived: (this.wizardData.hours.total || 0) - (this.wizardData.hours.pic || 0),
+                        actualInstrument: (this.wizardData.hours.instrument || 0) * 0.2,
+                        simulatedInstrument: (this.wizardData.hours.instrument || 0) * 0.8,
+                        batdTime: 0,
+                        instrumentDualAirplane: 0,
+                        recentInstrument: 0,
+                        complexTime: 0,
+                        dayXC: 0,
+                        nightXC: 0,
+                        soloLongXC: 0,
+                        nightTime: 0,
+                        longXC: 0,
+                        ir250nmXC: 0
+                    };
+                } else {
+                    // No wizard data and no database data - initialize to zeros
+                    currentHours = {
+                        totalTime: 0,
+                        picTime: 0,
+                        picXC: 0,
+                        xcTime: 0,
+                        instrumentTotal: 0,
+                        simInstrumentTime: 0,
+                        dualReceived: 0,
+                        actualInstrument: 0,
+                        simulatedInstrument: 0,
+                        batdTime: 0,
+                        instrumentDualAirplane: 0,
+                        recentInstrument: 0,
+                        complexTime: 0,
+                        dayXC: 0,
+                        nightXC: 0,
+                        soloLongXC: 0,
+                        nightTime: 0,
+                        longXC: 0,
+                        ir250nmXC: 0
+                    };
+                }
             }
         }
 
         console.log('[Onboarding] currentHours:', currentHours);
+
+        // Certification will be loaded from database by TrainingWidget.init()
+        // No need to sync here - the widget handles it
 
         // Refresh aircraft dropdown (but don't load old defaults)
         if (typeof refreshAircraftDropdown === 'function') {
@@ -1351,9 +1535,9 @@ const OnboardingManager = {
     },
 
     /**
-     * Toggle wizard rate type (wet vs dry)
+     * Toggle wizard rate type (wet vs dry) - Manual entry version
      */
-    toggleWizardRateType: function() {
+    toggleManualRateType: function() {
         const rateType = document.querySelector('input[name="wizard-rate-type"]:checked').value;
 
         const wetRateRow = document.getElementById('wizard-wet-rate-row');
@@ -1449,7 +1633,7 @@ const OnboardingManager = {
 
         // Reset to wet rate
         document.querySelector('input[name="wizard-rate-type"][value="wet"]').checked = true;
-        this.toggleWizardRateType();
+        this.toggleManualRateType();
 
         // Update list
         this.updateWizardAircraftList();

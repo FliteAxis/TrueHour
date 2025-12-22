@@ -68,16 +68,18 @@ const UserDataManager = (function() {
      */
     async function saveToDatabase() {
         const saveBtn = document.getElementById('saveBtn');
-        if (!saveBtn) return;
 
         try {
-            saveBtn.classList.add('saving');
+            if (saveBtn) {
+                saveBtn.classList.add('saving');
+            }
             showSaveStatus('saving', 'Saving...');
 
             // Collect current state
             const data = {
                 aircraft: [],
                 expenses: [],
+                flights: [],
                 budget_state: {}
             };
 
@@ -85,6 +87,12 @@ const UserDataManager = (function() {
             if (typeof AircraftAPI !== 'undefined' && AircraftAPI.getAllAircraft) {
                 data.aircraft = AircraftAPI.getAllAircraft();
                 console.log('[UserData] Collected', data.aircraft.length, 'aircraft');
+            }
+
+            // Get flights from OnboardingManager if available (from CSV import)
+            if (typeof OnboardingManager !== 'undefined' && OnboardingManager._flightData) {
+                data.flights = OnboardingManager._flightData;
+                console.log('[UserData] Collected', data.flights.length, 'flights from onboarding');
             }
 
             // Collect budget state (certification, hours, settings)
@@ -134,7 +142,9 @@ const UserDataManager = (function() {
             showSaveStatus('error', '✗ Save failed');
             throw error;
         } finally {
-            saveBtn.classList.remove('saving');
+            if (saveBtn) {
+                saveBtn.classList.remove('saving');
+            }
         }
     }
 
@@ -421,8 +431,8 @@ const UserDataManager = (function() {
                 'All your data has been permanently deleted. The page will now reload.'
             );
 
-            // Reload to show onboarding
-            window.location.reload();
+            // Redirect to onboarding instead of just reloading
+            window.location.href = '/?onboarding=true';
 
         } catch (error) {
             console.error('[UserData] Delete failed:', error);

@@ -51,7 +51,7 @@ const AircraftAPI = (function() {
             // We'll use localStorage as a fallback until we add a backend
             localStorage.setItem('truehour-config', JSON.stringify(config));
             isDirty = false;
-            console.log('Config saved to localStorage');
+            console.log('Config saved to localStorage', config);
             return true;
         } catch (error) {
             console.error('Failed to save config:', error);
@@ -92,6 +92,16 @@ const AircraftAPI = (function() {
     function getAircraft(id) {
         const aircraft = getAllAircraft();
         return aircraft.find(a => a.id === id);
+    }
+
+    /**
+     * Get default aircraft ID
+     */
+    function getDefaultAircraftId() {
+        if (!config) {
+            loadFromLocalStorage();
+        }
+        return config ? config.defaultAircraftId : null;
     }
 
     /**
@@ -408,6 +418,7 @@ const AircraftAPI = (function() {
         getAllAircraft,
         getAircraft,
         getDefaultAircraft,
+        getDefaultAircraftId,
         addAircraft,
         updateAircraft,
         deleteAircraft,

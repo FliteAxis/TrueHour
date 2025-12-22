@@ -249,7 +249,7 @@
     }
 
     // Load stats
-    fetch(`${API}/stats`)
+    fetch(`${API}/v1/stats`)
       .then(r => r.json())
       .then(data => {
         document.getElementById('recordCount').textContent = data.record_count?.toLocaleString() || '—';

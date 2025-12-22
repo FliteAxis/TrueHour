@@ -29,6 +29,7 @@ CREATE TABLE aircraft (
 CREATE TABLE flights (
     id SERIAL PRIMARY KEY,
     aircraft_id INTEGER REFERENCES aircraft(id),
+    tail_number VARCHAR(20),  -- Store tail number directly from CSV for simulator sessions
     date DATE NOT NULL,
     departure_airport TEXT,
     arrival_airport TEXT,
@@ -203,6 +204,8 @@ CREATE TABLE user_settings (
     default_aircraft_id INTEGER REFERENCES aircraft(id) ON DELETE SET NULL,
     timezone VARCHAR(50) DEFAULT 'America/New_York',
     budget_state JSONB,  -- Phase 3: certification goal, current hours, training settings
+    onboarding_completed BOOLEAN DEFAULT false,  -- Track whether user completed onboarding
+    target_certification TEXT,  -- Current target certification (private, ir, cpl, cfi)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

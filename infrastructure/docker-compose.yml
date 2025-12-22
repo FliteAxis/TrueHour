@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -53,9 +51,8 @@ services:
     restart: unless-stopped
     networks:
       - truehour-network
-      # Uncomment to access directly for debugging:
-      # ports:
-      #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
 volumes:
   postgres_data:

@@ -164,31 +164,41 @@ class PostgresDatabase:
     ) -> List[Dict[str, Any]]:
         """Get list of expenses with filters."""
         async with self.acquire() as conn:
-            query = "SELECT * FROM expenses WHERE 1=1"
+            query = """
+                SELECT
+                    e.id, e.aircraft_id, e.category, e.subcategory, e.description,
+                    e.amount, e.date, e.is_recurring, e.recurrence_interval,
+                    e.recurrence_end_date, e.vendor, e.is_tax_deductible, e.tax_category,
+                    e.created_at, e.updated_at,
+                    ebl.budget_card_id
+                FROM expenses e
+                LEFT JOIN expense_budget_links ebl ON e.id = ebl.expense_id
+                WHERE 1=1
+            """
             params = []
             param_count = 0
 
             if aircraft_id is not None:
                 param_count += 1
-                query += f" AND aircraft_id = ${param_count}"
+                query += f" AND e.aircraft_id = ${param_count}"
                 params.append(aircraft_id)
 
             if category:
                 param_count += 1
-                query += f" AND category = ${param_count}"
+                query += f" AND e.category = ${param_count}"
                 params.append(category)
 
             if start_date:
                 param_count += 1
-                query += f" AND date >= ${param_count}"
+                query += f" AND e.date >= ${param_count}"
                 params.append(start_date)
 
             if end_date:
                 param_count += 1
-                query += f" AND date <= ${param_count}"
+                query += f" AND e.date <= ${param_count}"
                 params.append(end_date)
 
-            query += " ORDER BY date DESC"
+            query += " ORDER BY e.date DESC"
 
             param_count += 1
             query += f" LIMIT ${param_count}"
@@ -199,17 +209,39 @@ class PostgresDatabase:
             params.append(offset)
 
             rows = await conn.fetch(query, *params)
-            return [dict(row) for row in rows]
+            result = [dict(row) for row in rows]
+            if result:
+                print(f"[DEBUG] get_expenses returning {len(result)} expenses")
+                print(f"[DEBUG] First expense keys: {list(result[0].keys())}")
+                print(f"[DEBUG] First expense budget_card_id: {result[0].get('budget_card_id')}")
+            return result
 
     async def get_expense_by_id(self, expense_id: int) -> Optional[Dict[str, Any]]:
         """Get single expense by ID."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow("SELECT * FROM expenses WHERE id = $1", expense_id)
+            row = await conn.fetchrow(
+                """
+                SELECT
+                    e.id, e.aircraft_id, e.category, e.subcategory, e.description,
+                    e.amount, e.date, e.is_recurring, e.recurrence_interval,
+                    e.recurrence_end_date, e.vendor, e.is_tax_deductible, e.tax_category,
+                    e.created_at, e.updated_at,
+                    ebl.budget_card_id
+                FROM expenses e
+                LEFT JOIN expense_budget_links ebl ON e.id = ebl.expense_id
+                WHERE e.id = $1
+                """,
+                expense_id,
+            )
             return dict(row) if row else None
 
     async def create_expense(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new expense."""
         async with self.acquire() as conn:
+            # Extract budget_card_id for separate handling
+            budget_card_id = data.get("budget_card_id")
+
+            # Insert expense without budget_card_id
             row = await conn.fetchrow(
                 """
                 INSERT INTO expenses (
@@ -233,7 +265,23 @@ class PostgresDatabase:
                 data.get("is_tax_deductible", False),
                 data.get("tax_category"),
             )
-            return dict(row)
+
+            expense = dict(row)
+
+            # If budget_card_id provided, create link
+            if budget_card_id:
+                await conn.execute(
+                    """
+                    INSERT INTO expense_budget_links (expense_id, budget_card_id, amount)
+                    VALUES ($1, $2, $3)
+                    """,
+                    expense["id"],
+                    budget_card_id,
+                    expense["amount"],
+                )
+                expense["budget_card_id"] = budget_card_id
+
+            return expense
 
     async def update_expense(self, expense_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update expense."""
@@ -328,7 +376,11 @@ class PostgresDatabase:
     ) -> List[Dict[str, Any]]:
         """Get list of flights with filters."""
         async with self.acquire() as conn:
-            query = "SELECT * FROM flights WHERE 1=1"
+            query = """
+                SELECT *
+                FROM flights
+                WHERE 1=1
+            """
             params = []
             param_count = 0
 
@@ -373,8 +425,235 @@ class PostgresDatabase:
                 for field in ["created_at", "updated_at"]:
                     if flight.get(field):
                         flight[field] = flight[field].isoformat()
+                # Handle NULL integer fields with defaults
+                for field in ["day_takeoffs", "day_landings_full_stop", "night_takeoffs",
+                              "night_landings_full_stop", "all_landings", "holds"]:
+                    if flight.get(field) is None:
+                        flight[field] = 0
+                # Handle NULL boolean fields with defaults
+                for field in ["is_flight_review", "is_ipc", "is_checkride", "is_simulator_session"]:
+                    if flight.get(field) is None:
+                        flight[field] = False
                 result.append(flight)
             return result
+
+    async def get_flight_by_id(self, flight_id: int) -> Optional[Dict[str, Any]]:
+        """Get single flight by ID."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow("""
+                SELECT *
+                FROM flights
+                WHERE id = $1
+            """, flight_id)
+            if row:
+                flight = dict(row)
+                # Convert date to ISO string
+                if flight.get("date"):
+                    flight["date"] = flight["date"].isoformat()
+                # Convert time fields to string
+                for field in ["time_out", "time_off", "time_on", "time_in"]:
+                    if flight.get(field):
+                        flight[field] = str(flight[field])
+                # Convert timestamps
+                for field in ["created_at", "updated_at"]:
+                    if flight.get(field):
+                        flight[field] = flight[field].isoformat()
+                # Handle NULL integer fields with defaults
+                for field in ["day_takeoffs", "day_landings_full_stop", "night_takeoffs",
+                              "night_landings_full_stop", "all_landings", "holds"]:
+                    if flight.get(field) is None:
+                        flight[field] = 0
+                # Handle NULL boolean fields with defaults
+                for field in ["is_flight_review", "is_ipc", "is_checkride", "is_simulator_session"]:
+                    if flight.get(field) is None:
+                        flight[field] = False
+                return flight
+            return None
+
+    async def create_flight(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create new flight."""
+        async with self.acquire() as conn:
+            # Convert approaches dict to JSON if present
+            approaches_json = json.dumps(data.get("approaches")) if data.get("approaches") else None
+
+            row = await conn.fetchrow(
+                """
+                INSERT INTO flights (
+                    aircraft_id, date, departure_airport, arrival_airport, route,
+                    time_out, time_off, time_on, time_in,
+                    total_time, pic_time, sic_time, night_time, solo_time,
+                    cross_country_time, actual_instrument_time, simulated_instrument_time,
+                    simulated_flight_time, dual_given_time, dual_received_time,
+                    ground_training_time, complex_time, high_performance_time,
+                    hobbs_start, hobbs_end, tach_start, tach_end,
+                    day_takeoffs, day_landings_full_stop,
+                    night_takeoffs, night_landings_full_stop, all_landings,
+                    holds, approaches, instructor_name, instructor_comments, pilot_comments,
+                    is_flight_review, is_ipc, is_checkride, is_simulator_session,
+                    fuel_gallons, fuel_cost, landing_fees, instructor_cost, rental_cost, other_costs
+                )
+                VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+                    $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+                    $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
+                    $41, $42, $43, $44, $45, $46, $47
+                )
+                RETURNING *
+                """,
+                data.get("aircraft_id"),
+                data.get("date"),
+                data.get("departure_airport"),
+                data.get("arrival_airport"),
+                data.get("route"),
+                data.get("time_out"),
+                data.get("time_off"),
+                data.get("time_on"),
+                data.get("time_in"),
+                data.get("total_time"),
+                data.get("pic_time"),
+                data.get("sic_time"),
+                data.get("night_time"),
+                data.get("solo_time"),
+                data.get("cross_country_time"),
+                data.get("actual_instrument_time"),
+                data.get("simulated_instrument_time"),
+                data.get("simulated_flight_time"),
+                data.get("dual_given_time"),
+                data.get("dual_received_time"),
+                data.get("ground_training_time"),
+                data.get("complex_time"),
+                data.get("high_performance_time"),
+                data.get("hobbs_start"),
+                data.get("hobbs_end"),
+                data.get("tach_start"),
+                data.get("tach_end"),
+                data.get("day_takeoffs", 0),
+                data.get("day_landings_full_stop", 0),
+                data.get("night_takeoffs", 0),
+                data.get("night_landings_full_stop", 0),
+                data.get("all_landings", 0),
+                data.get("holds", 0),
+                approaches_json,
+                data.get("instructor_name"),
+                data.get("instructor_comments"),
+                data.get("pilot_comments"),
+                data.get("is_flight_review", False),
+                data.get("is_ipc", False),
+                data.get("is_checkride", False),
+                data.get("is_simulator_session", False),
+                data.get("fuel_gallons"),
+                data.get("fuel_cost"),
+                data.get("landing_fees"),
+                data.get("instructor_cost"),
+                data.get("rental_cost"),
+                data.get("other_costs"),
+            )
+            flight = dict(row)
+            # Convert date to ISO string
+            if flight.get("date"):
+                flight["date"] = flight["date"].isoformat()
+            # Convert time fields to string
+            for field in ["time_out", "time_off", "time_on", "time_in"]:
+                if flight.get(field):
+                    flight[field] = str(flight[field])
+            # Convert timestamps
+            for field in ["created_at", "updated_at"]:
+                if flight.get(field):
+                    flight[field] = flight[field].isoformat()
+            return flight
+
+    async def update_flight(self, flight_id: int, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update flight."""
+        async with self.acquire() as conn:
+            # Build dynamic UPDATE query
+            set_clauses = []
+            params = []
+            param_count = 0
+
+            # Convert approaches dict to JSON if present
+            if "approaches" in data and data["approaches"] is not None:
+                data["approaches"] = json.dumps(data["approaches"])
+
+            for key, value in data.items():
+                param_count += 1
+                set_clauses.append(f"{key} = ${param_count}")
+                params.append(value)
+
+            if not set_clauses:
+                return await self.get_flight_by_id(flight_id)
+
+            param_count += 1
+            query = f"""
+                UPDATE flights
+                SET {', '.join(set_clauses)}, updated_at = NOW()
+                WHERE id = ${param_count}
+                RETURNING *
+            """
+            params.append(flight_id)
+
+            row = await conn.fetchrow(query, *params)
+            if row:
+                flight = dict(row)
+                # Convert date to ISO string
+                if flight.get("date"):
+                    flight["date"] = flight["date"].isoformat()
+                # Convert time fields to string
+                for field in ["time_out", "time_off", "time_on", "time_in"]:
+                    if flight.get(field):
+                        flight[field] = str(flight[field])
+                # Convert timestamps
+                for field in ["created_at", "updated_at"]:
+                    if flight.get(field):
+                        flight[field] = flight[field].isoformat()
+                return flight
+            return None
+
+    async def delete_flight(self, flight_id: int) -> bool:
+        """Delete flight."""
+        async with self.acquire() as conn:
+            result = await conn.execute("DELETE FROM flights WHERE id = $1", flight_id)
+            return result == "DELETE 1"
+
+    async def get_flight_summary(
+        self,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+    ) -> Dict[str, Any]:
+        """Get flight summary statistics."""
+        async with self.acquire() as conn:
+            query = """
+                SELECT
+                    COUNT(*) as total_flights,
+                    COALESCE(SUM(total_time), 0) as total_hours,
+                    COALESCE(SUM(pic_time), 0) as pic_hours,
+                    COALESCE(SUM(sic_time), 0) as sic_hours,
+                    COALESCE(SUM(night_time), 0) as night_hours,
+                    COALESCE(SUM(cross_country_time), 0) as cross_country_hours,
+                    COALESCE(SUM(actual_instrument_time), 0) as actual_instrument_hours,
+                    COALESCE(SUM(simulated_instrument_time), 0) as simulated_instrument_hours,
+                    COALESCE(SUM(simulated_flight_time), 0) as simulator_hours,
+                    COALESCE(SUM(dual_received_time), 0) as dual_received_hours,
+                    COALESCE(SUM(dual_given_time), 0) as dual_given_hours,
+                    COALESCE(SUM(complex_time), 0) as complex_hours,
+                    COALESCE(SUM(high_performance_time), 0) as high_performance_hours,
+                    COALESCE(SUM(all_landings), 0) as total_landings,
+                    COALESCE(SUM(night_landings_full_stop), 0) as night_landings
+                FROM flights
+                WHERE 1=1
+            """
+            params = []
+
+            if start_date:
+                params.append(start_date)
+                query += f" AND date >= ${len(params)}"
+
+            if end_date:
+                params.append(end_date)
+                query += f" AND date <= ${len(params)}"
+
+            row = await conn.fetchrow(query, *params)
+            return dict(row) if row else {}
 
     # Budget CRUD Operations
 

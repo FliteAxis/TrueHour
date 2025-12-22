@@ -824,54 +824,54 @@ async function showCSVImportModal(parsedData, aircraftTableData) {
             </div>
             <div style="padding-left: 30px; margin-bottom: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                 <div>
-                    <label style="font-size: 0.9em; color: #666;">Tail Number</label>
+                    <label for="csv-tail-${index}" style="font-size: 0.9em; color: #cbd5e1;">Tail Number</label>
                     <input type="text" class="input-field" id="csv-tail-${index}" value="${a.registration}" placeholder="e.g., N12345" style="font-size: 1.1em; padding: 10px;">
                 </div>
                 <div>
-                    <label style="font-size: 0.9em; color: #666;">Year</label>
+                    <label for="csv-year-${index}" style="font-size: 0.9em; color: #cbd5e1;">Year</label>
                     <input type="text" class="input-field" id="csv-year-${index}" value="${displayYear}" placeholder="e.g., 1981" style="font-size: 1.1em; padding: 10px;">
                 </div>
                 <div>
-                    <label style="font-size: 0.9em; color: #666;">Make</label>
+                    <label for="csv-make-${index}" style="font-size: 0.9em; color: #cbd5e1;">Make</label>
                     <input type="text" class="input-field" id="csv-make-${index}" value="${displayMake}" placeholder="e.g., Cessna" style="font-size: 1.1em; padding: 10px;">
                 </div>
                 <div>
-                    <label style="font-size: 0.9em; color: #666;">Model</label>
+                    <label for="csv-model-${index}" style="font-size: 0.9em; color: #cbd5e1;">Model</label>
                     <input type="text" class="input-field" id="csv-model-${index}" value="${displayModel}" placeholder="e.g., 172 Skyhawk" style="font-size: 1.1em; padding: 10px;">
                 </div>
             </div>
             <div style="display: flex; gap: 15px; margin-bottom: 8px; padding-left: 30px;">
-                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
                     <input type="radio" name="csv-rate-type-${index}" value="wet" checked onchange="toggleCSVRateType(${index})">
                     <span style="font-size: 0.9em;">Wet Rate</span>
                 </label>
-                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
                     <input type="radio" name="csv-rate-type-${index}" value="dry" onchange="toggleCSVRateType(${index})">
                     <span style="font-size: 0.9em;">Dry Rate</span>
                 </label>
             </div>
             <div class="csv-aircraft-rates">
                 <div id="csv-wet-section-${index}">
-                    <label style="font-size: 0.9em; color: #666;">Wet Rate ($/hr)</label>
+                    <label for="csv-wet-${index}" style="font-size: 0.9em; color: #cbd5e1;">Wet Rate ($/hr)</label>
                     <input type="number" class="input-field" id="csv-wet-${index}" value="150" min="0" style="background: #fffacd;">
                 </div>
                 <div id="csv-dry-section-${index}" style="display: none;">
-                    <label style="font-size: 0.9em; color: #666;">Dry Rate ($/hr)</label>
+                    <label for="csv-dry-${index}" style="font-size: 0.9em; color: #cbd5e1;">Dry Rate ($/hr)</label>
                     <input type="number" class="input-field" id="csv-dry-${index}" value="120" min="0" style="background: #fffacd;">
                 </div>
                 <div id="csv-fuel-section-${index}" style="display: none;">
                     <div style="margin-bottom: 8px;">
-                        <label style="font-size: 0.9em; color: #666;">Fuel Price ($/gal)</label>
+                        <label for="csv-fuel-price-${index}" style="font-size: 0.9em; color: #cbd5e1;">Fuel Price ($/gal)</label>
                         <input type="number" class="input-field" id="csv-fuel-price-${index}" value="6" min="0" step="0.10" style="background: #fffacd;">
                     </div>
                     <div>
-                        <label style="font-size: 0.9em; color: #666;">Fuel Burn (gal/hr)</label>
+                        <label for="csv-fuel-burn-${index}" style="font-size: 0.9em; color: #cbd5e1;">Fuel Burn (gal/hr)</label>
                         <input type="number" class="input-field" id="csv-fuel-burn-${index}" value="8" min="0" step="0.5" style="background: #fffacd;">
                     </div>
                 </div>
             </div>
             <div style="padding-left: 30px; margin-top: 10px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9em; color: #cbd5e1;">
                     <input type="checkbox" id="csv-default-${index}" ${index === 0 ? 'checked' : ''} onchange="handleCSVDefaultChange(${index})">
                     <span>★ Set as default aircraft</span>
                 </label>
@@ -1669,6 +1669,100 @@ function skipCurrentFAAChange() {
     }
 }
 
+// ============================================
+// AIRCRAFT CARDS UI (v2.0)
+// ============================================
+
+function renderAircraftCards() {
+    console.log('renderAircraftCards called');
+    const grid = document.getElementById('aircraftCardsGrid');
+    if (!grid) {
+        console.log('aircraftCardsGrid not found');
+        return;
+    }
+
+    const aircraft = AircraftAPI.getAllAircraft();
+    const defaultId = AircraftAPI.getDefaultAircraftId();
+    console.log('Aircraft found:', aircraft.length, 'Default ID:', defaultId);
+
+    if (aircraft.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #94a3b8;">No aircraft added yet. Click "+ Add Aircraft" to get started.</div>';
+        return;
+    }
+
+    grid.innerHTML = aircraft.map(a => {
+        const isDefault = a.id === defaultId;
+        const rate = a.wetRate || a.dryRate || 0;
+        const rateType = a.wetRate ? 'Wet' : 'Dry';
+
+        return `
+            <div class="aircraft-card ${isDefault ? 'default' : ''}" onclick="editAircraftCard('${escapeHtml(a.id)}')">
+                <div class="aircraft-card-header">
+                    <div>
+                        <div class="aircraft-card-title">${escapeHtml(a.make || 'Unknown')} ${escapeHtml(a.model || 'Aircraft')}</div>
+                        ${a.registration ? `<div class="aircraft-card-reg">${escapeHtml(a.registration)}</div>` : ''}
+                    </div>
+                    ${isDefault ? '<div class="aircraft-card-badge">DEFAULT</div>' : ''}
+                </div>
+                <div class="aircraft-card-info">
+                    <div class="aircraft-card-row">
+                        <span class="aircraft-card-label">Rate (${rateType})</span>
+                        <span class="aircraft-card-value">$${rate}/hr</span>
+                    </div>
+                    ${a.year ? `
+                    <div class="aircraft-card-row">
+                        <span class="aircraft-card-label">Year</span>
+                        <span class="aircraft-card-value">${escapeHtml(a.year)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function showAddAircraftModal() {
+    currentAircraftId = null;
+    document.getElementById('aircraftModalTitle').textContent = 'Add Aircraft';
+    document.getElementById('deleteAircraftBtn').style.display = 'none';
+    clearAircraftForm();
+    document.getElementById('aircraftEditorModal').style.display = 'flex';
+}
+
+function editAircraftCard(aircraftId) {
+    currentAircraftId = aircraftId;
+    document.getElementById('aircraftModalTitle').textContent = 'Edit Aircraft';
+    document.getElementById('deleteAircraftBtn').style.display = 'block';
+
+    // Load aircraft directly
+    const aircraft = AircraftAPI.getAircraft(aircraftId);
+    if (aircraft) {
+        loadAircraftIntoForm(aircraft);
+    }
+
+    document.getElementById('aircraftEditorModal').style.display = 'flex';
+}
+
+function closeAircraftModal() {
+    document.getElementById('aircraftEditorModal').style.display = 'none';
+    currentAircraftId = null;
+    clearAircraftForm();
+}
+
+async function saveAircraftFromModal() {
+    await saveCurrentAircraft();
+    closeAircraftModal();
+    renderAircraftCards();
+}
+
+async function deleteAircraftFromModal() {
+    if (confirm('Are you sure you want to delete this aircraft?')) {
+        await deleteCurrentAircraft();
+        closeAircraftModal();
+        renderAircraftCards();
+    }
+}
+
 // Initialize on page load
 console.log('aircraft-ui.js: Adding DOMContentLoaded listener');
 document.addEventListener('DOMContentLoaded', function() {
@@ -1678,6 +1772,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         console.log('aircraft-ui.js: Timeout fired, calling initAircraftUI now');
         initAircraftUI();
+        renderAircraftCards();
     }, 100);
 });
 console.log('aircraft-ui.js: Script loaded');

@@ -3,11 +3,16 @@
 import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from app.database import Database
+from app.db_migrations import verify_and_migrate_schema
 from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
-from app.routers import aircraft, budget_cards, budgets, expense_budget_links, expenses, import_history, user_data
+from app.routers import aircraft, budget_cards, budgets, expense_budget_links, expenses, flights, import_history, user_data
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
@@ -26,6 +31,13 @@ async def lifespan(app: FastAPI):
     # Initialize Postgres connection
     await postgres_db.connect()
     print("✅ PostgreSQL connection pool initialized")
+
+    # Verify and migrate database schema
+    migrations = await verify_and_migrate_schema(postgres_db)
+    if migrations:
+        print(f"✅ Applied {len(migrations)} database migration(s)")
+    else:
+        print("✅ Database schema is up-to-date")
 
     # Phase 0: Allow startup without FAA database
     if os.path.exists(DB_PATH):
@@ -73,6 +85,7 @@ app.include_router(budget_cards.router)
 app.include_router(budgets.router)
 app.include_router(expenses.router)
 app.include_router(expense_budget_links.router)
+app.include_router(flights.router)
 app.include_router(import_history.router)
 app.include_router(user_data.router)
 
@@ -305,3 +318,35 @@ async def stats():
     if db is None:
         raise HTTPException(503, "FAA database not available. Run update_faa_data.py to build it.")
     return db.get_stats()
+
+
+@app.delete("/api/data/delete-all")
+async def delete_all_data():
+    """Delete all user data including flights, expenses, budget cards, and aircraft."""
+    try:
+        async with postgres_db.acquire() as conn:
+            # Delete in order to respect foreign key constraints
+            await conn.execute("DELETE FROM expense_budget_links")
+            await conn.execute("DELETE FROM expenses")
+            await conn.execute("DELETE FROM flights")
+            await conn.execute("DELETE FROM budget_cards")
+            await conn.execute("DELETE FROM aircraft")
+            await conn.execute("DELETE FROM import_history")
+            await conn.execute("DELETE FROM user_sessions")
+            # Reset user settings to defaults but don't delete the row
+            await conn.execute(
+                """
+                UPDATE user_settings
+                SET auto_save_enabled = true,
+                    auto_save_interval = 3000,
+                    timezone = 'America/New_York',
+                    budget_state = NULL,
+                    default_aircraft_id = NULL,
+                    onboarding_completed = false,
+                    target_certification = NULL
+                """
+            )
+
+        return {"status": "success", "message": "All data deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete data: {str(e)}") from e
