@@ -7,6 +7,7 @@ export interface UserSettings {
   budget_state?: any;
   onboarding_completed: boolean;
   target_certification?: string | null;
+  enable_faa_lookup?: boolean;
 }
 
 export interface HoursData {
@@ -132,7 +133,7 @@ export interface BudgetCard {
   updated_at?: string;
 }
 
-export type BudgetCardCreate = Omit<BudgetCard, 'id' | 'actual_amount' | 'created_at' | 'updated_at'>;
+export type BudgetCardCreate = Omit<BudgetCard, "id" | "actual_amount" | "created_at" | "updated_at">;
 
 export interface BudgetCategorySummary {
   category: string;
@@ -220,36 +221,121 @@ export interface SaveDataRequest {
   budget_state?: any;
 }
 
-export type CertificationType = 'private' | 'ir' | 'cpl' | 'cfi';
+// User Aircraft (v2 - database backed)
+export interface UserAircraft {
+  id: number;
+  tail_number: string;
+  type_code?: string | null;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  gear_type?: string | null;
+  engine_type?: string | null;
+  aircraft_class?: string | null;
+  is_complex: boolean;
+  is_taa: boolean;
+  is_high_performance: boolean;
+  is_simulator: boolean;
+  category?: string | null;
+  hourly_rate_wet?: number | null;
+  hourly_rate_dry?: number | null;
+  notes?: string | null;
+  is_active: boolean;
+  data_source?: "faa" | "foreflight" | "manual" | null;
+  faa_last_checked?: string | null;
+  total_time?: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserAircraftCreate {
+  tail_number: string;
+  type_code?: string | null;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  gear_type?: string | null;
+  engine_type?: string | null;
+  aircraft_class?: string | null;
+  is_complex?: boolean;
+  is_taa?: boolean;
+  is_high_performance?: boolean;
+  is_simulator?: boolean;
+  category?: string | null;
+  hourly_rate_wet?: number | null;
+  hourly_rate_dry?: number | null;
+  notes?: string | null;
+  is_active?: boolean;
+  data_source?: "faa" | "foreflight" | "manual";
+  faa_last_checked?: string;
+}
+
+export interface UserAircraftUpdate {
+  tail_number?: string;
+  type_code?: string | null;
+  year?: number | null;
+  make?: string | null;
+  model?: string | null;
+  gear_type?: string | null;
+  engine_type?: string | null;
+  aircraft_class?: string | null;
+  is_complex?: boolean;
+  is_taa?: boolean;
+  is_high_performance?: boolean;
+  is_simulator?: boolean;
+  category?: string | null;
+  hourly_rate_wet?: number | null;
+  hourly_rate_dry?: number | null;
+  notes?: string | null;
+  is_active?: boolean;
+}
+
+// FAA Lookup Response
+export interface FAALookupResponse {
+  tail_number: string;
+  manufacturer: string;
+  model: string;
+  series?: string;
+  aircraft_type?: string;
+  engine_type?: string;
+  num_engines?: string;
+  num_seats?: string;
+  year_mfr?: string;
+  gear_type?: string;
+  is_complex?: boolean;
+  is_high_performance?: boolean;
+}
+
+export type CertificationType = "private" | "ir" | "cpl" | "cfi";
 
 export interface CertificationRequirement {
   label: string;
   required: number;
   unit: string;
-  key: keyof HoursData | 'total_xc_pic';
+  key: keyof HoursData | "total_xc_pic";
 }
 
 export const CERTIFICATION_REQUIREMENTS: Record<CertificationType, CertificationRequirement[]> = {
   private: [
-    { label: 'Total Time', required: 40, unit: 'hrs', key: 'total' },
-    { label: 'PIC', required: 10, unit: 'hrs', key: 'pic' },
-    { label: 'Cross-Country', required: 5, unit: 'hrs', key: 'cross_country' },
-    { label: 'Night', required: 3, unit: 'hrs', key: 'night' },
+    { label: "Total Time", required: 40, unit: "hrs", key: "total" },
+    { label: "PIC", required: 10, unit: "hrs", key: "pic" },
+    { label: "Cross-Country", required: 5, unit: "hrs", key: "cross_country" },
+    { label: "Night", required: 3, unit: "hrs", key: "night" },
   ],
   ir: [
-    { label: 'Total Time', required: 50, unit: 'hrs', key: 'total' },
-    { label: 'Cross-Country PIC', required: 50, unit: 'hrs', key: 'total_xc_pic' },
-    { label: 'Instrument Time', required: 40, unit: 'hrs', key: 'instrument_total' },
+    { label: "Total Time", required: 50, unit: "hrs", key: "total" },
+    { label: "Cross-Country PIC", required: 50, unit: "hrs", key: "total_xc_pic" },
+    { label: "Instrument Time", required: 40, unit: "hrs", key: "instrument_total" },
   ],
   cpl: [
-    { label: 'Total Time', required: 250, unit: 'hrs', key: 'total' },
-    { label: 'PIC', required: 100, unit: 'hrs', key: 'pic' },
-    { label: 'Cross-Country PIC', required: 50, unit: 'hrs', key: 'total_xc_pic' },
-    { label: 'Night', required: 5, unit: 'hrs', key: 'night' },
-    { label: 'Instrument', required: 10, unit: 'hrs', key: 'instrument_total' },
+    { label: "Total Time", required: 250, unit: "hrs", key: "total" },
+    { label: "PIC", required: 100, unit: "hrs", key: "pic" },
+    { label: "Cross-Country PIC", required: 50, unit: "hrs", key: "total_xc_pic" },
+    { label: "Night", required: 5, unit: "hrs", key: "night" },
+    { label: "Instrument", required: 10, unit: "hrs", key: "instrument_total" },
   ],
   cfi: [
-    { label: 'Total Time', required: 250, unit: 'hrs', key: 'total' },
-    { label: 'PIC', required: 100, unit: 'hrs', key: 'pic' },
+    { label: "Total Time", required: 250, unit: "hrs", key: "total" },
+    { label: "PIC", required: 100, unit: "hrs", key: "pic" },
   ],
 };

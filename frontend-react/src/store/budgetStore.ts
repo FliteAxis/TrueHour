@@ -1,11 +1,11 @@
 // TrueHour Budget Store
 // Manages budget cards state and operations
 
-import { create } from 'zustand';
-import type { BudgetCard, BudgetCardCreate, BudgetCategorySummary } from '../types/api';
-import * as api from '../services/api';
+import { create } from "zustand";
+import type { BudgetCard, BudgetCardCreate, BudgetCategorySummary } from "../types/api";
+import * as api from "../services/api";
 
-type ViewMode = 'annual' | 'monthly';
+type ViewMode = "annual" | "monthly";
 
 interface BudgetState {
   // State
@@ -40,19 +40,19 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
   summary: [],
   selectedYear: new Date().getFullYear(),
   selectedMonth: new Date().getMonth() + 1, // 1-12
-  viewMode: 'annual',
+  viewMode: "annual",
   isLoading: false,
   error: null,
 
   // Computed values
   totalBudgeted: () => {
     const { summary } = get();
-    return summary.reduce((sum, cat) => sum + parseFloat(cat.total_budgeted || '0'), 0);
+    return summary.reduce((sum, cat) => sum + parseFloat(cat.total_budgeted || "0"), 0);
   },
 
   totalActual: () => {
     const { summary } = get();
-    return summary.reduce((sum, cat) => sum + parseFloat(cat.total_actual || '0'), 0);
+    return summary.reduce((sum, cat) => sum + parseFloat(cat.total_actual || "0"), 0);
   },
 
   remaining: () => {
@@ -67,10 +67,10 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       const cards = await api.getBudgetCards(year, month);
       set({ cards, isLoading: false });
     } catch (error) {
-      console.error('[BudgetStore] Failed to load cards:', error);
+      console.error("[BudgetStore] Failed to load cards:", error);
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to load budget cards'
+        error: error instanceof Error ? error.message : "Failed to load budget cards",
       });
     }
   },
@@ -82,10 +82,10 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       const summary = await api.getBudgetCardsSummaryByCategory(year);
       set({ summary, isLoading: false });
     } catch (error) {
-      console.error('[BudgetStore] Failed to load summary:', error);
+      console.error("[BudgetStore] Failed to load summary:", error);
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to load budget summary'
+        error: error instanceof Error ? error.message : "Failed to load budget summary",
       });
     }
   },
@@ -97,15 +97,15 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       const newCard = await api.createBudgetCard(cardData);
       set({
         cards: [...get().cards, newCard],
-        isLoading: false
+        isLoading: false,
       });
       // Reload summary to update totals
       await get().loadSummary(get().selectedYear);
     } catch (error) {
-      console.error('[BudgetStore] Failed to create card:', error);
+      console.error("[BudgetStore] Failed to create card:", error);
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to create budget card'
+        error: error instanceof Error ? error.message : "Failed to create budget card",
       });
       throw error;
     }
@@ -117,16 +117,16 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     try {
       const updatedCard = await api.updateBudgetCard(id, updates);
       set({
-        cards: get().cards.map(c => c.id === id ? updatedCard : c),
-        isLoading: false
+        cards: get().cards.map((c) => (c.id === id ? updatedCard : c)),
+        isLoading: false,
       });
       // Reload summary to update totals
       await get().loadSummary(get().selectedYear);
     } catch (error) {
-      console.error('[BudgetStore] Failed to update card:', error);
+      console.error("[BudgetStore] Failed to update card:", error);
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to update budget card'
+        error: error instanceof Error ? error.message : "Failed to update budget card",
       });
       throw error;
     }
@@ -138,16 +138,16 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     try {
       await api.deleteBudgetCard(id);
       set({
-        cards: get().cards.filter(c => c.id !== id),
-        isLoading: false
+        cards: get().cards.filter((c) => c.id !== id),
+        isLoading: false,
       });
       // Reload summary to update totals
       await get().loadSummary(get().selectedYear);
     } catch (error) {
-      console.error('[BudgetStore] Failed to delete card:', error);
+      console.error("[BudgetStore] Failed to delete card:", error);
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : 'Failed to delete budget card'
+        error: error instanceof Error ? error.message : "Failed to delete budget card",
       });
       throw error;
     }
@@ -158,7 +158,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     set({ selectedYear: year });
     const { viewMode, selectedMonth } = get();
     // Reload cards and summary for new year
-    if (viewMode === 'monthly') {
+    if (viewMode === "monthly") {
       const monthDate = new Date(year, selectedMonth - 1, 1);
       get().loadCards(year, monthDate.getMonth() + 1);
     } else {
@@ -172,7 +172,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     set({ selectedMonth: month });
     const { selectedYear, viewMode } = get();
     // Reload cards for new month
-    if (viewMode === 'monthly') {
+    if (viewMode === "monthly") {
       const monthDate = new Date(selectedYear, month - 1, 1);
       get().loadCards(selectedYear, monthDate.getMonth() + 1);
     }
@@ -183,7 +183,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
     set({ viewMode: mode });
     const { selectedYear, selectedMonth } = get();
     // Reload cards based on new view mode
-    if (mode === 'monthly') {
+    if (mode === "monthly") {
       const monthDate = new Date(selectedYear, selectedMonth - 1, 1);
       get().loadCards(selectedYear, monthDate.getMonth() + 1);
     } else {
@@ -198,7 +198,7 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       summary: [],
       selectedYear: new Date().getFullYear(),
       selectedMonth: new Date().getMonth() + 1,
-      viewMode: 'annual',
+      viewMode: "annual",
       isLoading: false,
       error: null,
     });

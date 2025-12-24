@@ -38,12 +38,47 @@ class PostgresDatabase:
     # Aircraft CRUD Operations
 
     async def get_user_aircraft(self, is_active: Optional[bool] = None) -> List[Dict[str, Any]]:
-        """Get list of user aircraft."""
+        """Get list of user aircraft with total flight hours."""
         async with self.acquire() as conn:
             if is_active is None:
-                rows = await conn.fetch("SELECT * FROM aircraft ORDER BY tail_number")
+                query = """
+                    SELECT
+                        a.id, a.tail_number, a.type_code, a.year, a.make, a.model,
+                        a.gear_type, a.engine_type, a.aircraft_class, a.is_complex,
+                        a.is_taa, a.is_high_performance, a.is_simulator, a.category,
+                        a.hourly_rate_wet, a.hourly_rate_dry, a.notes, a.is_active,
+                        a.created_at, a.updated_at, a.fuel_price_per_gallon, a.fuel_burn_rate,
+                        a.data_source, a.faa_last_checked,
+                        CAST(COALESCE(
+                            SUM(CASE WHEN a.is_simulator THEN f.simulated_flight_time ELSE f.total_time END),
+                            0
+                        ) AS NUMERIC(10,2)) as total_time
+                    FROM aircraft a
+                    LEFT JOIN flights f ON f.aircraft_id = a.id
+                    GROUP BY a.id
+                    ORDER BY a.tail_number
+                """
+                rows = await conn.fetch(query)
             else:
-                rows = await conn.fetch("SELECT * FROM aircraft WHERE is_active = $1 ORDER BY tail_number", is_active)
+                query = """
+                    SELECT
+                        a.id, a.tail_number, a.type_code, a.year, a.make, a.model,
+                        a.gear_type, a.engine_type, a.aircraft_class, a.is_complex,
+                        a.is_taa, a.is_high_performance, a.is_simulator, a.category,
+                        a.hourly_rate_wet, a.hourly_rate_dry, a.notes, a.is_active,
+                        a.created_at, a.updated_at, a.fuel_price_per_gallon, a.fuel_burn_rate,
+                        a.data_source, a.faa_last_checked,
+                        CAST(COALESCE(
+                            SUM(CASE WHEN a.is_simulator THEN f.simulated_flight_time ELSE f.total_time END),
+                            0
+                        ) AS NUMERIC(10,2)) as total_time
+                    FROM aircraft a
+                    LEFT JOIN flights f ON f.aircraft_id = a.id
+                    WHERE a.is_active = $1
+                    GROUP BY a.id
+                    ORDER BY a.tail_number
+                """
+                rows = await conn.fetch(query, is_active)
             return [dict(row) for row in rows]
 
     async def get_aircraft_by_id(self, aircraft_id: int) -> Optional[Dict[str, Any]]:
@@ -426,8 +461,14 @@ class PostgresDatabase:
                     if flight.get(field):
                         flight[field] = flight[field].isoformat()
                 # Handle NULL integer fields with defaults
-                for field in ["day_takeoffs", "day_landings_full_stop", "night_takeoffs",
-                              "night_landings_full_stop", "all_landings", "holds"]:
+                for field in [
+                    "day_takeoffs",
+                    "day_landings_full_stop",
+                    "night_takeoffs",
+                    "night_landings_full_stop",
+                    "all_landings",
+                    "holds",
+                ]:
                     if flight.get(field) is None:
                         flight[field] = 0
                 # Handle NULL boolean fields with defaults
@@ -440,11 +481,14 @@ class PostgresDatabase:
     async def get_flight_by_id(self, flight_id: int) -> Optional[Dict[str, Any]]:
         """Get single flight by ID."""
         async with self.acquire() as conn:
-            row = await conn.fetchrow("""
+            row = await conn.fetchrow(
+                """
                 SELECT *
                 FROM flights
                 WHERE id = $1
-            """, flight_id)
+            """,
+                flight_id,
+            )
             if row:
                 flight = dict(row)
                 # Convert date to ISO string
@@ -459,8 +503,14 @@ class PostgresDatabase:
                     if flight.get(field):
                         flight[field] = flight[field].isoformat()
                 # Handle NULL integer fields with defaults
-                for field in ["day_takeoffs", "day_landings_full_stop", "night_takeoffs",
-                              "night_landings_full_stop", "all_landings", "holds"]:
+                for field in [
+                    "day_takeoffs",
+                    "day_landings_full_stop",
+                    "night_takeoffs",
+                    "night_landings_full_stop",
+                    "all_landings",
+                    "holds",
+                ]:
                     if flight.get(field) is None:
                         flight[field] = 0
                 # Handle NULL boolean fields with defaults

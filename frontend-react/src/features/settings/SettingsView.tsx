@@ -1,55 +1,87 @@
 // Settings View
 // Central settings page for customization
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getUserSettings, updateUserSettings } from "../../services/api";
+import type { UserSettings } from "../../types/api";
 
 export function SettingsView() {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<'tags' | 'categories' | 'general'>('general');
+  const [activeSection, setActiveSection] = useState<"tags" | "categories" | "general">("general");
+
+  // User settings
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Delete All Data confirmation
   const [showDeleteWarning, setShowDeleteWarning] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
   const [showDeleteError, setShowDeleteError] = useState(false);
-  const [deleteErrorMessage, setDeleteErrorMessage] = useState('');
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState("");
 
   // Tags management
-  const [customTags, setCustomTags] = useState<string[]>([
-    'PPL',
-    'IR',
-    'CPL',
-    'CFI',
-    'Priority',
-    'Optional',
-  ]);
-  const [newTag, setNewTag] = useState('');
+  const [customTags, setCustomTags] = useState<string[]>(["PPL", "IR", "CPL", "CFI", "Priority", "Optional"]);
+  const [newTag, setNewTag] = useState("");
 
   // Categories management
   const [customCategories, setCustomCategories] = useState<string[]>([
-    'Flight Training',
-    'Aircraft Rental',
-    'Ground School',
-    'Books & Materials',
-    'Exams & Checkrides',
-    'Medical',
-    'Equipment',
-    'Insurance',
-    'Membership',
-    'Fuel',
-    'Maintenance',
-    'Other',
+    "Flight Training",
+    "Aircraft Rental",
+    "Ground School",
+    "Books & Materials",
+    "Exams & Checkrides",
+    "Medical",
+    "Equipment",
+    "Insurance",
+    "Membership",
+    "Fuel",
+    "Maintenance",
+    "Other",
   ]);
-  const [newCategory, setNewCategory] = useState('');
+  const [newCategory, setNewCategory] = useState("");
+
+  // Load user settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await getUserSettings();
+        setSettings(data);
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    };
+    loadSettings();
+  }, []);
+
+  const handleToggleFAALookup = async (enabled: boolean) => {
+    if (!settings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const updatedSettings = { ...settings, enable_faa_lookup: enabled };
+      await updateUserSettings(updatedSettings);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error("Failed to update FAA lookup setting:", error);
+      // Revert on error
+      setSettings({ ...settings });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
 
   const handleAddTag = () => {
     const trimmed = newTag.trim();
     if (trimmed && !customTags.includes(trimmed)) {
       setCustomTags([...customTags, trimmed]);
-      setNewTag('');
+      setNewTag("");
     }
   };
 
@@ -61,7 +93,7 @@ export function SettingsView() {
     const trimmed = newCategory.trim();
     if (trimmed && !customCategories.includes(trimmed)) {
       setCustomCategories([...customCategories, trimmed]);
-      setNewCategory('');
+      setNewCategory("");
     }
   };
 
@@ -83,34 +115,34 @@ export function SettingsView() {
   const handleCancelDelete = () => {
     setShowDeleteWarning(false);
     setShowDeleteConfirm(false);
-    setDeleteConfirmText('');
+    setDeleteConfirmText("");
   };
 
   const handleConfirmDelete = async () => {
-    if (deleteConfirmText !== 'DELETE') {
+    if (deleteConfirmText !== "DELETE") {
       return;
     }
 
     setIsDeleting(true);
     try {
       // Call API to delete all data
-      const response = await fetch('/api/data/delete-all', {
-        method: 'DELETE',
+      const response = await fetch("/api/data/delete-all", {
+        method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete data');
+        throw new Error("Failed to delete data");
       }
 
       // Close modals and show success
       setShowDeleteConfirm(false);
-      setDeleteConfirmText('');
+      setDeleteConfirmText("");
       setShowDeleteSuccess(true);
     } catch (error) {
-      console.error('Failed to delete all data:', error);
+      console.error("Failed to delete all data:", error);
       setShowDeleteConfirm(false);
-      setDeleteConfirmText('');
-      setDeleteErrorMessage(error instanceof Error ? error.message : 'Failed to delete data. Please try again.');
+      setDeleteConfirmText("");
+      setDeleteErrorMessage(error instanceof Error ? error.message : "Failed to delete data. Please try again.");
       setShowDeleteError(true);
     } finally {
       setIsDeleting(false);
@@ -119,12 +151,12 @@ export function SettingsView() {
 
   const handleSuccessClose = () => {
     setShowDeleteSuccess(false);
-    navigate('/dashboard');
+    navigate("/dashboard");
   };
 
   const handleErrorClose = () => {
     setShowDeleteError(false);
-    setDeleteErrorMessage('');
+    setDeleteErrorMessage("");
   };
 
   return (
@@ -151,31 +183,31 @@ export function SettingsView() {
         <div className="md:col-span-1">
           <nav className="space-y-1 bg-truehour-card border border-truehour-border rounded-lg p-2">
             <button
-              onClick={() => setActiveSection('general')}
+              onClick={() => setActiveSection("general")}
               className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                activeSection === 'general'
-                  ? 'bg-truehour-blue text-white'
-                  : 'text-slate-300 hover:bg-truehour-darker hover:text-white'
+                activeSection === "general"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
               }`}
             >
               General
             </button>
             <button
-              onClick={() => setActiveSection('tags')}
+              onClick={() => setActiveSection("tags")}
               className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                activeSection === 'tags'
-                  ? 'bg-truehour-blue text-white'
-                  : 'text-slate-300 hover:bg-truehour-darker hover:text-white'
+                activeSection === "tags"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
               }`}
             >
               Tags
             </button>
             <button
-              onClick={() => setActiveSection('categories')}
+              onClick={() => setActiveSection("categories")}
               className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                activeSection === 'categories'
-                  ? 'bg-truehour-blue text-white'
-                  : 'text-slate-300 hover:bg-truehour-darker hover:text-white'
+                activeSection === "categories"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
               }`}
             >
               Categories
@@ -186,7 +218,7 @@ export function SettingsView() {
         {/* Main Content */}
         <div className="md:col-span-3">
           {/* General Settings */}
-          {activeSection === 'general' && (
+          {activeSection === "general" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
               <h2 className="text-2xl font-bold text-white mb-4">General Settings</h2>
               <div className="space-y-6">
@@ -206,6 +238,31 @@ export function SettingsView() {
                 </div>
 
                 <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Aircraft Import</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-truehour-darker rounded-lg">
+                      <div className="flex-1">
+                        <div className="text-white font-medium">FAA Registry Lookup</div>
+                        <div className="text-xs text-slate-400 mt-1 max-w-xl">
+                          Automatically query the FAA aircraft registry during ForeFlight imports to populate aircraft
+                          details. If disabled, only ForeFlight CSV data will be used.
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                        <input
+                          type="checkbox"
+                          checked={settings?.enable_faa_lookup ?? true}
+                          onChange={(e) => handleToggleFAALookup(e.target.checked)}
+                          disabled={isLoadingSettings || isSavingSettings}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
                   <h3 className="text-lg font-semibold text-white mb-3">Data Management</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between p-4 bg-truehour-darker rounded-lg">
@@ -220,7 +277,9 @@ export function SettingsView() {
                     <div className="flex items-center justify-between p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
                       <div>
                         <div className="text-white font-medium">Delete All Data</div>
-                        <div className="text-xs text-slate-500">Permanently delete all aircraft, expenses, flights, and settings</div>
+                        <div className="text-xs text-slate-500">
+                          Permanently delete all aircraft, expenses, flights, and settings
+                        </div>
                       </div>
                       <button
                         onClick={handleDeleteAllDataClick}
@@ -252,7 +311,7 @@ export function SettingsView() {
           )}
 
           {/* Tags Settings */}
-          {activeSection === 'tags' && (
+          {activeSection === "tags" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
               <h2 className="text-2xl font-bold text-white mb-2">Custom Tags</h2>
               <p className="text-slate-400 mb-6">
@@ -270,7 +329,7 @@ export function SettingsView() {
                     id="new-tag"
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddTag()}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
                     className="flex-1 bg-truehour-darker border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
                     placeholder="Enter tag name"
                   />
@@ -309,7 +368,12 @@ export function SettingsView() {
 
               <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                 <div className="flex gap-3">
-                  <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg
+                    className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -330,7 +394,7 @@ export function SettingsView() {
           )}
 
           {/* Categories Settings */}
-          {activeSection === 'categories' && (
+          {activeSection === "categories" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
               <h2 className="text-2xl font-bold text-white mb-2">Budget Categories</h2>
               <p className="text-slate-400 mb-6">
@@ -348,7 +412,7 @@ export function SettingsView() {
                     id="new-category"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
                     className="flex-1 bg-truehour-darker border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
                     placeholder="Enter category name"
                   />
@@ -411,8 +475,8 @@ export function SettingsView() {
                   <div className="text-sm text-amber-300">
                     <div className="font-medium mb-1">Important</div>
                     <div>
-                      Removing a category won't delete existing budget cards or expenses that use it. However, you won't be able
-                      to create new items with that category. At least one category must remain.
+                      Removing a category won't delete existing budget cards or expenses that use it. However, you won't
+                      be able to create new items with that category. At least one category must remain.
                     </div>
                   </div>
                 </div>
@@ -485,7 +549,9 @@ export function SettingsView() {
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-white mb-2">Type DELETE to Confirm</h3>
                   <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                    This is your last chance to cancel. Type <span className="font-mono font-bold text-red-400">DELETE</span> below to permanently delete all your data.
+                    This is your last chance to cancel. Type{" "}
+                    <span className="font-mono font-bold text-red-400">DELETE</span> below to permanently delete all
+                    your data.
                   </p>
                   <input
                     type="text"
@@ -508,7 +574,7 @@ export function SettingsView() {
                 </button>
                 <button
                   onClick={handleConfirmDelete}
-                  disabled={deleteConfirmText !== 'DELETE' || isDeleting}
+                  disabled={deleteConfirmText !== "DELETE" || isDeleting}
                   className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isDeleting ? (
@@ -517,7 +583,7 @@ export function SettingsView() {
                       Deleting...
                     </>
                   ) : (
-                    'Continue'
+                    "Continue"
                   )}
                 </button>
               </div>

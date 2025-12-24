@@ -1,10 +1,13 @@
 // TrueHour Flights View
 // Flight logbook with summary statistics and flight list
 
-import { useEffect, useState } from 'react';
-import { getFlights, getFlightSummary } from '../../services/api';
-import type { Flight, FlightSummary } from '../../types/api';
-import { FlightDetailModal } from './FlightDetailModal';
+import { useEffect, useState } from "react";
+import { getFlights, getFlightSummary } from "../../services/api";
+import type { Flight, FlightSummary } from "../../types/api";
+import { FlightDetailModal } from "./FlightDetailModal";
+
+type SortColumn = "date" | "aircraft" | "route" | "total" | "pic" | "xc" | "night" | "inst" | "ldg";
+type SortDirection = "asc" | "desc";
 
 export function FlightsView() {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -16,6 +19,8 @@ export function FlightsView() {
   const [hasMoreFlights, setHasMoreFlights] = useState<boolean>(false);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortColumn>("date");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   useEffect(() => {
     loadData();
@@ -38,8 +43,8 @@ export function FlightsView() {
       // Check if there are more flights (if we got exactly the limit, there might be more)
       setHasMoreFlights(flightsData.length === rowsPerPage);
     } catch (err) {
-      console.error('Failed to load flights:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load flights');
+      console.error("Failed to load flights:", err);
+      setError(err instanceof Error ? err.message : "Failed to load flights");
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +65,73 @@ export function FlightsView() {
     setSelectedFlight(null);
   };
 
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // New column, default to descending for numeric columns, ascending for text
+      setSortColumn(column);
+      setSortDirection(column === "aircraft" || column === "route" ? "asc" : "desc");
+    }
+  };
+
+  const getSortedFlights = () => {
+    return [...flights].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortColumn) {
+        case "date":
+          aVal = new Date(a.date).getTime();
+          bVal = new Date(b.date).getTime();
+          break;
+        case "aircraft":
+          aVal = a.tail_number || "";
+          bVal = b.tail_number || "";
+          break;
+        case "route":
+          aVal = formatRoute(a);
+          bVal = formatRoute(b);
+          break;
+        case "total":
+          aVal = Number(a.total_time) || 0;
+          bVal = Number(b.total_time) || 0;
+          break;
+        case "pic":
+          aVal = Number(a.pic_time) || 0;
+          bVal = Number(b.pic_time) || 0;
+          break;
+        case "xc":
+          aVal = Number(a.cross_country_time) || 0;
+          bVal = Number(b.cross_country_time) || 0;
+          break;
+        case "night":
+          aVal = Number(a.night_time) || 0;
+          bVal = Number(b.night_time) || 0;
+          break;
+        case "inst":
+          aVal = Number(a.actual_instrument_time || 0) + Number(a.simulated_instrument_time || 0);
+          bVal = Number(b.actual_instrument_time || 0) + Number(b.simulated_instrument_time || 0);
+          break;
+        case "ldg":
+          aVal = Number(a.all_landings) || 0;
+          bVal = Number(b.all_landings) || 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (typeof aVal === "string") {
+        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      } else {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+    });
+  };
+
   const formatHours = (hours?: number | null) => {
-    if (!hours || isNaN(Number(hours))) return '0.0';
+    if (!hours || isNaN(Number(hours))) return "0.0";
     return Number(hours).toFixed(1);
   };
 
@@ -76,7 +146,7 @@ export function FlightsView() {
     if (flight.arrival_airport && flight.arrival_airport !== parts[parts.length - 1]) {
       parts.push(flight.arrival_airport);
     }
-    return parts.join(' → ') || '-';
+    return parts.join(" → ") || "-";
   };
 
   return (
@@ -84,9 +154,7 @@ export function FlightsView() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-white">Flight Log</h1>
-        <p className="text-slate-400 mt-1">
-          Complete flight history and hours summary
-        </p>
+        <p className="text-slate-400 mt-1">Complete flight history and hours summary</p>
       </div>
 
       {/* Error State */}
@@ -135,7 +203,9 @@ export function FlightsView() {
           <div className="bg-truehour-card border border-truehour-border rounded-lg p-4">
             <div className="text-slate-400 text-sm mb-1">Instrument</div>
             <div className="text-2xl font-bold text-white">
-              {formatHours(Number(summary.actual_instrument_hours || 0) + Number(summary.simulated_instrument_hours || 0))}
+              {formatHours(
+                Number(summary.actual_instrument_hours || 0) + Number(summary.simulated_instrument_hours || 0)
+              )}
             </div>
           </div>
 
@@ -214,37 +284,109 @@ export function FlightsView() {
             <table className="w-full">
               <thead className="bg-truehour-darker">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Date
+                  <th
+                    onClick={() => handleSort("date")}
+                    className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      Date
+                      {sortColumn === "date" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Aircraft
+                  <th
+                    onClick={() => handleSort("aircraft")}
+                    className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      Aircraft
+                      {sortColumn === "aircraft" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Route
+                  <th
+                    onClick={() => handleSort("route")}
+                    className="px-4 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      Route
+                      {sortColumn === "route" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Total
+                  <th
+                    onClick={() => handleSort("total")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Total
+                      {sortColumn === "total" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    PIC
+                  <th
+                    onClick={() => handleSort("pic")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      PIC
+                      {sortColumn === "pic" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    XC
+                  <th
+                    onClick={() => handleSort("xc")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      XC
+                      {sortColumn === "xc" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Night
+                  <th
+                    onClick={() => handleSort("night")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Night
+                      {sortColumn === "night" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Inst
+                  <th
+                    onClick={() => handleSort("inst")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Inst
+                      {sortColumn === "inst" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Ldg
+                  <th
+                    onClick={() => handleSort("ldg")}
+                    className="px-4 py-3 text-right text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-truehour-blue transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1">
+                      Ldg
+                      {sortColumn === "ldg" && (
+                        <span className="text-truehour-blue">{sortDirection === "asc" ? "↑" : "↓"}</span>
+                      )}
+                    </div>
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-truehour-border">
-                {flights.map((flight) => (
+                {getSortedFlights().map((flight) => (
                   <tr
                     key={flight.id}
                     onClick={() => handleFlightClick(flight)}
@@ -252,55 +394,40 @@ export function FlightsView() {
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm text-white">
-                        {new Date(flight.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
+                        {new Date(flight.date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
                         })}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="text-sm font-mono text-white">
-                        {flight.tail_number || (flight.is_simulator_session ? 'SIM' : '-')}
+                        {flight.tail_number || (flight.is_simulator_session ? "SIM" : "-")}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-mono text-slate-300">
-                        {formatRoute(flight)}
-                      </div>
+                      <div className="text-sm font-mono text-slate-300">{formatRoute(flight)}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <div className="text-sm text-white">
-                        {formatHours(flight.total_time)}
-                      </div>
+                      <div className="text-sm text-white">{formatHours(flight.total_time)}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <div className="text-sm text-slate-300">
-                        {formatHours(flight.pic_time)}
-                      </div>
+                      <div className="text-sm text-slate-300">{formatHours(flight.pic_time)}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <div className="text-sm text-slate-300">
-                        {formatHours(flight.cross_country_time)}
-                      </div>
+                      <div className="text-sm text-slate-300">{formatHours(flight.cross_country_time)}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      <div className="text-sm text-slate-300">{formatHours(flight.night_time)}</div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
                       <div className="text-sm text-slate-300">
-                        {formatHours(flight.night_time)}
+                        {formatHours((flight.actual_instrument_time || 0) + (flight.simulated_instrument_time || 0))}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <div className="text-sm text-slate-300">
-                        {formatHours(
-                          (flight.actual_instrument_time || 0) +
-                          (flight.simulated_instrument_time || 0)
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right">
-                      <div className="text-sm text-slate-300">
-                        {flight.all_landings || 0}
-                      </div>
+                      <div className="text-sm text-slate-300">{flight.all_landings || 0}</div>
                     </td>
                   </tr>
                 ))}
@@ -311,7 +438,8 @@ export function FlightsView() {
           {/* Pagination Controls */}
           <div className="px-6 py-4 border-t border-truehour-border flex items-center justify-between">
             <div className="text-sm text-slate-400">
-              Showing {flights.length > 0 ? ((currentPage - 1) * rowsPerPage) + 1 : 0} - {(currentPage - 1) * rowsPerPage + flights.length} flights
+              Showing {flights.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0} -{" "}
+              {(currentPage - 1) * rowsPerPage + flights.length} flights
               {summary && ` of ${summary.total_flights} total`}
             </div>
             <div className="flex items-center gap-2">
@@ -322,9 +450,7 @@ export function FlightsView() {
               >
                 Previous
               </button>
-              <span className="text-sm text-slate-400 px-3">
-                Page {currentPage}
-              </span>
+              <span className="text-sm text-slate-400 px-3">Page {currentPage}</span>
               <button
                 onClick={() => setCurrentPage(currentPage + 1)}
                 disabled={!hasMoreFlights}
@@ -341,12 +467,7 @@ export function FlightsView() {
       {!isLoading && flights.length === 0 && (
         <div className="bg-truehour-card border border-truehour-border rounded-lg p-12">
           <div className="text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-slate-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="mx-auto h-12 w-12 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -355,19 +476,13 @@ export function FlightsView() {
               />
             </svg>
             <h3 className="mt-2 text-sm font-medium text-white">No flights yet</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Import your ForeFlight logbook to see your flights here
-            </p>
+            <p className="mt-1 text-sm text-slate-400">Import your ForeFlight logbook to see your flights here</p>
           </div>
         </div>
       )}
 
       {/* Flight Detail Modal */}
-      <FlightDetailModal
-        flight={selectedFlight}
-        isOpen={showDetailModal}
-        onClose={handleCloseDetailModal}
-      />
+      <FlightDetailModal flight={selectedFlight} isOpen={showDetailModal} onClose={handleCloseDetailModal} />
     </div>
   );
 }

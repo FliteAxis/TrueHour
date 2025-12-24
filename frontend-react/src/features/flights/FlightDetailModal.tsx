@@ -1,7 +1,7 @@
 // Flight Detail Modal
 // Displays all stored data for a selected flight (read-only for now)
 
-import type { Flight } from '../../types/api';
+import type { Flight } from "../../types/api";
 
 interface FlightDetailModalProps {
   flight: Flight | null;
@@ -13,25 +13,25 @@ export function FlightDetailModal({ flight, isOpen, onClose }: FlightDetailModal
   if (!isOpen || !flight) return null;
 
   const formatHours = (hours?: number | null) => {
-    if (!hours || isNaN(Number(hours))) return '0.0';
+    if (!hours || isNaN(Number(hours))) return "0.0";
     return Number(hours).toFixed(1);
   };
 
   const formatCurrency = (amount?: number | null) => {
-    if (!amount || isNaN(Number(amount))) return '$0.00';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    if (!amount || isNaN(Number(amount))) return "$0.00";
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
     }).format(Number(amount));
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(date).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -63,23 +63,25 @@ export function FlightDetailModal({ flight, isOpen, onClose }: FlightDetailModal
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <div className="text-slate-400 text-sm mb-1">Aircraft</div>
-                <div className="text-white font-mono">{flight.tail_number || (flight.is_simulator_session ? 'Simulator' : '-')}</div>
+                <div className="text-white font-mono">
+                  {flight.tail_number || (flight.is_simulator_session ? "Simulator" : "-")}
+                </div>
               </div>
               <div>
                 <div className="text-slate-400 text-sm mb-1">Date</div>
-                <div className="text-white">{new Date(flight.date).toLocaleDateString('en-US')}</div>
+                <div className="text-white">{new Date(flight.date).toLocaleDateString("en-US")}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-sm mb-1">Departure</div>
-                <div className="text-white font-mono">{flight.departure_airport || '-'}</div>
+                <div className="text-white font-mono">{flight.departure_airport || "-"}</div>
               </div>
               <div>
                 <div className="text-slate-400 text-sm mb-1">Arrival</div>
-                <div className="text-white font-mono">{flight.arrival_airport || '-'}</div>
+                <div className="text-white font-mono">{flight.arrival_airport || "-"}</div>
               </div>
               <div className="col-span-2">
                 <div className="text-slate-400 text-sm mb-1">Route</div>
-                <div className="text-white font-mono">{flight.route || '-'}</div>
+                <div className="text-white font-mono">{flight.route || "-"}</div>
               </div>
             </div>
           </div>
@@ -91,19 +93,19 @@ export function FlightDetailModal({ flight, isOpen, onClose }: FlightDetailModal
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Out</div>
-                  <div className="text-white font-mono">{flight.time_out || '-'}</div>
+                  <div className="text-white font-mono">{flight.time_out || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Off</div>
-                  <div className="text-white font-mono">{flight.time_off || '-'}</div>
+                  <div className="text-white font-mono">{flight.time_off || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">On</div>
-                  <div className="text-white font-mono">{flight.time_on || '-'}</div>
+                  <div className="text-white font-mono">{flight.time_on || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">In</div>
-                  <div className="text-white font-mono">{flight.time_in || '-'}</div>
+                  <div className="text-white font-mono">{flight.time_in || "-"}</div>
                 </div>
               </div>
             </div>
@@ -220,26 +222,30 @@ export function FlightDetailModal({ flight, isOpen, onClose }: FlightDetailModal
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Hobbs Start</div>
-                  <div className="text-white">{flight.hobbs_start || '-'}</div>
+                  <div className="text-white">{flight.hobbs_start || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Hobbs End</div>
-                  <div className="text-white">{flight.hobbs_end || '-'}</div>
+                  <div className="text-white">{flight.hobbs_end || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Tach Start</div>
-                  <div className="text-white">{flight.tach_start || '-'}</div>
+                  <div className="text-white">{flight.tach_start || "-"}</div>
                 </div>
                 <div>
                   <div className="text-slate-400 text-sm mb-1">Tach End</div>
-                  <div className="text-white">{flight.tach_end || '-'}</div>
+                  <div className="text-white">{flight.tach_end || "-"}</div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Costs */}
-          {(flight.fuel_cost || flight.landing_fees || flight.instructor_cost || flight.rental_cost || flight.other_costs) && (
+          {(flight.fuel_cost ||
+            flight.landing_fees ||
+            flight.instructor_cost ||
+            flight.rental_cost ||
+            flight.other_costs) && (
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">Costs</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

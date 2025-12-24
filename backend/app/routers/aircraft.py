@@ -76,6 +76,9 @@ class UserAircraftResponse(BaseModel):
     hourly_rate_dry: Optional[Decimal] = None
     notes: Optional[str] = None
     is_active: bool
+    data_source: Optional[str] = None
+    faa_last_checked: Optional[datetime] = None
+    total_time: Optional[Decimal] = Field(None, description="Total hours logged in this aircraft")
     created_at: datetime
     updated_at: datetime
 

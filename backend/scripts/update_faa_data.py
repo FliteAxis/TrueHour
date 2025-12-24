@@ -89,11 +89,21 @@ def download_faa_data() -> zipfile.ZipFile:
     max_retries = 3
     timeout = 300  # 5 minutes
 
+    # Use browser-like headers to avoid blocking
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    }
+
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.get(
-                FAA_URL, timeout=timeout, stream=True, headers={"User-Agent": "truehour-faa-builder/1.0"}
-            )
+            response = requests.get(FAA_URL, timeout=timeout, stream=True, headers=headers)
             response.raise_for_status()
 
             # Download with progress

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import * as api from '../../services/api';
-import type { BudgetCategorySummary } from '../../types/api';
+import { useEffect, useState } from "react";
+import * as api from "../../services/api";
+import type { BudgetCategorySummary } from "../../types/api";
 
 export function BudgetBreakdown() {
   const [categories, setCategories] = useState<BudgetCategorySummary[]>([]);
@@ -15,7 +15,7 @@ export function BudgetBreakdown() {
       const data = await api.getBudgetCardsSummaryByCategory(new Date().getFullYear());
       setCategories(data);
     } catch (error) {
-      console.error('Failed to load budget data:', error);
+      console.error("Failed to load budget data:", error);
     } finally {
       setIsLoading(false);
     }
@@ -25,12 +25,12 @@ export function BudgetBreakdown() {
 
   // Color palette for categories
   const colors = [
-    'rgb(59, 130, 246)',  // blue
-    'rgb(168, 85, 247)',  // purple
-    'rgb(236, 72, 153)',  // pink
-    'rgb(251, 146, 60)',  // orange
-    'rgb(34, 197, 94)',   // green
-    'rgb(20, 184, 166)',  // teal
+    "rgb(59, 130, 246)", // blue
+    "rgb(168, 85, 247)", // purple
+    "rgb(236, 72, 153)", // pink
+    "rgb(251, 146, 60)", // orange
+    "rgb(34, 197, 94)", // green
+    "rgb(20, 184, 166)", // teal
   ];
 
   // Calculate percentages and create chart data
@@ -63,9 +63,7 @@ export function BudgetBreakdown() {
     return (
       <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
         <h3 className="text-xl font-bold text-white mb-4">Budget Breakdown</h3>
-        <p className="text-slate-400 text-center py-12">
-          No budget data available. Add budget cards to see breakdown.
-        </p>
+        <p className="text-slate-400 text-center py-12">No budget data available. Add budget cards to see breakdown.</p>
       </div>
     );
   }
@@ -89,7 +87,7 @@ export function BudgetBreakdown() {
           {/* Colored segments */}
           {chartData.map((item, index) => {
             const segmentLength = (item.percentage / 100) * circumference;
-            const segmentOffset = cumulativePercentage * circumference / 100;
+            const segmentOffset = (cumulativePercentage * circumference) / 100;
             cumulativePercentage += item.percentage;
 
             return (
@@ -115,19 +113,18 @@ export function BudgetBreakdown() {
         {chartData.map((item, index) => (
           <div key={index} className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div
-                className="w-3 h-3 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
               <span className="text-slate-300 text-sm">{item.category}</span>
             </div>
             <div className="text-right">
               <span className="text-white font-semibold text-sm">
-                ${parseFloat(item.total_budgeted).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                $
+                {parseFloat(item.total_budgeted).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </span>
-              <span className="text-slate-400 text-xs ml-2">
-                ({item.percentage.toFixed(1)}%)
-              </span>
+              <span className="text-slate-400 text-xs ml-2">({item.percentage.toFixed(1)}%)</span>
             </div>
           </div>
         ))}
@@ -137,7 +134,7 @@ export function BudgetBreakdown() {
           <div className="flex items-center justify-between">
             <span className="text-white font-semibold">Total</span>
             <span className="text-truehour-blue font-bold text-lg">
-              ${totalBudget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${totalBudget.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
         </div>

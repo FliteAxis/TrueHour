@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { HoursCards } from './HoursCards';
-import { CertificationProgressDetailed } from './CertificationProgressDetailed';
-import { BudgetBreakdown } from './BudgetBreakdown';
-import { Timeline } from './Timeline';
-import { useUserStore } from '../../store/userStore';
+import { useState, useEffect } from "react";
+import { HoursCards } from "./HoursCards";
+import { CertificationProgressDetailed } from "./CertificationProgressDetailed";
+import { BudgetBreakdown } from "./BudgetBreakdown";
+import { Timeline } from "./Timeline";
+import { useUserStore } from "../../store/userStore";
 
-type CertificationType = 'private' | 'ir' | 'cpl' | 'cfi';
+type CertificationType = "private" | "ir" | "cpl" | "cfi";
 
 export function SummaryView() {
   const { settings, updateSettings } = useUserStore();
-  const [selectedCert, setSelectedCert] = useState<CertificationType>('ir');
+  const [selectedCert, setSelectedCert] = useState<CertificationType>("ir");
 
   useEffect(() => {
     if (settings?.target_certification) {

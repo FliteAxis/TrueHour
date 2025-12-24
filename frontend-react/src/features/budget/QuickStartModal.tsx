@@ -1,8 +1,8 @@
 // Quick Start Budget Cards Modal
 // Provides template cards for common aviation expenses
 
-import { useState } from 'react';
-import { useBudgetStore } from '../../store/budgetStore';
+import { useState } from "react";
+import { useBudgetStore } from "../../store/budgetStore";
 
 interface TemplateCard {
   name: string;
@@ -15,75 +15,75 @@ interface TemplateCard {
 
 const TEMPLATE_CARDS: TemplateCard[] = [
   {
-    name: 'Flight Instruction',
+    name: "Flight Instruction",
     amount: 5000,
-    category: 'Training',
-    description: 'Flight and ground instruction costs',
-    icon: '',
+    category: "Training",
+    description: "Flight and ground instruction costs",
+    icon: "",
     isOneTime: false,
   },
   {
-    name: 'Aircraft Rental',
+    name: "Aircraft Rental",
     amount: 8000,
-    category: 'Aircraft Rental',
-    description: 'Aircraft rental for training flights',
-    icon: '',
+    category: "Aircraft Rental",
+    description: "Aircraft rental for training flights",
+    icon: "",
     isOneTime: false,
   },
   {
-    name: 'Medical Exam',
+    name: "Medical Exam",
     amount: 300,
-    category: 'Medical',
-    description: 'FAA medical examination',
-    icon: '',
+    category: "Medical",
+    description: "FAA medical examination",
+    icon: "",
     isOneTime: true,
   },
   {
-    name: 'FAA Knowledge Test',
+    name: "FAA Knowledge Test",
     amount: 250,
-    category: 'Exams & Checkrides',
-    description: 'Written exam fee',
-    icon: '',
+    category: "Exams & Checkrides",
+    description: "Written exam fee",
+    icon: "",
     isOneTime: true,
   },
   {
-    name: 'Checkride',
+    name: "Checkride",
     amount: 1000,
-    category: 'Exams & Checkrides',
-    description: 'Practical exam with DPE',
-    icon: '',
+    category: "Exams & Checkrides",
+    description: "Practical exam with DPE",
+    icon: "",
     isOneTime: true,
   },
   {
-    name: 'Aviation Headset',
+    name: "Aviation Headset",
     amount: 500,
-    category: 'Equipment',
-    description: 'Headset and accessories',
-    icon: '',
+    category: "Equipment",
+    description: "Headset and accessories",
+    icon: "",
     isOneTime: true,
   },
   {
-    name: 'Books & Materials',
+    name: "Books & Materials",
     amount: 300,
-    category: 'Books & Materials',
-    description: 'Training materials and books',
-    icon: '',
+    category: "Books & Materials",
+    description: "Training materials and books",
+    icon: "",
     isOneTime: true,
   },
   {
-    name: 'ForeFlight Subscription',
+    name: "ForeFlight Subscription",
     amount: 275,
-    category: 'Subscriptions',
-    description: 'Annual subscription',
-    icon: '',
+    category: "Subscriptions",
+    description: "Annual subscription",
+    icon: "",
     isOneTime: false,
   },
   {
-    name: 'Ground School',
+    name: "Ground School",
     amount: 300,
-    category: 'Ground School',
-    description: 'Online or in-person ground school',
-    icon: '',
+    category: "Ground School",
+    description: "Online or in-person ground school",
+    icon: "",
     isOneTime: true,
   },
 ];
@@ -122,9 +122,9 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
           budgeted_amount: template.amount,
           category: template.category,
           notes: template.description,
-          frequency: template.isOneTime ? 'once' : 'annual',
+          frequency: template.isOneTime ? "once" : "annual",
           when_date: `${selectedYear}-01-01`,
-          status: 'active',
+          status: "active",
         });
       }
 
@@ -133,8 +133,8 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
 
       onClose();
     } catch (err) {
-      console.error('Failed to create template cards:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create budget cards';
+      console.error("Failed to create template cards:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to create budget cards";
       setError(errorMessage);
     } finally {
       setIsCreating(false);
@@ -143,7 +143,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
 
   const createSelectedTemplates = async () => {
     if (selectedTemplates.size === 0) {
-      setError('Please select at least one template card');
+      setError("Please select at least one template card");
       return;
     }
 
@@ -158,9 +158,9 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
           budgeted_amount: template.amount,
           category: template.category,
           notes: template.description,
-          frequency: template.isOneTime ? 'once' : 'annual',
+          frequency: template.isOneTime ? "once" : "annual",
           when_date: `${selectedYear}-01-01`,
-          status: 'active',
+          status: "active",
         });
       }
 
@@ -169,8 +169,8 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
 
       onClose();
     } catch (err) {
-      console.error('Failed to create selected template cards:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create budget cards';
+      console.error("Failed to create selected template cards:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to create budget cards";
       setError(errorMessage);
     } finally {
       setIsCreating(false);
@@ -197,7 +197,8 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
         {/* Description */}
         <div className="px-6 py-4 border-b border-truehour-border">
           <p className="text-slate-400">
-            Select templates to quickly create budget cards for common aviation expenses. Click any card to add it to your budget.
+            Select templates to quickly create budget cards for common aviation expenses. Click any card to add it to
+            your budget.
           </p>
         </div>
 
@@ -216,9 +217,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
                 key={index}
                 onClick={() => toggleTemplate(index)}
                 className={`bg-truehour-card border-2 rounded-lg p-6 text-left transition-all hover:border-truehour-blue/50 ${
-                  selectedTemplates.has(index)
-                    ? 'border-truehour-blue bg-truehour-blue/10'
-                    : 'border-truehour-border'
+                  selectedTemplates.has(index) ? "border-truehour-blue bg-truehour-blue/10" : "border-truehour-border"
                 }`}
               >
                 {/* Name */}
@@ -226,7 +225,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
 
                 {/* Amount */}
                 <div className="text-2xl font-bold text-truehour-blue mb-2">
-                  ${template.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${template.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
 
                 {/* Description */}
@@ -236,7 +235,11 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
                 {selectedTemplates.has(index) && (
                   <div className="mt-4 flex items-center gap-2 text-truehour-blue">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span className="text-sm font-medium">Selected</span>
                   </div>
@@ -262,7 +265,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
               className="px-6 py-3 bg-truehour-card border border-truehour-blue text-truehour-blue rounded-lg hover:bg-truehour-blue/10 transition-colors disabled:opacity-50"
               disabled={isCreating}
             >
-              {isCreating ? 'Creating...' : 'Create All Templates'}
+              {isCreating ? "Creating..." : "Create All Templates"}
             </button>
 
             <button
@@ -270,7 +273,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
               className="px-6 py-3 bg-truehour-blue text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
               disabled={isCreating || selectedTemplates.size === 0}
             >
-              {isCreating ? 'Creating...' : `Create Selected (${selectedTemplates.size})`}
+              {isCreating ? "Creating..." : `Create Selected (${selectedTemplates.size})`}
             </button>
           </div>
         </div>

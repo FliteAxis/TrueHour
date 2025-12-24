@@ -62,3 +62,7 @@ temp/
 # Logfiles
 logbook_*.csv
 Foreflight_*.csv
+
+# Node modules (anywhere in project)
+node_modules/
+**/node_modules/

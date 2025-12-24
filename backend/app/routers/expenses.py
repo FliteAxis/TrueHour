@@ -68,10 +68,7 @@ class ExpenseResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {
-        "from_attributes": True,
-        "json_schema_extra": {"exclude_none": False}
-    }
+    model_config = {"from_attributes": True, "json_schema_extra": {"exclude_none": False}}
 
 
 class ExpenseSummaryResponse(BaseModel):

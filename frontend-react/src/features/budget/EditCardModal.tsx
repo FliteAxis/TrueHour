@@ -1,9 +1,9 @@
 // Edit Budget Card Modal
 // Modal form for editing existing budget cards
 
-import { useState, useEffect } from 'react';
-import { useBudgetStore } from '../../store/budgetStore';
-import type { BudgetCard } from '../../types/api';
+import { useState, useEffect } from "react";
+import { useBudgetStore } from "../../store/budgetStore";
+import type { BudgetCard } from "../../types/api";
 
 interface EditCardModalProps {
   isOpen: boolean;
@@ -12,17 +12,17 @@ interface EditCardModalProps {
 }
 
 const CATEGORIES = [
-  'Training',
-  'Certifications',
-  'Equipment',
-  'Subscriptions',
-  'Membership',
-  'Administrative',
-  'Other',
+  "Training",
+  "Certifications",
+  "Equipment",
+  "Subscriptions",
+  "Membership",
+  "Administrative",
+  "Other",
 ];
 
-const FREQUENCIES = ['once', 'monthly', 'annual'];
-const STATUSES = ['active', 'inactive', 'completed'];
+const FREQUENCIES = ["once", "monthly", "annual"];
+const STATUSES = ["active", "inactive", "completed"];
 
 export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
   const { updateCard } = useBudgetStore();
@@ -34,11 +34,11 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
     when_date: card.when_date,
     budgeted_amount: card.budgeted_amount.toString(),
     status: card.status,
-    notes: card.notes || '',
+    notes: card.notes || "",
   });
 
   const [tags, setTags] = useState<string[]>(card.tags || []);
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +46,7 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
       setTags([...tags, trimmedTag]);
-      setTagInput('');
+      setTagInput("");
     }
   };
 
@@ -55,7 +55,7 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
   };
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAddTag();
     }
@@ -70,7 +70,7 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
       when_date: card.when_date,
       budgeted_amount: card.budgeted_amount.toString(),
       status: card.status,
-      notes: card.notes || '',
+      notes: card.notes || "",
     });
     setTags(card.tags || []);
   }, [card]);
@@ -81,11 +81,11 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
 
     // Validation
     if (!formData.name.trim()) {
-      setError('Name is required');
+      setError("Name is required");
       return;
     }
     if (!formData.budgeted_amount || parseFloat(formData.budgeted_amount) <= 0) {
-      setError('Budgeted amount must be greater than 0');
+      setError("Budgeted amount must be greater than 0");
       return;
     }
 
@@ -105,7 +105,7 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
 
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update budget card');
+      setError(err instanceof Error ? err.message : "Failed to update budget card");
     } finally {
       setIsSubmitting(false);
     }
@@ -345,7 +345,7 @@ export function EditCardModal({ isOpen, onClose, card }: EditCardModalProps) {
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </button>
           </div>

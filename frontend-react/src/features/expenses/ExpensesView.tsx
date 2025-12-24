@@ -1,13 +1,13 @@
 // Expenses View
 // Main view for tracking and managing expenses
 
-import { useEffect, useState } from 'react';
-import { useExpenseStore } from '../../store/expenseStore';
-import { useBudgetStore } from '../../store/budgetStore';
-import { CreateExpenseModal } from './CreateExpenseModal';
-import { EditExpenseModal } from './EditExpenseModal';
-import { ExpensesList } from './ExpensesList';
-import type { Expense } from '../../types/api';
+import { useEffect, useState } from "react";
+import { useExpenseStore } from "../../store/expenseStore";
+import { useBudgetStore } from "../../store/budgetStore";
+import { CreateExpenseModal } from "./CreateExpenseModal";
+import { EditExpenseModal } from "./EditExpenseModal";
+import { ExpensesList } from "./ExpensesList";
+import type { Expense } from "../../types/api";
 
 export function ExpensesView() {
   const { expenses, isLoading, error, fetchExpenses } = useExpenseStore();
@@ -23,7 +23,7 @@ export function ExpensesView() {
         await fetchExpenses();
         await loadCards();
       } catch (err) {
-        console.error('[ExpensesView] Failed to load data:', err);
+        console.error("[ExpensesView] Failed to load data:", err);
       }
     };
     loadData();
@@ -31,14 +31,16 @@ export function ExpensesView() {
 
   // Debug: Log budget cards whenever they change
   useEffect(() => {
-    console.log('[ExpensesView] Budget cards updated:', cards.length, cards);
+    console.log("[ExpensesView] Budget cards updated:", cards.length, cards);
   }, [cards]);
 
   // Debug: Log expenses to see budget_card_id
   useEffect(() => {
-    console.log('[ExpensesView] Expenses updated:', expenses.length);
-    expenses.forEach(exp => {
-      console.log(`  Expense ${exp.id}: category=${exp.category}, amount=${exp.amount}, budget_card_id=${exp.budget_card_id}`);
+    console.log("[ExpensesView] Expenses updated:", expenses.length);
+    expenses.forEach((exp) => {
+      console.log(
+        `  Expense ${exp.id}: category=${exp.category}, amount=${exp.amount}, budget_card_id=${exp.budget_card_id}`
+      );
     });
   }, [expenses]);
 
@@ -51,9 +53,9 @@ export function ExpensesView() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount);
@@ -120,7 +122,12 @@ export function ExpensesView() {
             <h3 className="text-slate-400 text-sm font-medium">Linked to Budget</h3>
             <div className="bg-green-500/10 p-2 rounded-lg">
               <svg className="w-5 h-5 text-truehour-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
               </svg>
             </div>
           </div>

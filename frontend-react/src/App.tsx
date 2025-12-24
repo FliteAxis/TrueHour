@@ -1,13 +1,14 @@
-import { useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { useUserStore } from './store/userStore';
-import { DashboardLayout } from './components/layout/DashboardLayout';
-import { SummaryView } from './features/dashboard/SummaryView';
-import { BudgetView } from './features/budget/BudgetView';
-import { ExpensesView } from './features/expenses/ExpensesView';
-import { FlightsView } from './features/flights/FlightsView';
-import { ReportsView } from './features/reports/ReportsView';
-import { SettingsView } from './features/settings/SettingsView';
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useUserStore } from "./store/userStore";
+import { DashboardLayout } from "./components/layout/DashboardLayout";
+import { SummaryView } from "./features/dashboard/SummaryView";
+import { BudgetView } from "./features/budget/BudgetView";
+import { ExpensesView } from "./features/expenses/ExpensesView";
+import { FlightsView } from "./features/flights/FlightsView";
+import { ReportsView } from "./features/reports/ReportsView";
+import { SettingsView } from "./features/settings/SettingsView";
+import { AircraftView } from "./features/aircraft/AircraftView";
 
 function App() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ function App() {
         await loadSettings();
         await loadCurrentHours();
       } catch (err) {
-        console.error('[App] Failed to load data:', err);
+        console.error("[App] Failed to load data:", err);
       }
     };
     loadData();
@@ -28,7 +29,7 @@ function App() {
   }, []);
 
   // Always render something so we can see what's happening
-  console.log('[App] Render state:', { settings, isLoading, error });
+  console.log("[App] Render state:", { settings, isLoading, error });
 
   if (error) {
     return (
@@ -66,9 +67,9 @@ function App() {
     const handleSkipOnboarding = async () => {
       try {
         await updateSettings({ onboarding_completed: true });
-        navigate('/dashboard');
+        navigate("/dashboard");
       } catch (err) {
-        console.error('Failed to update onboarding status:', err);
+        console.error("Failed to update onboarding status:", err);
       }
     };
 
@@ -76,9 +77,7 @@ function App() {
       <div className="min-h-screen flex items-center justify-center bg-truehour-dark">
         <div className="bg-truehour-card border border-truehour-border p-8 rounded-lg max-w-md text-center">
           <h2 className="text-2xl font-bold text-white mb-4">Welcome to TrueHour!</h2>
-          <p className="text-slate-300 mb-6">
-            Onboarding flow will go here. For now, you can explore the app.
-          </p>
+          <p className="text-slate-300 mb-6">Onboarding flow will go here. For now, you can explore the app.</p>
           <button
             onClick={handleSkipOnboarding}
             className="px-6 py-3 bg-truehour-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
@@ -99,6 +98,7 @@ function App() {
         <Route path="/budget" element={<BudgetView />} />
         <Route path="/expenses" element={<ExpensesView />} />
         <Route path="/flights" element={<FlightsView />} />
+        <Route path="/aircraft" element={<AircraftView />} />
         <Route path="/reports" element={<ReportsView />} />
         <Route path="/settings" element={<SettingsView />} />
       </Routes>

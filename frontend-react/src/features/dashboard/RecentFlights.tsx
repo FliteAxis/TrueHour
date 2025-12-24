@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import type { Flight } from '../../types/api';
-import * as api from '../../services/api';
+import { useEffect, useState } from "react";
+import type { Flight } from "../../types/api";
+import * as api from "../../services/api";
 
 export function RecentFlights() {
   const [flights, setFlights] = useState<Flight[]>([]);
@@ -22,7 +22,7 @@ export function RecentFlights() {
         .slice(0, 10);
       setFlights(recentFlights);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load flights');
+      setError(err instanceof Error ? err.message : "Failed to load flights");
     } finally {
       setIsLoading(false);
     }
@@ -88,10 +88,10 @@ export function RecentFlights() {
                 className="border-b border-truehour-border hover:bg-truehour-darker transition-colors"
               >
                 <td className="py-3 px-2 text-slate-300 text-sm">
-                  {new Date(flight.date).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
+                  {new Date(flight.date).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
                   })}
                 </td>
                 <td className="py-3 px-2 text-slate-300 text-sm">
@@ -104,16 +104,16 @@ export function RecentFlights() {
                   )}
                 </td>
                 <td className="py-3 px-2 text-right text-truehour-blue font-medium text-sm">
-                  {flight.total_time ? Number(flight.total_time).toFixed(1) : '0.0'}
+                  {flight.total_time ? Number(flight.total_time).toFixed(1) : "0.0"}
                 </td>
                 <td className="py-3 px-2 text-right text-slate-300 text-sm">
-                  {flight.pic_time ? Number(flight.pic_time).toFixed(1) : '—'}
+                  {flight.pic_time ? Number(flight.pic_time).toFixed(1) : "—"}
                 </td>
                 <td className="py-3 px-2 text-right text-slate-300 text-sm">
-                  {flight.cross_country_time ? Number(flight.cross_country_time).toFixed(1) : '—'}
+                  {flight.cross_country_time ? Number(flight.cross_country_time).toFixed(1) : "—"}
                 </td>
                 <td className="py-3 px-2 text-right text-slate-300 text-sm">
-                  {flight.night_time ? Number(flight.night_time).toFixed(1) : '—'}
+                  {flight.night_time ? Number(flight.night_time).toFixed(1) : "—"}
                 </td>
               </tr>
             ))}

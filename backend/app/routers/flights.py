@@ -175,10 +175,7 @@ class FlightResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {
-        "from_attributes": True,
-        "json_schema_extra": {"exclude_none": False}
-    }
+    model_config = {"from_attributes": True, "json_schema_extra": {"exclude_none": False}}
 
 
 class FlightSummary(BaseModel):
@@ -211,11 +208,7 @@ async def list_flights(
 ):
     """List flights with optional filters."""
     flights = await postgres_db.get_flights(
-        aircraft_id=aircraft_id,
-        start_date=start_date,
-        end_date=end_date,
-        limit=limit,
-        offset=offset
+        aircraft_id=aircraft_id, start_date=start_date, end_date=end_date, limit=limit, offset=offset
     )
     return flights
 
@@ -289,12 +282,24 @@ async def delete_flight(flight_id: int):
     return None
 
 
+class AircraftCreated(BaseModel):
+    """Aircraft created during import."""
+
+    id: int
+    tail_number: str
+    make: Optional[str] = None
+    model: Optional[str] = None
+    year: Optional[int] = None
+    data_source: Optional[str] = None
+
+
 class ImportResult(BaseModel):
     """Result of CSV import."""
 
     imported: int
     skipped: int
     errors: List[str]
+    aircraft_created: Optional[List[AircraftCreated]] = None
 
 
 def _safe_float(value) -> Optional[float]:
@@ -360,19 +365,36 @@ async def import_flights(file: UploadFile = File(...)):
         csv_data = contents.decode("utf-8")
 
         # ForeFlight CSV has metadata rows before the actual flight data
-        # Find the "Flights Table" header row and skip to it
-        lines = csv_data.split('\n')
+        # Find the "Aircraft Table" and "Flights Table" header rows
+        lines = csv_data.split("\n")
+
+        aircraft_table_start = -1
         flights_table_start = -1
+
         for i, line in enumerate(lines):
-            if line.startswith('Flights Table'):
+            if line.startswith("Aircraft Table"):
+                aircraft_table_start = i + 1  # Next line has the headers
+            elif line.startswith("Flights Table"):
                 flights_table_start = i + 1  # Next line has the headers
                 break
 
         if flights_table_start == -1:
-            raise HTTPException(status_code=400, detail="Invalid ForeFlight CSV format: 'Flights Table' header not found")
+            raise HTTPException(
+                status_code=400, detail="Invalid ForeFlight CSV format: 'Flights Table' header not found"
+            )
+
+        # Parse Aircraft Table if available
+        aircraft_data_dict = {}
+        if aircraft_table_start != -1 and flights_table_start > aircraft_table_start:
+            aircraft_csv = "\n".join(lines[aircraft_table_start : flights_table_start - 1])
+            aircraft_reader = csv.DictReader(io.StringIO(aircraft_csv))
+            for row in aircraft_reader:
+                tail = row.get("AircraftID")
+                if tail:
+                    aircraft_data_dict[tail] = row
 
         # Skip to the flights section
-        flights_csv = '\n'.join(lines[flights_table_start:])
+        flights_csv = "\n".join(lines[flights_table_start:])
         reader = csv.DictReader(io.StringIO(flights_csv))
 
         imported = 0
@@ -383,11 +405,29 @@ async def import_flights(file: UploadFile = File(...)):
         import_hashes = set()
 
         async with postgres_db.acquire() as conn:
+            # First, extract and import aircraft from the Aircraft Table data
+            from app.routers.user_data import _extract_and_import_aircraft
+
+            # Get user settings to check enable_faa_lookup
+            settings_row = await conn.fetchrow("SELECT enable_faa_lookup FROM user_settings ORDER BY id LIMIT 1")
+            enable_faa_lookup = settings_row["enable_faa_lookup"] if settings_row else True
+
+            # Convert CSV rows to list of dicts for aircraft extraction (pass aircraft table data)
+            flights_csv_copy = "\n".join(lines[flights_table_start:])
+            reader_for_aircraft = csv.DictReader(io.StringIO(flights_csv_copy))
+            flights_list = list(reader_for_aircraft)
+
+            # Extract and create aircraft (now passing aircraft_data_dict with ForeFlight data)
+            aircraft_map = await _extract_and_import_aircraft(conn, flights_list, enable_faa_lookup, aircraft_data_dict)
+            print(f"[Flight Import] Created {len(aircraft_map)} aircraft from import")
+
             # Get existing import hashes from database
             existing_hashes = await conn.fetch("SELECT DISTINCT import_hash FROM flights WHERE import_hash IS NOT NULL")
             existing_hash_set = {row["import_hash"] for row in existing_hashes}
 
-            for row_num, row in enumerate(reader, start=flights_table_start + 2):  # Adjust row numbers for error messages
+            for row_num, row in enumerate(
+                reader, start=flights_table_start + 2
+            ):  # Adjust row numbers for error messages
                 try:
                     # Validate required fields - Date is always required
                     # For simulator sessions, time may be in SimulatedFlight instead of TotalTime
@@ -424,13 +464,13 @@ async def import_flights(file: UploadFile = File(...)):
                     simulated_flight_time = _safe_float(row.get("SimulatedFlight"))
                     is_sim = simulated_flight_time is not None and simulated_flight_time > 0
 
-                    # Look up aircraft by tail number (skip for simulator sessions)
+                    # Look up aircraft by tail number (now includes simulators)
                     aircraft_id = None
                     tail_number = row.get("AircraftID")
-                    if tail_number and not is_sim:
+                    if tail_number:
+                        # Look up in user_aircraft table (created by aircraft extraction above)
                         aircraft_row = await conn.fetchrow(
-                            "SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)",
-                            tail_number
+                            "SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)", tail_number
                         )
                         if aircraft_row:
                             aircraft_id = aircraft_row["id"]
@@ -496,11 +536,31 @@ async def import_flights(file: UploadFile = File(...)):
         if imported > 0:
             try:
                 from app.routers import import_history
+
                 await import_history.recalculate_hours_from_flights()
             except Exception as e:
                 errors.append(f"Warning: Failed to recalculate hours: {str(e)}")
 
-        return ImportResult(imported=imported, skipped=skipped, errors=errors)
+        # Fetch created aircraft details to return in response
+        aircraft_created = []
+        async with postgres_db.acquire() as conn:
+            for tail, aircraft_id in aircraft_map.items():
+                aircraft_row = await conn.fetchrow(
+                    "SELECT id, tail_number, make, model, year, data_source FROM aircraft WHERE id = $1", aircraft_id
+                )
+                if aircraft_row:
+                    aircraft_created.append(
+                        AircraftCreated(
+                            id=aircraft_row["id"],
+                            tail_number=aircraft_row["tail_number"],
+                            make=aircraft_row["make"],
+                            model=aircraft_row["model"],
+                            year=aircraft_row["year"],
+                            data_source=aircraft_row["data_source"],
+                        )
+                    )
+
+        return ImportResult(imported=imported, skipped=skipped, errors=errors, aircraft_created=aircraft_created)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to import flights: {str(e)}") from e

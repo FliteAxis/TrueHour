@@ -1,15 +1,15 @@
 // TrueHour Budget View
 // Main budget page with summary cards, chart, and cards list
 
-import { useEffect, useState } from 'react';
-import { useBudgetStore } from '../../store/budgetStore';
-import { BudgetSummaryCards } from './BudgetSummaryCards';
-import { BudgetChart } from './BudgetChart';
-import { BudgetCardsList } from './BudgetCardsList';
-import { CreateCardModal } from './CreateCardModal';
-import { EditCardModal } from './EditCardModal';
-import { QuickStartModal } from './QuickStartModal';
-import type { BudgetCard } from '../../types/api';
+import { useEffect, useState } from "react";
+import { useBudgetStore } from "../../store/budgetStore";
+import { BudgetSummaryCards } from "./BudgetSummaryCards";
+import { BudgetChart } from "./BudgetChart";
+import { BudgetCardsList } from "./BudgetCardsList";
+import { CreateCardModal } from "./CreateCardModal";
+import { EditCardModal } from "./EditCardModal";
+import { QuickStartModal } from "./QuickStartModal";
+import type { BudgetCard } from "../../types/api";
 
 export function BudgetView() {
   const {
@@ -65,11 +65,11 @@ export function BudgetView() {
     }
   };
 
-  const handleViewModeChange = (mode: 'annual' | 'monthly') => {
+  const handleViewModeChange = (mode: "annual" | "monthly") => {
     setViewMode(mode);
   };
 
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   return (
     <div className="space-y-6">
@@ -77,30 +77,24 @@ export function BudgetView() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white">Budget Cards</h1>
-          <p className="text-slate-400 mt-1">
-            Outcome-based budgeting for your flight training
-          </p>
+          <p className="text-slate-400 mt-1">Outcome-based budgeting for your flight training</p>
         </div>
 
         <div className="flex items-center gap-4">
           {/* View Mode Toggle */}
           <div className="flex bg-truehour-darker border border-truehour-border rounded-lg p-1">
             <button
-              onClick={() => handleViewModeChange('annual')}
+              onClick={() => handleViewModeChange("annual")}
               className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                viewMode === 'annual'
-                  ? 'bg-truehour-blue text-white'
-                  : 'text-slate-400 hover:text-white'
+                viewMode === "annual" ? "bg-truehour-blue text-white" : "text-slate-400 hover:text-white"
               }`}
             >
               Annual
             </button>
             <button
-              onClick={() => handleViewModeChange('monthly')}
+              onClick={() => handleViewModeChange("monthly")}
               className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                viewMode === 'monthly'
-                  ? 'bg-truehour-blue text-white'
-                  : 'text-slate-400 hover:text-white'
+                viewMode === "monthly" ? "bg-truehour-blue text-white" : "text-slate-400 hover:text-white"
               }`}
             >
               Monthly
@@ -110,19 +104,19 @@ export function BudgetView() {
           {/* Date Selector */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => viewMode === 'annual' ? handleYearChange(selectedYear - 1) : handleMonthChange(selectedMonth - 1)}
+              onClick={() =>
+                viewMode === "annual" ? handleYearChange(selectedYear - 1) : handleMonthChange(selectedMonth - 1)
+              }
               className="p-2 text-slate-400 hover:text-white transition-colors"
-              aria-label={viewMode === 'annual' ? 'Previous year' : 'Previous month'}
+              aria-label={viewMode === "annual" ? "Previous year" : "Previous month"}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
-            {viewMode === 'annual' ? (
-              <span className="text-2xl font-bold text-white min-w-[80px] text-center">
-                {selectedYear}
-              </span>
+            {viewMode === "annual" ? (
+              <span className="text-2xl font-bold text-white min-w-[80px] text-center">{selectedYear}</span>
             ) : (
               <span className="text-2xl font-bold text-white min-w-[120px] text-center">
                 {monthNames[selectedMonth - 1]} {selectedYear}
@@ -130,9 +124,11 @@ export function BudgetView() {
             )}
 
             <button
-              onClick={() => viewMode === 'annual' ? handleYearChange(selectedYear + 1) : handleMonthChange(selectedMonth + 1)}
+              onClick={() =>
+                viewMode === "annual" ? handleYearChange(selectedYear + 1) : handleMonthChange(selectedMonth + 1)
+              }
               className="p-2 text-slate-400 hover:text-white transition-colors"
-              aria-label={viewMode === 'annual' ? 'Next year' : 'Next month'}
+              aria-label={viewMode === "annual" ? "Next year" : "Next month"}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -141,7 +137,7 @@ export function BudgetView() {
             <button
               onClick={() => {
                 handleYearChange(new Date().getFullYear());
-                if (viewMode === 'monthly') {
+                if (viewMode === "monthly") {
                   handleMonthChange(new Date().getMonth() + 1);
                 }
               }}
@@ -228,23 +224,11 @@ export function BudgetView() {
       ) : null}
 
       {/* Modals */}
-      <CreateCardModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-      />
+      <CreateCardModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
 
-      <QuickStartModal
-        isOpen={showQuickStartModal}
-        onClose={() => setShowQuickStartModal(false)}
-      />
+      <QuickStartModal isOpen={showQuickStartModal} onClose={() => setShowQuickStartModal(false)} />
 
-      {selectedCard && (
-        <EditCardModal
-          isOpen={showEditModal}
-          onClose={handleCloseEditModal}
-          card={selectedCard}
-        />
-      )}
+      {selectedCard && <EditCardModal isOpen={showEditModal} onClose={handleCloseEditModal} card={selectedCard} />}
     </div>
   );
 }

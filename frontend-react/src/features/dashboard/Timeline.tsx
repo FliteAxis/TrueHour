@@ -1,55 +1,58 @@
-import { useUserStore } from '../../store/userStore';
-import type { HoursData } from '../../types/api';
+import { useUserStore } from "../../store/userStore";
+import type { HoursData } from "../../types/api";
 
-type CertificationType = 'private' | 'ir' | 'cpl' | 'cfi';
+type CertificationType = "private" | "ir" | "cpl" | "cfi";
 
 interface TimelineProps {
   selectedCert: CertificationType;
 }
 
 // Certification requirements mapping
-const CERT_REQUIREMENTS: Record<CertificationType, {
-  name: string;
-  totalHoursRequired: number;
-  keyRequirement: {
-    label: string;
-    field: keyof HoursData;
-    required: number;
-  };
-}> = {
+const CERT_REQUIREMENTS: Record<
+  CertificationType,
+  {
+    name: string;
+    totalHoursRequired: number;
+    keyRequirement: {
+      label: string;
+      field: keyof HoursData;
+      required: number;
+    };
+  }
+> = {
   private: {
-    name: 'Private Pilot',
+    name: "Private Pilot",
     totalHoursRequired: 40,
     keyRequirement: {
-      label: 'total time',
-      field: 'total',
+      label: "total time",
+      field: "total",
       required: 40,
     },
   },
   ir: {
-    name: 'Instrument Rating',
+    name: "Instrument Rating",
     totalHoursRequired: 40,
     keyRequirement: {
-      label: 'instrument time',
-      field: 'instrument_total',
+      label: "instrument time",
+      field: "instrument_total",
       required: 40,
     },
   },
   cpl: {
-    name: 'Commercial Pilot',
+    name: "Commercial Pilot",
     totalHoursRequired: 250,
     keyRequirement: {
-      label: 'total time',
-      field: 'total',
+      label: "total time",
+      field: "total",
       required: 250,
     },
   },
   cfi: {
-    name: 'Flight Instructor',
+    name: "Flight Instructor",
     totalHoursRequired: 250,
     keyRequirement: {
-      label: 'total time',
-      field: 'total',
+      label: "total time",
+      field: "total",
       required: 250,
     },
   },
@@ -102,9 +105,7 @@ export function Timeline({ selectedCert }: TimelineProps) {
             <span className="text-truehour-blue text-5xl font-bold">{months}</span>
             <span className="text-slate-300 text-2xl">Months</span>
           </div>
-          <p className="text-slate-500 text-xs">
-            Based on current flying rate and requirements
-          </p>
+          <p className="text-slate-500 text-xs">Based on current flying rate and requirements</p>
         </div>
 
         {/* Divider */}
@@ -114,11 +115,12 @@ export function Timeline({ selectedCert }: TimelineProps) {
         <div className="text-center">
           <p className="text-slate-400 text-sm mb-2">Est. Monthly Budget</p>
           <div className="text-truehour-green text-4xl font-bold mb-1">
-            ${budget > 0 ? (budget / months).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'}
+            $
+            {budget > 0
+              ? (budget / months).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+              : "0.00"}
           </div>
-          <p className="text-slate-500 text-xs">
-            Estimated cost to complete certification
-          </p>
+          <p className="text-slate-500 text-xs">Estimated cost to complete certification</p>
         </div>
 
         {/* Divider */}
@@ -128,9 +130,7 @@ export function Timeline({ selectedCert }: TimelineProps) {
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-slate-400 text-sm">Overall Progress</span>
-            <span className="text-slate-300 text-sm font-semibold">
-              {progressPercent}%
-            </span>
+            <span className="text-slate-300 text-sm font-semibold">{progressPercent}%</span>
           </div>
           <div className="w-full bg-truehour-darker rounded-full h-3 overflow-hidden">
             <div
@@ -147,22 +147,27 @@ export function Timeline({ selectedCert }: TimelineProps) {
           <h4 className="text-white font-semibold text-sm mb-2">Next Milestone</h4>
           <p className="text-slate-400 text-xs mb-2">
             {remainingHours > 0 ? (
-              <>Complete {certInfo.keyRequirement.required} hours of {certInfo.keyRequirement.label} to meet {certInfo.name} requirements</>
+              <>
+                Complete {certInfo.keyRequirement.required} hours of {certInfo.keyRequirement.label} to meet{" "}
+                {certInfo.name} requirements
+              </>
             ) : (
-              <>You've met the {certInfo.keyRequirement.label} requirement for {certInfo.name}!</>
+              <>
+                You've met the {certInfo.keyRequirement.label} requirement for {certInfo.name}!
+              </>
             )}
           </p>
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-500">Status:</span>
-            <span className={`font-medium ${remainingHours > 0 ? 'text-truehour-orange' : 'text-truehour-green'}`}>
-              {remainingHours > 0 ? 'In Progress' : 'Complete ✓'}
+            <span className={`font-medium ${remainingHours > 0 ? "text-truehour-orange" : "text-truehour-green"}`}>
+              {remainingHours > 0 ? "In Progress" : "Complete ✓"}
             </span>
           </div>
           {remainingHours > 0 && (
             <div className="mt-2 pt-2 border-t border-truehour-border">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-500">Current:</span>
-                <span className="text-slate-300 font-medium">{currentValue?.toFixed(1) ?? '0.0'} hrs</span>
+                <span className="text-slate-300 font-medium">{currentValue?.toFixed(1) ?? "0.0"} hrs</span>
               </div>
               <div className="flex items-center justify-between text-xs mt-1">
                 <span className="text-slate-500">Remaining:</span>

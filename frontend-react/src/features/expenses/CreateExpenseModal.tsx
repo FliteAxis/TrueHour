@@ -1,9 +1,9 @@
 // Create Expense Modal
 // Modal form for creating new expenses
 
-import { useState } from 'react';
-import { useExpenseStore } from '../../store/expenseStore';
-import type { BudgetCard } from '../../types/api';
+import { useState } from "react";
+import { useExpenseStore } from "../../store/expenseStore";
+import type { BudgetCard } from "../../types/api";
 
 interface CreateExpenseModalProps {
   isOpen: boolean;
@@ -12,36 +12,36 @@ interface CreateExpenseModalProps {
 }
 
 const CATEGORIES = [
-  'Flight Training',
-  'Aircraft Rental',
-  'Ground School',
-  'Books & Materials',
-  'Exams & Checkrides',
-  'Medical',
-  'Equipment',
-  'Insurance',
-  'Membership',
-  'Fuel',
-  'Maintenance',
-  'Other',
+  "Flight Training",
+  "Aircraft Rental",
+  "Ground School",
+  "Books & Materials",
+  "Exams & Checkrides",
+  "Medical",
+  "Equipment",
+  "Insurance",
+  "Membership",
+  "Fuel",
+  "Maintenance",
+  "Other",
 ];
 
 export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: CreateExpenseModalProps) {
   const { createExpense, linkToBudgetCard } = useExpenseStore();
 
   const [formData, setFormData] = useState({
-    category: 'Flight Training',
-    subcategory: '',
-    description: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
-    vendor: '',
-    budget_card_id: '',
+    category: "Flight Training",
+    subcategory: "",
+    description: "",
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
+    vendor: "",
+    budget_card_id: "",
     is_recurring: false,
-    recurrence_interval: '',
-    recurrence_end_date: '',
+    recurrence_interval: "",
+    recurrence_end_date: "",
     is_tax_deductible: false,
-    tax_category: '',
+    tax_category: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,7 +53,7 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
 
     // Validation
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      setError('Amount must be greater than 0');
+      setError("Amount must be greater than 0");
       return;
     }
 
@@ -67,8 +67,10 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
         amount: parseFloat(formData.amount),
         date: formData.date,
         is_recurring: formData.is_recurring,
-        recurrence_interval: formData.is_recurring && formData.recurrence_interval ? formData.recurrence_interval : null,
-        recurrence_end_date: formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
+        recurrence_interval:
+          formData.is_recurring && formData.recurrence_interval ? formData.recurrence_interval : null,
+        recurrence_end_date:
+          formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
         vendor: formData.vendor || null,
         is_tax_deductible: formData.is_tax_deductible,
         tax_category: formData.is_tax_deductible && formData.tax_category ? formData.tax_category : null,
@@ -81,22 +83,22 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
 
       // Reset form and close
       setFormData({
-        category: 'Flight Training',
-        subcategory: '',
-        description: '',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        vendor: '',
-        budget_card_id: '',
+        category: "Flight Training",
+        subcategory: "",
+        description: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        vendor: "",
+        budget_card_id: "",
         is_recurring: false,
-        recurrence_interval: '',
-        recurrence_end_date: '',
+        recurrence_interval: "",
+        recurrence_end_date: "",
         is_tax_deductible: false,
-        tax_category: '',
+        tax_category: "",
       });
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create expense');
+      setError(err instanceof Error ? err.message : "Failed to create expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -105,18 +107,18 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
   const handleClose = () => {
     if (!isSubmitting) {
       setFormData({
-        category: 'Flight Training',
-        subcategory: '',
-        description: '',
-        amount: '',
-        date: new Date().toISOString().split('T')[0],
-        vendor: '',
-        budget_card_id: '',
+        category: "Flight Training",
+        subcategory: "",
+        description: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        vendor: "",
+        budget_card_id: "",
         is_recurring: false,
-        recurrence_interval: '',
-        recurrence_end_date: '',
+        recurrence_interval: "",
+        recurrence_end_date: "",
         is_tax_deductible: false,
-        tax_category: '',
+        tax_category: "",
       });
       setError(null);
       onClose();
@@ -292,9 +294,7 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
                 <label htmlFor="is_recurring" className="text-sm font-medium text-slate-300">
                   Recurring Expense
                 </label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  This expense repeats on a regular schedule
-                </p>
+                <p className="text-xs text-slate-500 mt-0.5">This expense repeats on a regular schedule</p>
               </div>
             </div>
 
@@ -346,9 +346,7 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
                 <label htmlFor="is_tax_deductible" className="text-sm font-medium text-slate-300">
                   Tax Deductible
                 </label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Mark if this expense may be tax deductible
-                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Mark if this expense may be tax deductible</p>
               </div>
             </div>
 
@@ -391,7 +389,7 @@ export function CreateExpenseModal({ isOpen, onClose, budgetCards = [] }: Create
                   Creating...
                 </>
               ) : (
-                'Add Expense'
+                "Add Expense"
               )}
             </button>
           </div>

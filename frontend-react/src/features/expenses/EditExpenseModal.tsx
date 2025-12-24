@@ -1,9 +1,9 @@
 // Edit Expense Modal
 // Modal form for editing existing expenses
 
-import { useState, useEffect } from 'react';
-import { useExpenseStore } from '../../store/expenseStore';
-import type { Expense, BudgetCard } from '../../types/api';
+import { useState, useEffect } from "react";
+import { useExpenseStore } from "../../store/expenseStore";
+import type { Expense, BudgetCard } from "../../types/api";
 
 interface EditExpenseModalProps {
   isOpen: boolean;
@@ -13,18 +13,18 @@ interface EditExpenseModalProps {
 }
 
 const CATEGORIES = [
-  'Flight Training',
-  'Aircraft Rental',
-  'Ground School',
-  'Books & Materials',
-  'Exams & Checkrides',
-  'Medical',
-  'Equipment',
-  'Insurance',
-  'Membership',
-  'Fuel',
-  'Maintenance',
-  'Other',
+  "Flight Training",
+  "Aircraft Rental",
+  "Ground School",
+  "Books & Materials",
+  "Exams & Checkrides",
+  "Medical",
+  "Equipment",
+  "Insurance",
+  "Membership",
+  "Fuel",
+  "Maintenance",
+  "Other",
 ];
 
 export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }: EditExpenseModalProps) {
@@ -32,17 +32,17 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
 
   const [formData, setFormData] = useState({
     category: expense.category,
-    subcategory: expense.subcategory || '',
-    description: expense.description || '',
+    subcategory: expense.subcategory || "",
+    description: expense.description || "",
     amount: expense.amount.toString(),
     date: expense.date,
-    vendor: expense.vendor || '',
-    budget_card_id: expense.budget_card_id?.toString() || '',
+    vendor: expense.vendor || "",
+    budget_card_id: expense.budget_card_id?.toString() || "",
     is_recurring: expense.is_recurring,
-    recurrence_interval: expense.recurrence_interval || '',
-    recurrence_end_date: expense.recurrence_end_date || '',
+    recurrence_interval: expense.recurrence_interval || "",
+    recurrence_end_date: expense.recurrence_end_date || "",
     is_tax_deductible: expense.is_tax_deductible,
-    tax_category: expense.tax_category || '',
+    tax_category: expense.tax_category || "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,17 +52,17 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
   useEffect(() => {
     setFormData({
       category: expense.category,
-      subcategory: expense.subcategory || '',
-      description: expense.description || '',
+      subcategory: expense.subcategory || "",
+      description: expense.description || "",
       amount: expense.amount.toString(),
       date: expense.date,
-      vendor: expense.vendor || '',
-      budget_card_id: expense.budget_card_id?.toString() || '',
+      vendor: expense.vendor || "",
+      budget_card_id: expense.budget_card_id?.toString() || "",
       is_recurring: expense.is_recurring,
-      recurrence_interval: expense.recurrence_interval || '',
-      recurrence_end_date: expense.recurrence_end_date || '',
+      recurrence_interval: expense.recurrence_interval || "",
+      recurrence_end_date: expense.recurrence_end_date || "",
       is_tax_deductible: expense.is_tax_deductible,
-      tax_category: expense.tax_category || '',
+      tax_category: expense.tax_category || "",
     });
   }, [expense]);
 
@@ -72,7 +72,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
 
     // Validation
     if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      setError('Amount must be greater than 0');
+      setError("Amount must be greater than 0");
       return;
     }
 
@@ -86,8 +86,10 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
         amount: parseFloat(formData.amount),
         date: formData.date,
         is_recurring: formData.is_recurring,
-        recurrence_interval: formData.is_recurring && formData.recurrence_interval ? formData.recurrence_interval : null,
-        recurrence_end_date: formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
+        recurrence_interval:
+          formData.is_recurring && formData.recurrence_interval ? formData.recurrence_interval : null,
+        recurrence_end_date:
+          formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
         vendor: formData.vendor || null,
         is_tax_deductible: formData.is_tax_deductible,
         tax_category: formData.is_tax_deductible && formData.tax_category ? formData.tax_category : null,
@@ -115,7 +117,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
         await fetchExpenses();
       } else if (oldBudgetCardId != null && newBudgetCardId != null && amountChanged) {
         // Same budget card but amount changed - need to update the link
-        console.log('[EditExpenseModal] Updating link amount from', oldAmount, 'to', newAmount);
+        console.log("[EditExpenseModal] Updating link amount from", oldAmount, "to", newAmount);
         await unlinkFromBudgetCard(oldBudgetCardId, expense.id, true); // Skip refresh
         await linkToBudgetCard(expense.id, newBudgetCardId, newAmount, true); // Skip refresh
         // Refresh once at the end
@@ -125,7 +127,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
 
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update expense');
+      setError(err instanceof Error ? err.message : "Failed to update expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -307,9 +309,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
                 <label htmlFor="edit-is_recurring" className="text-sm font-medium text-slate-300">
                   Recurring Expense
                 </label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  This expense repeats on a regular schedule
-                </p>
+                <p className="text-xs text-slate-500 mt-0.5">This expense repeats on a regular schedule</p>
               </div>
             </div>
 
@@ -361,9 +361,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
                 <label htmlFor="edit-is_tax_deductible" className="text-sm font-medium text-slate-300">
                   Tax Deductible
                 </label>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Mark if this expense may be tax deductible
-                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Mark if this expense may be tax deductible</p>
               </div>
             </div>
 
@@ -406,7 +404,7 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
                   Saving...
                 </>
               ) : (
-                'Save Changes'
+                "Save Changes"
               )}
             </button>
           </div>

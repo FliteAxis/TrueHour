@@ -2,7 +2,7 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: infrastructure/Dockerfile.frontend
+      dockerfile: infrastructure/Dockerfile.frontend-react
     ports:
       - "${APP_PORT:-8181}:80"
     depends_on:

@@ -1,8 +1,8 @@
 // Create Budget Card Modal
 // Modal form for creating new budget cards
 
-import { useState } from 'react';
-import { useBudgetStore } from '../../store/budgetStore';
+import { useState } from "react";
+import { useBudgetStore } from "../../store/budgetStore";
 
 interface CreateCardModalProps {
   isOpen: boolean;
@@ -10,33 +10,33 @@ interface CreateCardModalProps {
 }
 
 const CATEGORIES = [
-  'Training',
-  'Certifications',
-  'Equipment',
-  'Subscriptions',
-  'Membership',
-  'Administrative',
-  'Other',
+  "Training",
+  "Certifications",
+  "Equipment",
+  "Subscriptions",
+  "Membership",
+  "Administrative",
+  "Other",
 ];
 
-const FREQUENCIES = ['once', 'monthly', 'annual'];
-const STATUSES = ['active', 'inactive', 'completed'];
+const FREQUENCIES = ["once", "monthly", "annual"];
+const STATUSES = ["active", "inactive", "completed"];
 
 export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
   const { createCard } = useBudgetStore();
 
   const [formData, setFormData] = useState({
-    name: '',
-    category: 'Training',
-    frequency: 'once',
-    when_date: new Date().toISOString().split('T')[0],
-    budgeted_amount: '',
-    status: 'active',
-    notes: '',
+    name: "",
+    category: "Training",
+    frequency: "once",
+    when_date: new Date().toISOString().split("T")[0],
+    budgeted_amount: "",
+    status: "active",
+    notes: "",
   });
 
   const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
     const trimmedTag = tagInput.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
       setTags([...tags, trimmedTag]);
-      setTagInput('');
+      setTagInput("");
     }
   };
 
@@ -53,7 +53,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
   };
 
   const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAddTag();
     }
@@ -65,11 +65,11 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
 
     // Validation
     if (!formData.name.trim()) {
-      setError('Name is required');
+      setError("Name is required");
       return;
     }
     if (!formData.budgeted_amount || parseFloat(formData.budgeted_amount) <= 0) {
-      setError('Budgeted amount must be greater than 0');
+      setError("Budgeted amount must be greater than 0");
       return;
     }
 
@@ -89,19 +89,19 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
 
       // Reset form and close
       setFormData({
-        name: '',
-        category: 'Flight Training',
-        frequency: 'once',
-        when_date: new Date().toISOString().split('T')[0],
-        budgeted_amount: '',
-        status: 'active',
-        notes: '',
+        name: "",
+        category: "Flight Training",
+        frequency: "once",
+        when_date: new Date().toISOString().split("T")[0],
+        budgeted_amount: "",
+        status: "active",
+        notes: "",
       });
       setTags([]);
-      setTagInput('');
+      setTagInput("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create budget card');
+      setError(err instanceof Error ? err.message : "Failed to create budget card");
     } finally {
       setIsSubmitting(false);
     }
@@ -110,16 +110,16 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
   const handleClose = () => {
     if (!isSubmitting) {
       setFormData({
-        name: '',
-        category: 'Flight Training',
-        frequency: 'once',
-        when_date: new Date().toISOString().split('T')[0],
-        budgeted_amount: '',
-        status: 'active',
-        notes: '',
+        name: "",
+        category: "Flight Training",
+        frequency: "once",
+        when_date: new Date().toISOString().split("T")[0],
+        budgeted_amount: "",
+        status: "active",
+        notes: "",
       });
       setTags([]);
-      setTagInput('');
+      setTagInput("");
       setError(null);
       onClose();
     }
@@ -263,9 +263,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
                   required
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Actual amounts are calculated from linked expenses
-              </p>
+              <p className="text-xs text-slate-500 mt-1">Actual amounts are calculated from linked expenses</p>
             </div>
 
             {/* Tags */}
@@ -352,7 +350,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
                   Creating...
                 </>
               ) : (
-                'Create Budget Card'
+                "Create Budget Card"
               )}
             </button>
           </div>

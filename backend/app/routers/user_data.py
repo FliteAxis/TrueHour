@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from app.postgres_database import postgres_db
@@ -22,6 +22,7 @@ class UserSettings(BaseModel):
     budget_state: Optional[Dict[str, Any]] = None  # Phase 3: certification, hours, settings
     onboarding_completed: bool = False  # Track whether user completed onboarding
     target_certification: Optional[str] = None  # Current target certification (private, ir, cpl, cfi)
+    enable_faa_lookup: bool = True  # Enable/disable FAA aircraft lookup during imports
 
 
 class UserDataResponse(BaseModel):
@@ -86,6 +87,260 @@ def _safe_date(value: Any) -> Optional[date]:
             except ValueError:
                 return None
     return None
+
+
+def _is_simulator(tail_number: str) -> bool:
+    """Check if aircraft ID is a simulator."""
+    if not tail_number:
+        return False
+    lower = tail_number.lower()
+    return lower.startswith(("sim", "fsx", "x-plane", "aatd", "batd", "pfcmfd", "ftd"))
+
+
+def _is_us_aircraft(tail_number: str) -> bool:
+    """Check if aircraft is US registered (N-number)."""
+    if not tail_number:
+        return False
+    return tail_number.upper().startswith("N") and len(tail_number) >= 2
+
+
+def _extract_foreflight_aircraft_data(flights_data: List[Dict], tail_number: str) -> Dict:
+    """Extract aircraft data from ForeFlight flights."""
+    # Find first flight with this tail that has make/model
+    for flight in flights_data:
+        if flight.get("AircraftID") == tail_number:
+            make = flight.get("Make", "")
+            model = flight.get("Model", "")
+            year = flight.get("Year")
+
+            if make or model:
+                return {
+                    "make": make if make else None,
+                    "model": model if model else None,
+                    "year": int(year) if year and str(year).isdigit() else None,
+                    "type_code": None,
+                    "gear_type": None,
+                    "engine_type": None,
+                    "aircraft_class": None,
+                }
+
+    return {
+        "make": None,
+        "model": None,
+        "year": None,
+        "type_code": None,
+        "gear_type": None,
+        "engine_type": None,
+        "aircraft_class": None,
+    }
+
+
+async def _lookup_faa_aircraft(tail_number: str, enable_faa_lookup: bool = True) -> Optional[Dict]:
+    """Lookup aircraft from FAA database."""
+    # Check if FAA lookup is disabled via settings or environment variable
+    import os
+
+    if not enable_faa_lookup:
+        print("[FAA Lookup] Disabled via user settings")
+        return None
+
+    if os.getenv("DISABLE_FAA_LOOKUP", "false").lower() == "true":
+        print("[FAA Lookup] Disabled via DISABLE_FAA_LOOKUP env var")
+        return None
+
+    try:
+        # Import db and normalize_tail from main
+        from app.main import db, normalize_tail
+        from app.utils.gear_inference import infer_gear_type, should_be_complex, should_be_high_performance
+
+        if db is None:
+            return None
+
+        normalized = normalize_tail(tail_number)
+        if not normalized:
+            return None
+
+        aircraft = db.lookup(normalized)
+        if aircraft:
+            make = aircraft.manufacturer
+            model = aircraft.model
+
+            # Infer gear type and characteristics from make/model
+            gear_type = infer_gear_type(make, model)
+
+            return {
+                "make": make,
+                "model": model,
+                "year": int(aircraft.year_mfr) if aircraft.year_mfr and str(aircraft.year_mfr).isdigit() else None,
+                "type_code": aircraft.series,
+                "engine_type": aircraft.engine_type,
+                "aircraft_class": aircraft.aircraft_type,
+                "gear_type": gear_type,
+                "is_complex": should_be_complex(make, model, gear_type),
+                "is_high_performance": should_be_high_performance(make, model),
+            }
+    except Exception as e:
+        print(f"[FAA Lookup] Error looking up {tail_number}: {e}")
+
+    return None
+
+
+async def _create_user_aircraft(conn: Any, tail_number: str, aircraft_data: Dict, data_source: str) -> int:
+    """Create aircraft record and return ID."""
+    result = await conn.fetchrow(
+        """
+        INSERT INTO aircraft (
+            tail_number, make, model, year, type_code,
+            gear_type, engine_type, aircraft_class,
+            is_complex, is_taa, is_high_performance, is_simulator,
+            category, data_source, faa_last_checked, is_active
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING id
+        """,
+        tail_number,
+        aircraft_data.get("make"),
+        aircraft_data.get("model"),
+        aircraft_data.get("year"),
+        aircraft_data.get("type_code"),
+        aircraft_data.get("gear_type"),
+        aircraft_data.get("engine_type"),
+        aircraft_data.get("aircraft_class"),
+        aircraft_data.get("is_complex", False),
+        aircraft_data.get("is_taa", False),
+        aircraft_data.get("is_high_performance", False),
+        _is_simulator(tail_number),
+        "rental",  # default category
+        data_source,  # "faa" or "foreflight"
+        datetime.now() if data_source == "faa" else None,  # faa_last_checked
+        True,  # is_active
+    )
+
+    return result["id"]
+
+
+async def _extract_and_import_aircraft(
+    conn: Any,
+    flights_data: List[Dict[str, Any]],
+    enable_faa_lookup: bool = True,
+    aircraft_table_data: Optional[Dict[str, Dict]] = None,
+) -> Dict[str, int]:
+    """
+    Extract unique aircraft from flights and create aircraft records.
+
+    Args:
+        conn: Database connection
+        flights_data: List of flight records
+        enable_faa_lookup: Whether to enable FAA registry lookups
+        aircraft_table_data: Optional dict mapping tail_number -> ForeFlight aircraft data
+
+    Returns mapping of tail_number -> aircraft_id.
+    """
+    aircraft_map = {}
+    unique_tails = set()
+    unique_simulators = set()
+
+    # Phase 1: Extract unique tail numbers (separate aircraft from simulators)
+    for flight in flights_data:
+        tail = flight.get("AircraftID")
+        if tail:
+            if _is_simulator(tail):
+                unique_simulators.add(tail)
+            else:
+                unique_tails.add(tail)
+
+    print(f"[Aircraft Import] Found {len(unique_tails)} aircraft and {len(unique_simulators)} simulators in flights")
+
+    # Phase 2: Process each aircraft
+    for tail_number in unique_tails:
+        # Check if already exists
+        existing = await conn.fetchrow("SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)", tail_number)
+
+        if existing:
+            aircraft_map[tail_number] = existing["id"]
+            print(f"[Aircraft Import] {tail_number} already exists (ID: {existing['id']})")
+            continue
+
+        # Gather ForeFlight data from Aircraft Table or flights
+        if aircraft_table_data and tail_number in aircraft_table_data:
+            # Use data from Aircraft Table (preferred)
+            ac_row = aircraft_table_data[tail_number]
+            ff_data = {
+                "make": ac_row.get("Make") or None,
+                "model": ac_row.get("Model") or None,
+                "year": int(ac_row.get("Year")) if ac_row.get("Year") and str(ac_row.get("Year")).isdigit() else None,
+                "type_code": ac_row.get("TypeCode") or None,
+                "gear_type": ac_row.get("GearType") or None,
+                "engine_type": ac_row.get("EngineType") or None,
+                "aircraft_class": ac_row.get("aircraftClass (FAA)") or None,
+            }
+        else:
+            # Fallback to extracting from flights
+            ff_data = _extract_foreflight_aircraft_data(flights_data, tail_number)
+
+        # Try FAA lookup first (if US aircraft and FAA lookup enabled)
+        aircraft_data = None
+        data_source = "foreflight"
+
+        if _is_us_aircraft(tail_number) and enable_faa_lookup:
+            aircraft_data = await _lookup_faa_aircraft(tail_number, enable_faa_lookup)
+            if aircraft_data:
+                data_source = "faa"
+                print(f"[Aircraft Import] {tail_number}: Found FAA data")
+            else:
+                print(f"[Aircraft Import] {tail_number}: FAA lookup failed, using ForeFlight data")
+
+        # Fallback to ForeFlight data
+        if not aircraft_data:
+            aircraft_data = ff_data
+            data_source = "foreflight"
+
+        # Only create if we have at least tail number
+        if tail_number:
+            try:
+                aircraft_id = await _create_user_aircraft(conn, tail_number, aircraft_data, data_source)
+                aircraft_map[tail_number] = aircraft_id
+                print(f"[Aircraft Import] Created {tail_number} (ID: {aircraft_id}, Source: {data_source})")
+            except Exception as e:
+                print(f"[Aircraft Import] Failed to create {tail_number}: {e}")
+
+    # Phase 3: Process simulator devices
+    for sim_id in unique_simulators:
+        # Check if already exists
+        existing = await conn.fetchrow("SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)", sim_id)
+
+        if existing:
+            aircraft_map[sim_id] = existing["id"]
+            print(f"[Aircraft Import] Simulator {sim_id} already exists (ID: {existing['id']})")
+            continue
+
+        # Get ForeFlight data if available
+        sim_data = {}
+        if aircraft_table_data and sim_id in aircraft_table_data:
+            ac_row = aircraft_table_data[sim_id]
+            sim_data = {
+                "make": ac_row.get("Make") or None,
+                "model": ac_row.get("Model") or "Simulator",
+                "type_code": ac_row.get("TypeCode") or "SIM",
+                "is_simulator": True,
+            }
+        else:
+            # Default simulator data
+            sim_data = {
+                "make": None,
+                "model": "Simulator",
+                "type_code": "SIM",
+                "is_simulator": True,
+            }
+
+        try:
+            aircraft_id = await _create_user_aircraft(conn, sim_id, sim_data, "manual")
+            aircraft_map[sim_id] = aircraft_id
+            print(f"[Aircraft Import] Created simulator {sim_id} (ID: {aircraft_id})")
+        except Exception as e:
+            print(f"[Aircraft Import] Failed to create simulator {sim_id}: {e}")
+
+    return aircraft_map
 
 
 async def _save_aircraft(conn: Any, aircraft_data: List[Dict[str, Any]]) -> int:
@@ -156,8 +411,7 @@ async def _save_flights(conn: Any, flights_data: List[Dict[str, Any]]) -> int:
         tail_number = flight.get("AircraftID")
         if tail_number and not tail_number.lower().startswith(("sim", "fsx", "x-plane", "aatd", "batd", "pfcmfd")):
             aircraft_row = await conn.fetchrow(
-                "SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)",
-                tail_number
+                "SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)", tail_number
             )
             if aircraft_row:
                 aircraft_id = aircraft_row["id"]
@@ -228,6 +482,17 @@ async def save_user_data(
 
     try:
         async with postgres_db.acquire() as conn:
+            # Fetch user settings to get enable_faa_lookup preference
+            settings_row = await conn.fetchrow("SELECT enable_faa_lookup FROM user_settings ORDER BY id LIMIT 1")
+            enable_faa_lookup = settings_row["enable_faa_lookup"] if settings_row else True
+
+            # Extract and import aircraft from flights FIRST (before saving flights)
+            # This ensures aircraft records exist when flights reference them
+            imported_aircraft_count = 0
+            if data and data.flights:
+                aircraft_map = await _extract_and_import_aircraft(conn, data.flights, enable_faa_lookup)
+                imported_aircraft_count = len(aircraft_map)
+
             aircraft_count = 0
             if data and data.aircraft:
                 aircraft_count = await _save_aircraft(conn, data.aircraft)
@@ -251,14 +516,19 @@ async def save_user_data(
 
         return {
             "status": "success",
-            "message": f"Saved {aircraft_count} aircraft and {flights_count} flights",
+            "message": (
+                f"Imported {imported_aircraft_count} aircraft from flights, "
+                f"saved {aircraft_count} aircraft and {flights_count} flights"
+            ),
             "session_id": session_id,
             "saved_at": datetime.now().isoformat(),
+            "aircraft_imported": imported_aircraft_count,
             "aircraft_saved": aircraft_count,
             "flights_saved": flights_count,
         }
     except Exception as e:
         import traceback
+
         error_detail = f"Save failed: {str(e)}"
         print(f"[SAVE_ERROR] {error_detail}")
         print(f"[SAVE_ERROR] Traceback: {traceback.format_exc()}")
@@ -472,5 +742,3 @@ async def get_user_settings():
             return UserSettings()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get settings: {str(e)}") from e
-
-

@@ -1,20 +1,20 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { HamburgerMenu } from '../common/HamburgerMenu';
-import { ImportDataModal } from '../common/ImportDataModal';
-import { ExpenseImportModal } from '../common/ExpenseImportModal';
+import { useState } from "react";
+import type { ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { HamburgerMenu } from "../common/HamburgerMenu";
+import { ImportDataModal } from "../common/ImportDataModal";
+import { ExpenseImportModal } from "../common/ExpenseImportModal";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 const navItems = [
-  { path: '/dashboard', label: 'Summary' },
-  { path: '/budget', label: 'Budget' },
-  { path: '/expenses', label: 'Expenses' },
-  { path: '/flights', label: 'Flights' },
-  { path: '/reports', label: 'Reports' },
+  { path: "/dashboard", label: "Summary" },
+  { path: "/budget", label: "Budget" },
+  { path: "/expenses", label: "Expenses" },
+  { path: "/flights", label: "Flights" },
+  { path: "/reports", label: "Reports" },
 ];
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -36,9 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               />
               <img src="/logo.png" alt="TrueHour" className="h-10 w-10" />
               <div>
-                <h1 className="text-2xl font-bold text-white leading-tight">
-                  TrueHour
-                </h1>
+                <h1 className="text-2xl font-bold text-white leading-tight">TrueHour</h1>
                 <p className="text-xs text-truehour-blue">by FliteAxis</p>
               </div>
             </div>
@@ -55,8 +53,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                       px-3 py-2 text-sm font-medium rounded-md transition-colors
                       ${
                         isActive
-                          ? 'bg-truehour-blue text-white'
-                          : 'text-slate-300 hover:bg-truehour-card hover:text-white'
+                          ? "bg-truehour-blue text-white"
+                          : "text-slate-300 hover:bg-truehour-card hover:text-white"
                       }
                     `}
                   >
@@ -70,9 +68,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
 
       {/* Import Modals */}
       <ImportDataModal isOpen={isLogbookImportModalOpen} onClose={() => setIsLogbookImportModalOpen(false)} />

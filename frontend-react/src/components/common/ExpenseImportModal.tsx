@@ -1,7 +1,7 @@
 // Expense Import Modal
 // Modal for importing expense data from CSV
 
-import { useState } from 'react';
+import { useState } from "react";
 
 interface ExpenseImportModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
 
   const handleImport = async () => {
     if (!file) {
-      setError('Please select a file to import');
+      setError("Please select a file to import");
       return;
     }
 
@@ -32,26 +32,26 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await fetch('/api/expenses/import', {
-        method: 'POST',
+      const response = await fetch("/api/expenses/import", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Import failed');
+        throw new Error(errorData.detail || "Import failed");
       }
 
       const result = await response.json();
-      console.log('Import successful:', result);
+      console.log("Import successful:", result);
 
       // Close modal and refresh data
       onClose();
       window.location.reload(); // Simple refresh for now
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to import expenses');
+      setError(err instanceof Error ? err.message : "Failed to import expenses");
     } finally {
       setIsImporting(false);
     }
@@ -59,33 +59,43 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
 
   const handleDownloadTemplate = () => {
     // Create CSV template
-    const headers = ['date', 'category', 'amount', 'vendor', 'description', 'subcategory', 'is_recurring', 'is_tax_deductible', 'budget_card_id'];
+    const headers = [
+      "date",
+      "category",
+      "amount",
+      "vendor",
+      "description",
+      "subcategory",
+      "is_recurring",
+      "is_tax_deductible",
+      "budget_card_id",
+    ];
     const example = [
-      '2024-01-15',
-      'Flight Training',
-      '250.00',
-      'Local Flight School',
-      'Dual instruction - pattern work',
-      'Dual instruction',
-      'false',
-      'true',
-      '1'
+      "2024-01-15",
+      "Flight Training",
+      "250.00",
+      "Local Flight School",
+      "Dual instruction - pattern work",
+      "Dual instruction",
+      "false",
+      "true",
+      "1",
     ];
 
     const csvContent = [
-      headers.join(','),
-      example.join(','),
+      headers.join(","),
+      example.join(","),
       // Add a few blank rows for user to fill in
-      '',
-      '',
-      ''
-    ].join('\n');
+      "",
+      "",
+      "",
+    ].join("\n");
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = 'truehour_expense_template.csv';
+    a.download = "truehour_expense_template.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -195,7 +205,7 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
                   <span className="text-white font-medium">CSV Format Guide</span>
                 </div>
                 <svg
-                  className={`w-5 h-5 text-slate-400 transition-transform ${showFormat ? 'rotate-180' : ''}`}
+                  className={`w-5 h-5 text-slate-400 transition-transform ${showFormat ? "rotate-180" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -257,10 +267,12 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
                     </div>
 
                     <div className="text-xs space-y-1">
-                      <p><strong>Valid Categories:</strong></p>
+                      <p>
+                        <strong>Valid Categories:</strong>
+                      </p>
                       <p className="text-slate-400">
-                        Flight Training, Aircraft Rental, Ground School, Books & Materials, Exams & Checkrides,
-                        Medical, Equipment, Insurance, Membership, Fuel, Maintenance, Other
+                        Flight Training, Aircraft Rental, Ground School, Books & Materials, Exams & Checkrides, Medical,
+                        Equipment, Insurance, Membership, Fuel, Maintenance, Other
                       </p>
                     </div>
                   </div>

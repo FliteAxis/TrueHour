@@ -1,10 +1,10 @@
 // Expense Store
 // Zustand store for managing expenses
 
-import { create } from 'zustand';
-import type { Expense, ExpenseCreate, ExpenseUpdate, ExpenseSummary } from '../types/api';
+import { create } from "zustand";
+import type { Expense, ExpenseCreate, ExpenseUpdate, ExpenseSummary } from "../types/api";
 
-const API_BASE = import.meta.env.VITE_API_URL || '';
+const API_BASE = import.meta.env.VITE_API_URL || "";
 
 // Helper for handling API responses
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -47,25 +47,25 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const params = new URLSearchParams();
-      if (filters?.aircraft_id) params.append('aircraft_id', filters.aircraft_id.toString());
-      if (filters?.category) params.append('category', filters.category);
-      if (filters?.start_date) params.append('start_date', filters.start_date);
-      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.aircraft_id) params.append("aircraft_id", filters.aircraft_id.toString());
+      if (filters?.category) params.append("category", filters.category);
+      if (filters?.start_date) params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
 
       const queryString = params.toString();
-      const url = `${API_BASE}/api/expenses${queryString ? `?${queryString}` : ''}`;
-      console.log('[expenseStore] Fetching expenses from:', url);
+      const url = `${API_BASE}/api/expenses${queryString ? `?${queryString}` : ""}`;
+      console.log("[expenseStore] Fetching expenses from:", url);
       const response = await fetch(url);
       const expenses = await handleResponse<Expense[]>(response);
-      console.log('[expenseStore] Received expenses:', expenses);
-      expenses.forEach(exp => {
+      console.log("[expenseStore] Received expenses:", expenses);
+      expenses.forEach((exp) => {
         console.log(`  Expense ${exp.id}: budget_card_id=${exp.budget_card_id}`);
       });
 
       set({ expenses, isLoading: false });
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to fetch expenses',
+        error: error instanceof Error ? error.message : "Failed to fetch expenses",
         isLoading: false,
       });
       throw error;
@@ -75,18 +75,18 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   fetchSummary: async (filters) => {
     try {
       const params = new URLSearchParams();
-      if (filters?.start_date) params.append('start_date', filters.start_date);
-      if (filters?.end_date) params.append('end_date', filters.end_date);
-      if (filters?.group_by) params.append('group_by', filters.group_by);
+      if (filters?.start_date) params.append("start_date", filters.start_date);
+      if (filters?.end_date) params.append("end_date", filters.end_date);
+      if (filters?.group_by) params.append("group_by", filters.group_by);
 
       const queryString = params.toString();
-      const url = `${API_BASE}/api/expenses/summary${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_BASE}/api/expenses/summary${queryString ? `?${queryString}` : ""}`;
       const response = await fetch(url);
       const summary = await handleResponse<ExpenseSummary[]>(response);
 
       set({ summary });
     } catch (error) {
-      console.error('Failed to fetch expense summary:', error);
+      console.error("Failed to fetch expense summary:", error);
       throw error;
     }
   },
@@ -95,8 +95,8 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await fetch(`${API_BASE}/api/expenses`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(expense),
       });
       const created = await handleResponse<Expense>(response);
@@ -107,7 +107,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       return created;
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to create expense',
+        error: error instanceof Error ? error.message : "Failed to create expense",
         isLoading: false,
       });
       throw error;
@@ -118,8 +118,8 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await fetch(`${API_BASE}/api/expenses/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(expense),
       });
       const updated = await handleResponse<Expense>(response);
@@ -130,7 +130,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       return updated;
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to update expense',
+        error: error instanceof Error ? error.message : "Failed to update expense",
         isLoading: false,
       });
       throw error;
@@ -141,7 +141,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await fetch(`${API_BASE}/api/expenses/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (!response.ok) {
         throw new Error(`Failed to delete expense: ${response.status}`);
@@ -152,7 +152,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       }));
     } catch (error) {
       set({
-        error: error instanceof Error ? error.message : 'Failed to delete expense',
+        error: error instanceof Error ? error.message : "Failed to delete expense",
         isLoading: false,
       });
       throw error;
@@ -161,17 +161,20 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
 
   linkToBudgetCard: async (expenseId, budgetCardId, amount, skipRefresh = false) => {
     try {
-      const response = await fetch(`${API_BASE}/api/budget-cards/${budgetCardId}/link-expense?expense_id=${expenseId}&amount=${amount}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = await fetch(
+        `${API_BASE}/api/budget-cards/${budgetCardId}/link-expense?expense_id=${expenseId}&amount=${amount}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
       await handleResponse<void>(response);
       // Refresh expenses to get updated link status (unless skipped)
       if (!skipRefresh) {
         await get().fetchExpenses();
       }
     } catch (error) {
-      console.error('Failed to link expense to budget card:', error);
+      console.error("Failed to link expense to budget card:", error);
       throw error;
     }
   },
@@ -179,7 +182,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   unlinkFromBudgetCard: async (budgetCardId, expenseId, skipRefresh = false) => {
     try {
       const response = await fetch(`${API_BASE}/api/budget-cards/${budgetCardId}/unlink-expense/${expenseId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
       if (!response.ok) {
         throw new Error(`Failed to unlink expense: ${response.status}`);
@@ -189,7 +192,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
         await get().fetchExpenses();
       }
     } catch (error) {
-      console.error('Failed to unlink expense from budget card:', error);
+      console.error("Failed to unlink expense from budget card:", error);
       throw error;
     }
   },

@@ -1,4 +1,4 @@
-import { useUserStore } from '../../store/userStore';
+import { useUserStore } from "../../store/userStore";
 
 interface HourCard {
   label: string;
@@ -31,12 +31,12 @@ export function HoursCards() {
   }
 
   const cards: HourCard[] = [
-    { label: 'Total Hours', value: currentHours.total, color: 'text-truehour-blue' },
-    { label: 'PIC', value: currentHours.pic, color: 'text-truehour-green' },
-    { label: 'Cross Country', value: currentHours.cross_country, color: 'text-truehour-orange' },
-    { label: 'Instrument', value: currentHours.instrument_total, color: 'text-purple-400' },
-    { label: 'Night', value: currentHours.night, color: 'text-indigo-400' },
-    { label: 'Simulator', value: currentHours.simulator_time, color: 'text-cyan-400' },
+    { label: "Total Hours", value: currentHours.total, color: "text-truehour-blue" },
+    { label: "PIC", value: currentHours.pic, color: "text-truehour-green" },
+    { label: "Cross Country", value: currentHours.cross_country, color: "text-truehour-orange" },
+    { label: "Instrument", value: currentHours.instrument_total, color: "text-purple-400" },
+    { label: "Night", value: currentHours.night, color: "text-indigo-400" },
+    { label: "Simulator", value: currentHours.simulator_time, color: "text-cyan-400" },
   ];
 
   return (
@@ -47,9 +47,7 @@ export function HoursCards() {
           className="bg-truehour-card border border-truehour-border rounded-lg p-4 hover:border-truehour-blue transition-colors"
         >
           <p className="text-slate-400 text-xs font-medium mb-2">{card.label}</p>
-          <p className={`text-3xl font-bold ${card.color}`}>
-            {card.value.toFixed(1)}
-          </p>
+          <p className={`text-3xl font-bold ${card.color}`}>{card.value.toFixed(1)}</p>
           <p className="text-slate-500 text-xs mt-1">hours</p>
         </div>
       ))}
