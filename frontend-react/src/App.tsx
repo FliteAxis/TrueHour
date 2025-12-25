@@ -9,6 +9,7 @@ import { FlightsView } from "./features/flights/FlightsView";
 import { ReportsView } from "./features/reports/ReportsView";
 import { SettingsView } from "./features/settings/SettingsView";
 import { AircraftView } from "./features/aircraft/AircraftView";
+import { AircraftRatesView } from "./features/aircraft/AircraftRatesView";
 
 function App() {
   const navigate = useNavigate();
@@ -99,6 +100,7 @@ function App() {
         <Route path="/expenses" element={<ExpensesView />} />
         <Route path="/flights" element={<FlightsView />} />
         <Route path="/aircraft" element={<AircraftView />} />
+        <Route path="/aircraft/rates" element={<AircraftRatesView />} />
         <Route path="/reports" element={<ReportsView />} />
         <Route path="/settings" element={<SettingsView />} />
       </Routes>

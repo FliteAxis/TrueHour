@@ -202,6 +202,8 @@ class BudgetCardBase(BaseModel):
     budgeted_amount: Decimal = Field(..., gt=0, description="Budgeted amount")
     notes: Optional[str] = Field(None, description="Additional notes (flight details, hours breakdown, etc.)")
     associated_hours: Optional[Decimal] = Field(None, description="Training hours associated with this budget item")
+    aircraft_id: Optional[int] = Field(None, description="Optional aircraft link for auto-calculating costs")
+    hourly_rate_type: str = Field(default="wet", description="Which rate to use: wet or dry")
     status: str = Field(default="active", description="Status: active, completed, cancelled")
 
 
@@ -221,6 +223,8 @@ class BudgetCardUpdate(BaseModel):
     budgeted_amount: Optional[Decimal] = Field(None, gt=0)
     notes: Optional[str] = None
     associated_hours: Optional[Decimal] = None
+    aircraft_id: Optional[int] = None
+    hourly_rate_type: Optional[str] = None
     status: Optional[str] = None
 
 
@@ -230,6 +234,9 @@ class BudgetCardResponse(BudgetCardBase):
     id: int
     actual_amount: Decimal = Field(description="Auto-calculated sum of linked expenses")
     remaining_amount: Decimal = Field(description="Calculated: budgeted_amount - actual_amount")
+    aircraft_tail: Optional[str] = Field(None, description="Aircraft tail number (if linked)")
+    aircraft_make: Optional[str] = Field(None, description="Aircraft make (if linked)")
+    aircraft_model: Optional[str] = Field(None, description="Aircraft model (if linked)")
     created_at: datetime
     updated_at: datetime
 
@@ -247,6 +254,11 @@ class BudgetCardResponse(BudgetCardBase):
                 "remaining_amount": 2515.00,
                 "notes": "2x | 2 hrs / week + Ground * 4 weeks",
                 "associated_hours": 12.0,
+                "aircraft_id": 1,
+                "aircraft_tail": "N5274S",
+                "aircraft_make": "CESSNA",
+                "aircraft_model": "R182",
+                "hourly_rate_type": "wet",
                 "status": "active",
                 "created_at": "2025-12-14T00:00:00Z",
                 "updated_at": "2025-12-14T00:00:00Z",

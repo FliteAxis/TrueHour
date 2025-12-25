@@ -8,6 +8,13 @@ export interface UserSettings {
   onboarding_completed: boolean;
   target_certification?: string | null;
   enable_faa_lookup?: boolean;
+  // Training configuration
+  training_pace_mode?: "auto" | "manual";
+  training_hours_per_week?: number | null;
+  default_training_aircraft_id?: number | null;
+  ground_instruction_rate?: number | null;
+  budget_buffer_percentage?: number | null;
+  budget_categories?: string[];
 }
 
 export interface HoursData {
@@ -28,6 +35,18 @@ export interface HoursData {
   dual_xc: number;
   private_long_xc: number;
   private_towered_ops: number;
+  // Commercial-specific fields
+  cpl_sim_instrument_training: number; // Req 9: 10hrs instrument training (includes simulator)
+  cpl_sim_instrument_airplane: number; // Req 10: 5hrs instrument in single-engine airplane
+  cpl_complex_turbine_taa: number; // Req 11: 10hrs complex/turbine/TAA training
+  cpl_2hr_day_xc: number; // Req 12: 2-hour day XC >100nm (0 or 1)
+  cpl_2hr_night_xc: number; // Req 13: 2-hour night XC >100nm (0 or 1)
+  cpl_checkride_prep_recent: number; // Req 14: 3hrs checkride prep in last 2 months
+  cpl_solo_se: number; // Req 15: 10hrs solo in single-engine
+  cpl_300nm_xc: number; // Req 16: 300nm XC solo/instructor-only (0 or 1)
+  cpl_night_vfr: number; // Req 17: 5hrs night VFR solo/instructor-only
+  cpl_night_takeoffs_towered: number; // Req 18: 10 night takeoffs at towered
+  cpl_night_landings_towered: number; // Req 18: 10 night landings at towered
 }
 
 export interface Aircraft {
@@ -129,11 +148,36 @@ export interface BudgetCard {
   status: string;
   notes?: string;
   tags?: string[];
+  associated_hours?: number | null;
+  aircraft_id?: number | null;
+  hourly_rate_type?: "wet" | "dry";
+  aircraft_tail?: string | null;
+  aircraft_make?: string | null;
+  aircraft_model?: string | null;
   created_at?: string;
   updated_at?: string;
 }
 
-export type BudgetCardCreate = Omit<BudgetCard, "id" | "actual_amount" | "created_at" | "updated_at">;
+export type BudgetCardCreate = Omit<
+  BudgetCard,
+  "id" | "actual_amount" | "aircraft_tail" | "aircraft_make" | "aircraft_model" | "created_at" | "updated_at"
+>;
+
+export interface CostCalculation {
+  hours: number;
+  rate_type: "wet" | "dry";
+  aircraft_hourly_rate?: number;
+  hourly_rate?: number; // Deprecated, use aircraft_hourly_rate
+  hourly_rate_dry?: number;
+  fuel_burn_rate?: number;
+  fuel_price_per_gallon?: number;
+  fuel_cost_per_hour?: number;
+  aircraft_total_rate?: number;
+  instructor_rate?: number;
+  total_hourly_rate?: number;
+  total_cost: number;
+  calculation: string;
+}
 
 export interface BudgetCategorySummary {
   category: string;
@@ -239,6 +283,8 @@ export interface UserAircraft {
   category?: string | null;
   hourly_rate_wet?: number | null;
   hourly_rate_dry?: number | null;
+  fuel_burn_rate?: number | null;
+  fuel_price_per_gallon?: number | null;
   notes?: string | null;
   is_active: boolean;
   data_source?: "faa" | "foreflight" | "manual" | null;
@@ -264,6 +310,8 @@ export interface UserAircraftCreate {
   category?: string | null;
   hourly_rate_wet?: number | null;
   hourly_rate_dry?: number | null;
+  fuel_burn_rate?: number | null;
+  fuel_price_per_gallon?: number | null;
   notes?: string | null;
   is_active?: boolean;
   data_source?: "faa" | "foreflight" | "manual";
@@ -286,6 +334,8 @@ export interface UserAircraftUpdate {
   category?: string | null;
   hourly_rate_wet?: number | null;
   hourly_rate_dry?: number | null;
+  fuel_burn_rate?: number | null;
+  fuel_price_per_gallon?: number | null;
   notes?: string | null;
   is_active?: boolean;
 }

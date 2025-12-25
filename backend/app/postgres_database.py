@@ -93,9 +93,57 @@ class PostgresDatabase:
             row = await conn.fetchrow("SELECT * FROM aircraft WHERE tail_number = $1", tail_number.upper())
             return dict(row) if row else None
 
+    @staticmethod
+    def normalize_aircraft_make(make: Optional[str]) -> Optional[str]:
+        """Normalize aircraft manufacturer names."""
+        if not make:
+            return make
+
+        # Convert to string and strip whitespace
+        normalized = str(make).strip()
+
+        # Replace AICSA with Piper
+        if normalized.upper() == "AICSA":
+            normalized = "Piper"
+
+        # Remove common suffixes (case insensitive)
+        suffixes_to_remove = [" aircraft", " powermatic"]
+        for suffix in suffixes_to_remove:
+            if normalized.lower().endswith(suffix):
+                normalized = normalized[: -len(suffix)].strip()
+
+        return normalized
+
+    @staticmethod
+    def normalize_aircraft_model(model: Optional[str]) -> Optional[str]:
+        """Normalize aircraft model names."""
+        if not model:
+            return model
+
+        # Convert to string and strip whitespace
+        normalized = str(model).strip()
+
+        # Remove "Powermatic" anywhere in the model name (case insensitive)
+        # This is a Cessna engine variant that's not helpful for identification
+        normalized = normalized.replace(" Powermatic", "").replace(" powermatic", "").replace(" POWERMATIC", "")
+
+        # Clean up any double spaces left over
+        while "  " in normalized:
+            normalized = normalized.replace("  ", " ")
+
+        return normalized.strip()
+
     async def create_aircraft(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create new aircraft."""
         data["tail_number"] = data["tail_number"].upper()
+
+        # Normalize make field
+        if "make" in data and data["make"]:
+            data["make"] = self.normalize_aircraft_make(data["make"])
+
+        # Normalize model field
+        if "model" in data and data["model"]:
+            data["model"] = self.normalize_aircraft_model(data["model"])
 
         async with self.acquire() as conn:
             row = await conn.fetchrow(
@@ -103,9 +151,10 @@ class PostgresDatabase:
                 INSERT INTO aircraft (
                     tail_number, type_code, year, make, model, gear_type, engine_type,
                     aircraft_class, is_complex, is_taa, is_high_performance, is_simulator,
-                    category, hourly_rate_wet, hourly_rate_dry, notes, is_active
+                    category, hourly_rate_wet, hourly_rate_dry, fuel_burn_rate,
+                    fuel_price_per_gallon, notes, is_active
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
                 RETURNING *
             """,
                 data.get("tail_number"),
@@ -123,6 +172,8 @@ class PostgresDatabase:
                 data.get("category"),
                 data.get("hourly_rate_wet"),
                 data.get("hourly_rate_dry"),
+                data.get("fuel_burn_rate"),
+                data.get("fuel_price_per_gallon"),
                 data.get("notes"),
                 data.get("is_active", True),
             )
@@ -132,6 +183,14 @@ class PostgresDatabase:
         """Update aircraft."""
         if "tail_number" in data:
             data["tail_number"] = data["tail_number"].upper()
+
+        # Normalize make field
+        if "make" in data and data["make"]:
+            data["make"] = self.normalize_aircraft_make(data["make"])
+
+        # Normalize model field
+        if "model" in data and data["model"]:
+            data["model"] = self.normalize_aircraft_model(data["model"])
 
         async with self.acquire() as conn:
             row = await conn.fetchrow(
@@ -153,8 +212,10 @@ class PostgresDatabase:
                     category = COALESCE($14, category),
                     hourly_rate_wet = COALESCE($15, hourly_rate_wet),
                     hourly_rate_dry = COALESCE($16, hourly_rate_dry),
-                    notes = COALESCE($17, notes),
-                    is_active = COALESCE($18, is_active),
+                    fuel_burn_rate = COALESCE($17, fuel_burn_rate),
+                    fuel_price_per_gallon = COALESCE($18, fuel_price_per_gallon),
+                    notes = COALESCE($19, notes),
+                    is_active = COALESCE($20, is_active),
                     updated_at = NOW()
                 WHERE id = $1
                 RETURNING *
@@ -175,6 +236,8 @@ class PostgresDatabase:
                 data.get("category"),
                 data.get("hourly_rate_wet"),
                 data.get("hourly_rate_dry"),
+                data.get("fuel_burn_rate"),
+                data.get("fuel_price_per_gallon"),
                 data.get("notes"),
                 data.get("is_active"),
             )
@@ -705,6 +768,14 @@ class PostgresDatabase:
             row = await conn.fetchrow(query, *params)
             return dict(row) if row else {}
 
+    # User Settings Operations
+
+    async def get_user_settings(self) -> Optional[Dict[str, Any]]:
+        """Get user settings."""
+        async with self.acquire() as conn:
+            row = await conn.fetchrow("SELECT * FROM user_settings ORDER BY id DESC LIMIT 1")
+            return dict(row) if row else None
+
     # Budget CRUD Operations
 
     async def get_budgets(self, is_active: Optional[bool] = None) -> List[Dict[str, Any]]:
@@ -859,9 +930,13 @@ class PostgresDatabase:
                 SELECT
                     bc.*,
                     COALESCE(SUM(ebl.amount), 0) as actual_amount,
-                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount
+                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount,
+                    a.tail_number as aircraft_tail,
+                    a.make as aircraft_make,
+                    a.model as aircraft_model
                 FROM budget_cards bc
                 LEFT JOIN expense_budget_links ebl ON bc.id = ebl.budget_card_id
+                LEFT JOIN aircraft a ON bc.aircraft_id = a.id
                 WHERE 1=1
             """
             params = []
@@ -882,7 +957,7 @@ class PostgresDatabase:
                 params.append(month)
                 param_count += 1
 
-            query += " GROUP BY bc.id ORDER BY bc.when_date DESC, bc.id"
+            query += " GROUP BY bc.id, a.id, a.tail_number, a.make, a.model ORDER BY bc.when_date DESC, bc.id"
 
             rows = await conn.fetch(query, *params)
             return [dict(row) for row in rows]
@@ -895,11 +970,15 @@ class PostgresDatabase:
                 SELECT
                     bc.*,
                     COALESCE(SUM(ebl.amount), 0) as actual_amount,
-                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount
+                    bc.budgeted_amount - COALESCE(SUM(ebl.amount), 0) as remaining_amount,
+                    a.tail_number as aircraft_tail,
+                    a.make as aircraft_make,
+                    a.model as aircraft_model
                 FROM budget_cards bc
                 LEFT JOIN expense_budget_links ebl ON bc.id = ebl.budget_card_id
+                LEFT JOIN aircraft a ON bc.aircraft_id = a.id
                 WHERE bc.id = $1
-                GROUP BY bc.id
+                GROUP BY bc.id, a.id, a.tail_number, a.make, a.model
             """,
                 card_id,
             )
@@ -912,9 +991,9 @@ class PostgresDatabase:
                 """
                 INSERT INTO budget_cards (
                     name, category, frequency, when_date, budgeted_amount,
-                    notes, associated_hours, status
+                    notes, associated_hours, aircraft_id, hourly_rate_type, status
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                 RETURNING id
             """,
                 data["name"],
@@ -924,6 +1003,8 @@ class PostgresDatabase:
                 data["budgeted_amount"],
                 data.get("notes"),
                 data.get("associated_hours"),
+                data.get("aircraft_id"),
+                data.get("hourly_rate_type", "wet"),
                 data.get("status", "active"),
             )
             return row["id"]
@@ -947,6 +1028,8 @@ class PostgresDatabase:
                 "budgeted_amount",
                 "notes",
                 "associated_hours",
+                "aircraft_id",
+                "hourly_rate_type",
                 "status",
             ]:
                 if field in data:

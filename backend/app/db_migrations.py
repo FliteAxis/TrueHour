@@ -204,6 +204,106 @@ async def verify_and_migrate_schema(db) -> List[str]:
             )
             migrations_applied.append("Added enable_faa_lookup column to user_settings")
 
+        # Check if budget_cards.aircraft_id column exists
+        aircraft_id_exists = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'budget_cards'
+                AND column_name = 'aircraft_id'
+            )
+            """
+        )
+
+        if not aircraft_id_exists:
+            logger.warning("budget_cards.aircraft_id column missing - adding it")
+            await conn.execute(
+                """
+                ALTER TABLE budget_cards
+                ADD COLUMN aircraft_id INTEGER REFERENCES aircraft(id) ON DELETE SET NULL;
+
+                ALTER TABLE budget_cards
+                ADD COLUMN hourly_rate_type VARCHAR(10) DEFAULT 'wet';
+
+                CREATE INDEX idx_budget_cards_aircraft ON budget_cards(aircraft_id);
+
+                COMMENT ON COLUMN budget_cards.aircraft_id IS
+                    'Optional link to aircraft for auto-calculating training costs';
+                COMMENT ON COLUMN budget_cards.hourly_rate_type IS
+                    'Which rate to use: wet or dry (when aircraft_id is set)';
+                """
+            )
+            migrations_applied.append("Added aircraft_id and hourly_rate_type to budget_cards")
+
+        # Check if user_settings training configuration columns exist
+        training_pace_mode_exists = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'user_settings'
+                AND column_name = 'training_pace_mode'
+            )
+            """
+        )
+
+        if not training_pace_mode_exists:
+            logger.warning("user_settings training configuration columns missing - adding them")
+            await conn.execute(
+                """
+                ALTER TABLE user_settings
+                ADD COLUMN training_pace_mode VARCHAR(20) DEFAULT 'manual';
+
+                ALTER TABLE user_settings
+                ADD COLUMN training_hours_per_week NUMERIC(10,2) DEFAULT 2.0;
+
+                ALTER TABLE user_settings
+                ADD COLUMN default_training_aircraft_id INTEGER REFERENCES aircraft(id) ON DELETE SET NULL;
+
+                ALTER TABLE user_settings
+                ADD COLUMN ground_instruction_rate NUMERIC(10,2);
+
+                ALTER TABLE user_settings
+                ADD COLUMN budget_buffer_percentage INTEGER DEFAULT 10;
+
+                COMMENT ON COLUMN user_settings.training_pace_mode IS
+                    'How to calculate training pace: auto (from flight history) or manual (user-specified)';
+                COMMENT ON COLUMN user_settings.training_hours_per_week IS
+                    'Expected training hours per week (used when training_pace_mode is manual)';
+                COMMENT ON COLUMN user_settings.default_training_aircraft_id IS
+                    'Default aircraft for training cost calculations';
+                COMMENT ON COLUMN user_settings.ground_instruction_rate IS
+                    'Hourly rate for ground instruction';
+                COMMENT ON COLUMN user_settings.budget_buffer_percentage IS
+                    'Buffer percentage to add to budget calculations (e.g., 10 for 10% buffer)';
+                """
+            )
+            migrations_applied.append("Added training configuration columns to user_settings")
+
+        # Check if user_settings.budget_categories column exists
+        result = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'user_settings'
+                AND column_name = 'budget_categories'
+            )
+            """
+        )
+
+        if not result:
+            logger.warning("user_settings.budget_categories column missing - adding it")
+            await conn.execute(
+                """
+                ALTER TABLE user_settings ADD COLUMN budget_categories JSONB;
+                COMMENT ON COLUMN user_settings.budget_categories IS
+                    'Custom budget categories defined by the user';
+                """
+            )
+            migrations_applied.append("Added budget_categories column to user_settings")
+
     if migrations_applied:
         logger.info(f"Applied {len(migrations_applied)} migrations:")
         for msg in migrations_applied:

@@ -28,6 +28,7 @@ interface BudgetState {
   createCard: (card: BudgetCardCreate) => Promise<void>;
   updateCard: (id: number, updates: Partial<BudgetCard>) => Promise<void>;
   deleteCard: (id: number) => Promise<void>;
+  duplicateCard: (id: number) => Promise<void>;
   setYear: (year: number) => void;
   setMonth: (month: number) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -148,6 +149,27 @@ export const useBudgetStore = create<BudgetState>()((set, get) => ({
       set({
         isLoading: false,
         error: error instanceof Error ? error.message : "Failed to delete budget card",
+      });
+      throw error;
+    }
+  },
+
+  // Duplicate budget card
+  duplicateCard: async (id) => {
+    set({ isLoading: true, error: null });
+    try {
+      const duplicatedCard = await api.duplicateBudgetCard(id);
+      set({
+        cards: [...get().cards, duplicatedCard],
+        isLoading: false,
+      });
+      // Reload summary to update totals
+      await get().loadSummary(get().selectedYear);
+    } catch (error) {
+      console.error("[BudgetStore] Failed to duplicate card:", error);
+      set({
+        isLoading: false,
+        error: error instanceof Error ? error.message : "Failed to duplicate budget card",
       });
       throw error;
     }

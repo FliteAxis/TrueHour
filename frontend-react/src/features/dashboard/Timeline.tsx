@@ -59,27 +59,32 @@ const CERT_REQUIREMENTS: Record<
 };
 
 export function Timeline({ selectedCert }: TimelineProps) {
-  const { currentHours } = useUserStore();
+  const { currentHours, settings } = useUserStore();
 
   const certInfo = CERT_REQUIREMENTS[selectedCert];
 
-  // Calculate estimated time to completion based on recent flying rate
+  // Calculate estimated time to completion based on training settings
   const calculateEstimate = () => {
     if (!currentHours) {
       return { months: 0, budget: 0, remainingHours: 0, progressPercent: 0 };
     }
 
-    const currentValue = currentHours[certInfo.keyRequirement.field] || 0;
+    const currentValue = Number(currentHours[certInfo.keyRequirement.field]) || 0;
     const requiredValue = certInfo.keyRequirement.required;
     const remainingHours = Math.max(0, requiredValue - currentValue);
     const progressPercent = Math.min(100, Math.round((currentValue / requiredValue) * 100));
 
-    // Assume average flying rate of 5 hours/month and $200/hour
-    const avgHoursPerMonth = 5;
-    const avgCostPerHour = 200;
+    // Get training settings or use defaults
+    const hoursPerWeek = settings?.training_hours_per_week || 2.0;
+    const avgHoursPerMonth = hoursPerWeek * 4.33; // 4.33 weeks per month on average
+    const avgCostPerHour = 200; // TODO: Calculate from default training aircraft rates
+
+    // Apply buffer if configured
+    const bufferMultiplier = 1 + (settings?.budget_buffer_percentage || 10) / 100;
 
     const months = remainingHours > 0 ? remainingHours / avgHoursPerMonth : 0;
-    const budget = remainingHours * avgCostPerHour;
+    const budgetBeforeBuffer = remainingHours * avgCostPerHour;
+    const budget = budgetBeforeBuffer * bufferMultiplier;
 
     return {
       months: Math.ceil(months),

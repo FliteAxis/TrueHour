@@ -110,6 +110,18 @@ export const useUserStore = create<UserState>()((set, get) => ({
             dual_xc: 0,
             private_long_xc: 0,
             private_towered_ops: 0,
+            // Commercial-specific defaults
+            cpl_sim_instrument_training: 0,
+            cpl_sim_instrument_airplane: 0,
+            cpl_complex_turbine_taa: 0,
+            cpl_2hr_day_xc: 0,
+            cpl_2hr_night_xc: 0,
+            cpl_checkride_prep_recent: 0,
+            cpl_solo_se: 0,
+            cpl_300nm_xc: 0,
+            cpl_night_vfr: 0,
+            cpl_night_takeoffs_towered: 0,
+            cpl_night_landings_towered: 0,
           },
           isLoading: false,
         });

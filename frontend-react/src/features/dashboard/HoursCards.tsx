@@ -31,12 +31,12 @@ export function HoursCards() {
   }
 
   const cards: HourCard[] = [
-    { label: "Total Hours", value: currentHours.total, color: "text-truehour-blue" },
-    { label: "PIC", value: currentHours.pic, color: "text-truehour-green" },
-    { label: "Cross Country", value: currentHours.cross_country, color: "text-truehour-orange" },
-    { label: "Instrument", value: currentHours.instrument_total, color: "text-purple-400" },
-    { label: "Night", value: currentHours.night, color: "text-indigo-400" },
-    { label: "Simulator", value: currentHours.simulator_time, color: "text-cyan-400" },
+    { label: "Total Hours", value: Number(currentHours.total) || 0, color: "text-truehour-blue" },
+    { label: "PIC", value: Number(currentHours.pic) || 0, color: "text-truehour-green" },
+    { label: "Cross Country", value: Number(currentHours.cross_country) || 0, color: "text-truehour-orange" },
+    { label: "Instrument", value: Number(currentHours.instrument_total) || 0, color: "text-purple-400" },
+    { label: "Night", value: Number(currentHours.night) || 0, color: "text-indigo-400" },
+    { label: "Simulator", value: Number(currentHours.simulator_time) || 0, color: "text-cyan-400" },
   ];
 
   return (

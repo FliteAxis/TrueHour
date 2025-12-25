@@ -8,7 +8,15 @@ import { AddAircraftModal } from "./AddAircraftModal";
 import { EditAircraftModal } from "./EditAircraftModal";
 import { SourceBadge } from "../../components/common/SourceBadge";
 
-type SortOption = "tail-asc" | "tail-desc" | "hours-asc" | "hours-desc" | "recent-asc" | "recent-desc";
+type SortOption =
+  | "tail-asc"
+  | "tail-desc"
+  | "hours-asc"
+  | "hours-desc"
+  | "recent-asc"
+  | "recent-desc"
+  | "rate-asc"
+  | "rate-desc";
 type CategoryFilter = "all" | "rental" | "club" | "owned";
 
 export function AircraftView() {
@@ -46,6 +54,16 @@ export function AircraftView() {
           return (a.updated_at || "").localeCompare(b.updated_at || "");
         case "recent-desc":
           return (b.updated_at || "").localeCompare(a.updated_at || "");
+        case "rate-asc": {
+          const aRate = Number(a.hourly_rate_wet || a.hourly_rate_dry) || 0;
+          const bRate = Number(b.hourly_rate_wet || b.hourly_rate_dry) || 0;
+          return aRate - bRate;
+        }
+        case "rate-desc": {
+          const aRate = Number(a.hourly_rate_wet || a.hourly_rate_dry) || 0;
+          const bRate = Number(b.hourly_rate_wet || b.hourly_rate_dry) || 0;
+          return bRate - aRate;
+        }
         default:
           return 0;
       }
@@ -97,7 +115,9 @@ export function AircraftView() {
 
   const formatCurrency = (amount?: number | null) => {
     if (!amount) return "-";
-    return `$${amount.toFixed(2)}/hr`;
+    const numAmount = Number(amount);
+    if (isNaN(numAmount)) return "-";
+    return `$${numAmount.toFixed(2)}/hr`;
   };
 
   return (
@@ -161,6 +181,8 @@ export function AircraftView() {
               <option value="tail-desc">Tail Number (Z-A)</option>
               <option value="hours-desc">Hours (Most)</option>
               <option value="hours-asc">Hours (Least)</option>
+              <option value="rate-desc">Hourly Rate (Highest)</option>
+              <option value="rate-asc">Hourly Rate (Lowest)</option>
               <option value="recent-desc">Latest Flight (Recent)</option>
               <option value="recent-asc">Latest Flight (Oldest)</option>
             </select>
@@ -269,13 +291,21 @@ export function AircraftView() {
                   </div>
                 )}
 
-                {/* Edit Button */}
-                <button
-                  onClick={() => handleEditClick(ac)}
-                  className="w-full px-4 py-2 bg-truehour-darker hover:bg-truehour-border text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
-                >
-                  Edit Aircraft
-                </button>
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleEditClick(ac)}
+                    className="px-4 py-2 bg-truehour-darker hover:bg-truehour-border text-slate-300 hover:text-white rounded-lg transition-colors text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => (window.location.href = `/aircraft/rates#aircraft-${ac.id}`)}
+                    className="px-4 py-2 bg-truehour-blue/20 hover:bg-truehour-blue/30 text-truehour-blue hover:text-white border border-truehour-blue/30 rounded-lg transition-colors text-sm"
+                  >
+                    Rate
+                  </button>
+                </div>
               </div>
             ))}
           </div>

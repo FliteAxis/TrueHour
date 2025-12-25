@@ -1,14 +1,14 @@
 // Settings View
 // Central settings page for customization
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserSettings, updateUserSettings } from "../../services/api";
-import type { UserSettings } from "../../types/api";
+import type { UserSettings, UserAircraft } from "../../types/api";
 
 export function SettingsView() {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState<"tags" | "categories" | "general">("general");
+  const [activeSection, setActiveSection] = useState<"tags" | "categories" | "general" | "training">("general");
 
   // User settings
   const [settings, setSettings] = useState<UserSettings | null>(null);
@@ -29,21 +29,31 @@ export function SettingsView() {
   const [newTag, setNewTag] = useState("");
 
   // Categories management
-  const [customCategories, setCustomCategories] = useState<string[]>([
-    "Flight Training",
+  const DEFAULT_CATEGORIES = [
+    "Administrative",
     "Aircraft Rental",
-    "Ground School",
-    "Books & Materials",
-    "Exams & Checkrides",
-    "Medical",
+    "Certifications",
     "Equipment",
-    "Insurance",
-    "Membership",
+    "Exams & Checkrides",
     "Fuel",
+    "Ground School",
+    "Insurance",
     "Maintenance",
+    "Medical",
+    "Membership",
     "Other",
-  ]);
+    "Subscriptions",
+    "Training",
+  ];
+  const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
   const [newCategory, setNewCategory] = useState("");
+
+  // Aircraft for training settings
+  const [aircraft, setAircraft] = useState<UserAircraft[]>([]);
+  const [isLoadingAircraft, setIsLoadingAircraft] = useState(false);
+
+  // Debounce timer for numeric inputs
+  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load user settings on mount
   useEffect(() => {
@@ -51,6 +61,19 @@ export function SettingsView() {
       try {
         const data = await getUserSettings();
         setSettings(data);
+        // Load categories from settings or use defaults
+        if (data.budget_categories && data.budget_categories.length > 0) {
+          setCustomCategories(data.budget_categories.sort());
+        } else {
+          // Initialize database with default categories on first load
+          try {
+            await updateUserSettings({ ...data, budget_categories: DEFAULT_CATEGORIES });
+            setCustomCategories(DEFAULT_CATEGORIES);
+          } catch (error) {
+            console.error("Failed to initialize default categories:", error);
+            setCustomCategories(DEFAULT_CATEGORIES);
+          }
+        }
       } catch (error) {
         console.error("Failed to load settings:", error);
       } finally {
@@ -58,6 +81,36 @@ export function SettingsView() {
       }
     };
     loadSettings();
+  }, []);
+
+  // Load aircraft when Training section is opened
+  useEffect(() => {
+    if (activeSection === "training" && aircraft.length === 0) {
+      const loadAircraft = async () => {
+        setIsLoadingAircraft(true);
+        try {
+          const response = await fetch("http://localhost:8000/api/user/aircraft?is_active=true");
+          if (response.ok) {
+            const data = await response.json();
+            setAircraft(data);
+          }
+        } catch (error) {
+          console.error("Failed to load aircraft:", error);
+        } finally {
+          setIsLoadingAircraft(false);
+        }
+      };
+      loadAircraft();
+    }
+  }, [activeSection, aircraft.length]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
   }, []);
 
   const handleToggleFAALookup = async (enabled: boolean) => {
@@ -77,6 +130,41 @@ export function SettingsView() {
     }
   };
 
+  const handleUpdateTrainingSetting = async (updates: Partial<UserSettings>) => {
+    if (!settings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const updatedSettings = { ...settings, ...updates };
+      await updateUserSettings(updatedSettings);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error("Failed to update training setting:", error);
+      // Revert on error
+      setSettings({ ...settings });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // Debounced version for numeric inputs (delays save for 1 second after last keystroke)
+  const handleUpdateTrainingSettingDebounced = (updates: Partial<UserSettings>) => {
+    if (!settings) return;
+
+    // Update local state immediately for responsive UI
+    setSettings({ ...settings, ...updates });
+
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    // Set new timer to save after 1 second of no typing
+    saveTimerRef.current = setTimeout(() => {
+      handleUpdateTrainingSetting(updates);
+    }, 1000);
+  };
+
   const handleAddTag = () => {
     const trimmed = newTag.trim();
     if (trimmed && !customTags.includes(trimmed)) {
@@ -89,17 +177,35 @@ export function SettingsView() {
     setCustomTags(customTags.filter((t) => t !== tag));
   };
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     const trimmed = newCategory.trim();
     if (trimmed && !customCategories.includes(trimmed)) {
-      setCustomCategories([...customCategories, trimmed]);
+      const updatedCategories = [...customCategories, trimmed].sort();
+      setCustomCategories(updatedCategories);
       setNewCategory("");
+      // Save to settings
+      if (settings) {
+        try {
+          await updateUserSettings({ ...settings, budget_categories: updatedCategories });
+        } catch (error) {
+          console.error("Failed to save categories:", error);
+        }
+      }
     }
   };
 
-  const handleRemoveCategory = (category: string) => {
+  const handleRemoveCategory = async (category: string) => {
     if (customCategories.length > 1) {
-      setCustomCategories(customCategories.filter((c) => c !== category));
+      const updatedCategories = customCategories.filter((c) => c !== category).sort();
+      setCustomCategories(updatedCategories);
+      // Save to settings
+      if (settings) {
+        try {
+          await updateUserSettings({ ...settings, budget_categories: updatedCategories });
+        } catch (error) {
+          console.error("Failed to save categories:", error);
+        }
+      }
     }
   };
 
@@ -193,6 +299,16 @@ export function SettingsView() {
               General
             </button>
             <button
+              onClick={() => setActiveSection("training")}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                activeSection === "training"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
+              }`}
+            >
+              Training
+            </button>
+            <button
               onClick={() => setActiveSection("tags")}
               className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
                 activeSection === "tags"
@@ -220,7 +336,25 @@ export function SettingsView() {
           {/* General Settings */}
           {activeSection === "general" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-white mb-4">General Settings</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">General Settings</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-4" />
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-3">Appearance</h3>
@@ -310,10 +444,244 @@ export function SettingsView() {
             </div>
           )}
 
+          {/* Training Settings */}
+          {activeSection === "training" && (
+            <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Training Configuration</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-6">
+                Configure how TrueHour calculates your training timeline and budget projections
+              </p>
+
+              <div className="space-y-6">
+                {/* Target Certification */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Target Certification</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Current Certification Goal</label>
+                    <select
+                      value={settings?.target_certification || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSetting({
+                          target_certification: e.target.value || null,
+                        })
+                      }
+                      disabled={isLoadingSettings || isSavingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    >
+                      <option value="">None selected</option>
+                      <option value="private">Private Pilot (PPL)</option>
+                      <option value="ir">Instrument Rating (IR)</option>
+                      <option value="cpl">Commercial Pilot (CPL)</option>
+                      <option value="cfi">Certified Flight Instructor (CFI)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      This determines which certification requirements are tracked on your dashboard and used for budget
+                      calculations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Training Pace Mode */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Training Pace</h3>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-truehour-darker rounded-lg">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Calculation Mode</label>
+                      <select
+                        value={settings?.training_pace_mode || "manual"}
+                        onChange={(e) =>
+                          handleUpdateTrainingSetting({
+                            training_pace_mode: e.target.value as "auto" | "manual",
+                          })
+                        }
+                        disabled={isLoadingSettings || isSavingSettings}
+                        className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      >
+                        <option value="manual">Manual - Set specific hours per week</option>
+                        <option value="auto">Automatic - Calculate from recent flight history (3+ months)</option>
+                      </select>
+                      <p className="text-xs text-slate-500 mt-2">
+                        {settings?.training_pace_mode === "auto"
+                          ? "Timeline will be calculated based on your average flying rate over the last 3 months"
+                          : "Set your expected training hours per week below"}
+                      </p>
+                    </div>
+
+                    {/* Hours Per Week (only show if manual mode) */}
+                    {(!settings?.training_pace_mode || settings?.training_pace_mode === "manual") && (
+                      <div className="p-4 bg-truehour-darker rounded-lg">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Expected Hours Per Week</label>
+                        <input
+                          type="number"
+                          value={settings?.training_hours_per_week || 2.0}
+                          onChange={(e) =>
+                            handleUpdateTrainingSettingDebounced({
+                              training_hours_per_week: parseFloat(e.target.value) || 2.0,
+                            })
+                          }
+                          disabled={isLoadingSettings}
+                          className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                          step="0.5"
+                          min="0.5"
+                          max="40"
+                        />
+                        <p className="text-xs text-slate-500 mt-2">
+                          How many hours per week do you plan to fly? (e.g., 2.0 for part-time, 10+ for full-time
+                          training)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Default Aircraft */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Default Training Aircraft</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Aircraft</label>
+                    <select
+                      value={settings?.default_training_aircraft_id || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSetting({
+                          default_training_aircraft_id: e.target.value ? parseInt(e.target.value) : null,
+                        })
+                      }
+                      disabled={isLoadingSettings || isSavingSettings || isLoadingAircraft}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    >
+                      <option value="">None selected</option>
+                      {aircraft.map((ac) => (
+                        <option key={ac.id} value={ac.id}>
+                          {ac.tail_number} - {ac.make} {ac.model}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Select the primary aircraft you'll use for training. This will be used for cost calculations in
+                      the Timeline dashboard.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ground Instruction Rate */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Ground Instruction</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Hourly Rate ($/hr)</label>
+                    <input
+                      type="number"
+                      value={settings?.ground_instruction_rate || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSettingDebounced({
+                          ground_instruction_rate: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      disabled={isLoadingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      placeholder="0.00"
+                      step="1.00"
+                      min="0"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Optional: Set your ground instruction rate for more accurate budget calculations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Budget Buffer */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Budget Buffer</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Buffer Percentage (%)</label>
+                    <input
+                      type="number"
+                      value={settings?.budget_buffer_percentage || 10}
+                      onChange={(e) =>
+                        handleUpdateTrainingSettingDebounced({
+                          budget_buffer_percentage: parseInt(e.target.value) || 10,
+                        })
+                      }
+                      disabled={isLoadingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      step="5"
+                      min="0"
+                      max="100"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Add a buffer to timeline and budget calculations to account for unexpected costs or delays
+                      (recommended: 10-20%)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="flex gap-3">
+                    <svg
+                      className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div className="text-sm text-blue-300">
+                      <div className="font-medium mb-1">How this affects TrueHour</div>
+                      <div>
+                        These settings drive the Timeline calculations on your dashboard and provide smart suggestions
+                        when creating budget cards. Your training pace and aircraft selection help estimate completion
+                        timeframes and costs for your target certification.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tags Settings */}
           {activeSection === "tags" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Custom Tags</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Custom Tags</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
               <p className="text-slate-400 mb-6">
                 Manage tags that can be applied to budget cards for better organization
               </p>
@@ -396,7 +764,24 @@ export function SettingsView() {
           {/* Categories Settings */}
           {activeSection === "categories" && (
             <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Budget Categories</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Budget Categories</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
               <p className="text-slate-400 mb-6">
                 Customize the expense categories available when creating budget cards and expenses
               </p>

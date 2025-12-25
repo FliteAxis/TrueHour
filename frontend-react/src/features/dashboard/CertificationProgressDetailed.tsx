@@ -84,6 +84,7 @@ const PRIVATE_REQUIREMENTS: DetailedRequirement[] = [
     details: (hours) =>
       hours.private_long_xc >= 1 ? (
         <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
+          <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
           <div className="grid grid-cols-4 gap-2 text-slate-400">
             <div>
               <div className="font-medium text-slate-300">Flight Date</div>
@@ -94,13 +95,17 @@ const PRIVATE_REQUIREMENTS: DetailedRequirement[] = [
               <div>N52440</div>
             </div>
             <div>
-              <div className="font-medium text-slate-300">Total Distance (nm)</div>
+              <div className="font-medium text-slate-300">Distance (nm)</div>
               <div>207.7</div>
             </div>
             <div>
-              <div className="font-medium text-slate-300">Route</div>
-              <div>KAMW KAMW C17 KALO KAMW KAMW</div>
+              <div className="font-medium text-slate-300">Type</div>
+              <div>Solo</div>
             </div>
+          </div>
+          <div className="mt-1">
+            <div className="font-medium text-slate-300">Route</div>
+            <div className="text-slate-400">KAMW → C17 → KALO → KAMW</div>
           </div>
         </div>
       ) : null,
@@ -198,26 +203,30 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
   {
     id: "total",
     label: "250 hours of flight time",
-    description: "250 hours of total flight time (simulator hours may be included).",
+    description: "250 hours of total flight time (includes 8.3 simulator hours).",
     required: 250,
     unit: "hours",
     calculate: (hours) => hours.total,
+    details: (hours) =>
+      hours.simulator_time > 0 ? (
+        <div className="text-xs text-slate-400 mt-1">({hours.simulator_time.toFixed(1)} SIMULATOR hours included)</div>
+      ) : null,
   },
   {
     id: "powered",
     label: "100 hours in powered aircraft",
-    description: "100 hours in powered aircraft.",
+    description: "100 hours in powered aircraft (includes flight training).",
     required: 100,
     unit: "hours",
-    calculate: (hours) => hours.total, // Approximation - all time is in powered aircraft
+    calculate: (hours) => hours.total - hours.simulator_time, // Total minus simulator
   },
   {
     id: "airplanes",
     label: "50 hours in airplanes",
-    description: "50 hours in airplanes.",
+    description: "50 hours in airplanes (subset of powered aircraft time).",
     required: 50,
     unit: "hours",
-    calculate: (hours) => hours.total, // Approximation
+    calculate: (hours) => hours.total - hours.simulator_time,
   },
   {
     id: "pic",
@@ -254,7 +263,7 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
   {
     id: "dual",
     label: "20 hours of flight training",
-    description: "20 hours of flight training.",
+    description: "20 hours of flight training with an instructor.",
     required: 20,
     unit: "hours",
     calculate: (hours) => hours.dual_received,
@@ -262,18 +271,153 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
   {
     id: "instrument_training",
     label: "10 hours of simulated instrument training",
-    description: "10 hours of instrument training.",
+    description: "10 hours of instrument training (includes airplane and approved simulator).",
     required: 10,
     unit: "hours",
-    calculate: (hours) => hours.instrument_dual_airplane,
+    calculate: (hours) => hours.cpl_sim_instrument_training,
+    details: (hours) => (
+      <div className="text-xs text-slate-400 mt-1">
+        ({hours.cpl_sim_instrument_airplane.toFixed(1)} airplane + ~
+        {(hours.cpl_sim_instrument_training - hours.cpl_sim_instrument_airplane).toFixed(1)} simulator)
+      </div>
+    ),
   },
   {
-    id: "complex",
-    label: "10 hours complex or TAA training",
-    description: "10 hours of training in a complex or technically advanced airplane.",
+    id: "instrument_airplane",
+    label: "5 hours simulated instrument in single engine airplane",
+    description: "5 hours of simulated instrument training in a single-engine airplane.",
+    required: 5,
+    unit: "hours",
+    calculate: (hours) => hours.cpl_sim_instrument_airplane,
+  },
+  {
+    id: "complex_turbine_taa",
+    label: "10 hours complex/turbine/TAA training",
+    description: "10 hours of training in a complex, turbine, or technically advanced airplane.",
     required: 10,
     unit: "hours",
-    calculate: (hours) => hours.complex,
+    calculate: (hours) => hours.cpl_complex_turbine_taa,
+  },
+  {
+    id: "day_xc",
+    label: "2-hour day XC >100nm in single engine",
+    description:
+      "One 2-hour day cross-country flight of more than 100nm straight-line distance in a single-engine airplane.",
+    required: 1,
+    unit: "flight",
+    calculate: (hours) => hours.cpl_2hr_day_xc,
+    details: (hours) =>
+      hours.cpl_2hr_day_xc >= 1 ? (
+        <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
+          <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
+          <div className="grid grid-cols-4 gap-2 text-slate-400">
+            <div>
+              <div className="font-medium text-slate-300">Flight Date</div>
+              <div>2025-05-13</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Aircraft ID</div>
+              <div>N5274S</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Total (hrs)</div>
+              <div>2.7</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Distance (nm)</div>
+              <div>230.2</div>
+            </div>
+          </div>
+          <div className="mt-1">
+            <div className="font-medium text-slate-300">Route</div>
+            <div className="text-slate-400">KAMW → KSDA → KDSM → KAMW</div>
+          </div>
+        </div>
+      ) : null,
+  },
+  {
+    id: "night_xc",
+    label: "2-hour night XC >100nm in single engine",
+    description:
+      "One 2-hour night cross-country flight of more than 100nm straight-line distance in a single-engine airplane.",
+    required: 1,
+    unit: "flight",
+    calculate: (hours) => hours.cpl_2hr_night_xc,
+  },
+  {
+    id: "checkride_prep",
+    label: "3 hours checkride prep in last 2 months",
+    description:
+      "3 hours of training in a single-engine airplane in preparation for the practical test, within 2 calendar months.",
+    required: 3,
+    unit: "hours",
+    calculate: (hours) => hours.cpl_checkride_prep_recent,
+  },
+  {
+    id: "solo_se",
+    label: "10 hours solo in single engine",
+    description: "10 hours of solo flight time in a single-engine airplane.",
+    required: 10,
+    unit: "hours",
+    calculate: (hours) => hours.cpl_solo_se,
+  },
+  {
+    id: "long_xc",
+    label: "300nm XC, 3 points, one 250nm+ from departure",
+    description:
+      "One cross-country flight of at least 300nm with landings at 3 points, one of which is 250nm+ from departure (solo or PIC with instructor only).",
+    required: 1,
+    unit: "flight",
+    calculate: (hours) => hours.cpl_300nm_xc,
+    details: (hours) =>
+      hours.cpl_300nm_xc >= 1 ? (
+        <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
+          <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
+          <div className="grid grid-cols-4 gap-2 text-slate-400">
+            <div>
+              <div className="font-medium text-slate-300">Flight Date</div>
+              <div>2025-09-11</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Aircraft ID</div>
+              <div>N5274S</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Type</div>
+              <div>Solo</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Distance (nm)</div>
+              <div>310.1</div>
+            </div>
+          </div>
+          <div className="mt-1">
+            <div className="font-medium text-slate-300">Route</div>
+            <div className="text-slate-400">KEOK → KFSW → KBRL → KIOW</div>
+          </div>
+        </div>
+      ) : null,
+  },
+  {
+    id: "night_vfr",
+    label: "5 hours night VFR in single engine",
+    description: "5 hours of night VFR conditions in a single-engine airplane (solo or PIC with instructor only).",
+    required: 5,
+    unit: "hours",
+    calculate: (hours) => hours.cpl_night_vfr,
+  },
+  {
+    id: "night_towered_ops",
+    label: "10 night takeoffs and 10 night landings at towered airport",
+    description: "10 night takeoffs and 10 night landings to a full stop at a towered airport.",
+    required: 10,
+    unit: "operations",
+    calculate: (hours) => Math.min(hours.cpl_night_takeoffs_towered, hours.cpl_night_landings_towered),
+    details: (hours) => (
+      <div className="text-xs text-slate-400 mt-1">
+        ({hours.cpl_night_takeoffs_towered} takeoffs, {hours.cpl_night_landings_towered} landings)
+      </div>
+    ),
   },
 ];
 
@@ -332,7 +476,8 @@ export function CertificationProgressDetailed({ selectedCert }: CertificationPro
       return { current: 0, remaining: req.required, percentage: 0, isComplete: false };
     }
 
-    const current = req.calculate(currentHours);
+    const rawCurrent = req.calculate(currentHours);
+    const current = Number(rawCurrent) || 0;
     const remaining = Math.max(0, req.required - current);
     const percentage = Math.min(100, (current / req.required) * 100);
     const isComplete = current >= req.required;

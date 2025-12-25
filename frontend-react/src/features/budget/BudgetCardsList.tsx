@@ -14,11 +14,12 @@ type FilterCategory = "all" | string;
 type FilterStatus = "all" | "active" | "inactive" | "completed";
 
 export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
-  const { deleteCard } = useBudgetStore();
+  const { deleteCard, duplicateCard } = useBudgetStore();
 
   const [filterCategory, setFilterCategory] = useState<FilterCategory>("all");
   const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [sortBy, setSortBy] = useState<"date" | "name" | "amount">("date");
+  const [cardToDelete, setCardToDelete] = useState<BudgetCard | null>(null);
 
   // Get unique categories
   const categories = Array.from(new Set(cards.map((c) => c.category))).sort();
@@ -44,14 +45,32 @@ export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
     }
   });
 
-  const handleDelete = async (id: number) => {
-    if (confirm("Are you sure you want to delete this budget card?")) {
-      try {
-        await deleteCard(id);
-      } catch (error) {
-        console.error("Failed to delete card:", error);
-        alert("Failed to delete card. Please try again.");
-      }
+  const handleDeleteClick = (card: BudgetCard) => {
+    setCardToDelete(card);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!cardToDelete) return;
+
+    try {
+      await deleteCard(cardToDelete.id);
+      setCardToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete card:", error);
+      alert("Failed to delete card. Please try again.");
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setCardToDelete(null);
+  };
+
+  const handleDuplicateCard = async (card: BudgetCard) => {
+    try {
+      await duplicateCard(card.id);
+    } catch (error) {
+      console.error("Failed to duplicate card:", error);
+      alert("Failed to duplicate card. Please try again.");
     }
   };
 
@@ -187,7 +206,7 @@ export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
                   key={card.id}
                   className="bg-truehour-card border border-truehour-border rounded-lg p-4 hover:border-truehour-blue transition-all duration-200 flex flex-col"
                 >
-                  {/* Header with Edit/Delete */}
+                  {/* Header with Edit/Duplicate/Delete */}
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex-1 pr-2">
                       <h4 className="text-white font-semibold text-lg">{card.name}</h4>
@@ -209,7 +228,21 @@ export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
                         </svg>
                       </button>
                       <button
-                        onClick={() => handleDelete(card.id)}
+                        onClick={() => handleDuplicateCard(card)}
+                        className="p-1.5 text-slate-400 hover:text-truehour-green transition-colors rounded hover:bg-truehour-darker"
+                        aria-label="Duplicate card"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(card)}
                         className="p-1.5 text-slate-400 hover:text-red-400 transition-colors rounded hover:bg-truehour-darker"
                         aria-label="Delete card"
                       >
@@ -255,6 +288,38 @@ export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
                       );
                     })()}
                   </div>
+
+                  {/* Aircraft Info */}
+                  {card.aircraft_tail && (
+                    <div className="mb-3 flex items-center gap-2">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 3l1.5 3 3.5 1-1 4.5L12 14l3-2.5-1-4.5 3.5-1L19 3M5 21h14"
+                        />
+                      </svg>
+                      <span className="text-sm text-slate-300">
+                        {card.aircraft_tail}
+                        {card.aircraft_make && card.aircraft_model && (
+                          <span className="text-slate-500 ml-1">
+                            ({card.aircraft_make} {card.aircraft_model})
+                          </span>
+                        )}
+                      </span>
+                      {card.hourly_rate_type && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-slate-700 text-slate-300">
+                          {card.hourly_rate_type}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Associated Hours */}
+                  {card.associated_hours && (
+                    <div className="mb-3 text-sm text-slate-400">{card.associated_hours} hrs planned</div>
+                  )}
 
                   {/* Budget Info */}
                   <div className="space-y-3 mb-4 flex-1">
@@ -318,6 +383,88 @@ export function BudgetCardsList({ cards, onEditCard }: BudgetCardsListProps) {
               Showing {filteredCards.length} of {cards.length} budget card
               {cards.length !== 1 ? "s" : ""}
             </p>
+          </div>
+        </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {cardToDelete && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" onClick={handleDeleteCancel} />
+
+          {/* Modal */}
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-md">
+            <div className="bg-truehour-card border border-truehour-border rounded-lg shadow-2xl p-6">
+              {/* Header */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-1">Delete Budget Card</h3>
+                  <p className="text-slate-400 text-sm">
+                    Are you sure you want to delete "{cardToDelete.name}"? This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              {/* Card Info */}
+              <div className="bg-truehour-darker rounded-lg p-3 mb-6 border border-truehour-border">
+                <div className="text-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-400">Budgeted Amount:</span>
+                    <span className="text-white font-semibold">{formatCurrency(cardToDelete.budgeted_amount)}</span>
+                  </div>
+                  {cardToDelete.actual_amount > 0 && (
+                    <div className="flex items-center justify-between text-amber-400">
+                      <span>Linked Expenses:</span>
+                      <span className="font-semibold">{formatCurrency(cardToDelete.actual_amount)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Warning */}
+              {cardToDelete.actual_amount > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-6">
+                  <p className="text-amber-400 text-sm flex items-start gap-2">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                    <span>This card has linked expenses. They will not be deleted but will become unlinked.</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="flex-1 px-4 py-2.5 bg-truehour-darker hover:bg-truehour-border text-white rounded-lg transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  Delete Card
+                </button>
+              </div>
+            </div>
           </div>
         </>
       )}

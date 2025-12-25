@@ -23,6 +23,13 @@ class UserSettings(BaseModel):
     onboarding_completed: bool = False  # Track whether user completed onboarding
     target_certification: Optional[str] = None  # Current target certification (private, ir, cpl, cfi)
     enable_faa_lookup: bool = True  # Enable/disable FAA aircraft lookup during imports
+    # Training configuration
+    training_pace_mode: Optional[str] = "manual"  # 'auto' or 'manual'
+    training_hours_per_week: Optional[float] = 2.0  # Expected training hours per week
+    default_training_aircraft_id: Optional[int] = None  # Default aircraft for training
+    ground_instruction_rate: Optional[float] = None  # Hourly rate for ground instruction
+    budget_buffer_percentage: Optional[int] = 10  # Buffer % for budget calculations
+    budget_categories: Optional[List[str]] = None  # Custom budget categories
 
 
 class UserDataResponse(BaseModel):
@@ -641,9 +648,16 @@ async def update_user_settings(settings: UserSettings):
                     budget_state,
                     onboarding_completed,
                     target_certification,
+                    enable_faa_lookup,
+                    training_pace_mode,
+                    training_hours_per_week,
+                    default_training_aircraft_id,
+                    ground_instruction_rate,
+                    budget_buffer_percentage,
+                    budget_categories,
                     updated_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
                 ON CONFLICT (id)
                 DO UPDATE SET
                     auto_save_enabled = EXCLUDED.auto_save_enabled,
@@ -653,6 +667,13 @@ async def update_user_settings(settings: UserSettings):
                     budget_state = EXCLUDED.budget_state,
                     onboarding_completed = EXCLUDED.onboarding_completed,
                     target_certification = EXCLUDED.target_certification,
+                    enable_faa_lookup = EXCLUDED.enable_faa_lookup,
+                    training_pace_mode = EXCLUDED.training_pace_mode,
+                    training_hours_per_week = EXCLUDED.training_hours_per_week,
+                    default_training_aircraft_id = EXCLUDED.default_training_aircraft_id,
+                    ground_instruction_rate = EXCLUDED.ground_instruction_rate,
+                    budget_buffer_percentage = EXCLUDED.budget_buffer_percentage,
+                    budget_categories = EXCLUDED.budget_categories,
                     updated_at = NOW()
             """,
                 settings.auto_save_enabled,
@@ -662,6 +683,13 @@ async def update_user_settings(settings: UserSettings):
                 json.dumps(settings.budget_state) if settings.budget_state else None,
                 settings.onboarding_completed,
                 settings.target_certification,
+                settings.enable_faa_lookup,
+                settings.training_pace_mode,
+                settings.training_hours_per_week,
+                settings.default_training_aircraft_id,
+                settings.ground_instruction_rate,
+                settings.budget_buffer_percentage,
+                json.dumps(settings.budget_categories) if settings.budget_categories else None,
             )
 
         return settings
@@ -729,6 +757,15 @@ async def get_user_settings():
                         else settings_row["budget_state"]
                     )
 
+                # Parse budget_categories if it exists
+                budget_categories = None
+                if settings_row.get("budget_categories"):
+                    budget_categories = (
+                        json.loads(settings_row["budget_categories"])
+                        if isinstance(settings_row["budget_categories"], str)
+                        else settings_row["budget_categories"]
+                    )
+
                 return UserSettings(
                     auto_save_enabled=settings_row["auto_save_enabled"],
                     auto_save_interval=settings_row["auto_save_interval"],
@@ -737,6 +774,13 @@ async def get_user_settings():
                     budget_state=budget_state,
                     onboarding_completed=settings_row.get("onboarding_completed", False),
                     target_certification=settings_row.get("target_certification"),
+                    enable_faa_lookup=settings_row.get("enable_faa_lookup", True),
+                    training_pace_mode=settings_row.get("training_pace_mode", "manual"),
+                    training_hours_per_week=settings_row.get("training_hours_per_week", 2.0),
+                    default_training_aircraft_id=settings_row.get("default_training_aircraft_id"),
+                    ground_instruction_rate=settings_row.get("ground_instruction_rate"),
+                    budget_buffer_percentage=settings_row.get("budget_buffer_percentage", 10),
+                    budget_categories=budget_categories,
                 )
             # Return defaults if no settings exist
             return UserSettings()

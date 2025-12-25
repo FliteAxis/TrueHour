@@ -42,7 +42,7 @@ export function HamburgerMenu({ onImportLogbook, onImportExpenses }: HamburgerMe
       title: "Aircraft",
       items: [
         { label: "My Aircraft", path: "/aircraft" },
-        { label: "Aircraft Rates", path: "/aircraft/rates", comingSoon: true },
+        { label: "Aircraft Rates", path: "/aircraft/rates" },
         { label: "Aircraft Management", path: "/aircraft/manage", comingSoon: true },
       ],
     },

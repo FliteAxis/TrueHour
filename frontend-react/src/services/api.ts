@@ -122,6 +122,13 @@ export async function deleteBudgetCard(id: number): Promise<void> {
   }
 }
 
+export async function duplicateBudgetCard(id: number): Promise<BudgetCard> {
+  const response = await fetch(`${API_BASE}/api/budget-cards/${id}/duplicate`, {
+    method: "POST",
+  });
+  return handleResponse<BudgetCard>(response);
+}
+
 // ============================================================================
 // Import History (Hours)
 // ============================================================================
