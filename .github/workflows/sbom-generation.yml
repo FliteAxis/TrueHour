@@ -6,7 +6,7 @@ on:
     paths:
       - 'backend/requirements.txt'
       - 'backend/Dockerfile'
-      - 'infrastructure/Dockerfile.frontend'
+      - 'infrastructure/Dockerfile.frontend-react'
   pull_request:
   release:
     types: [published]
@@ -29,7 +29,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -58,7 +58,7 @@ jobs:
           pip-licenses --format=markdown --output-file=backend-licenses.md
 
       - name: Upload Python SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: python-sbom
           path: |
@@ -79,7 +79,7 @@ jobs:
             dockerfile: backend/Dockerfile
           - name: truehour-frontend
             context: .
-            dockerfile: infrastructure/Dockerfile.frontend
+            dockerfile: infrastructure/Dockerfile.frontend-react
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -112,7 +112,7 @@ jobs:
           output-file: ${{ matrix.image.name }}-sbom.txt
 
       - name: Scan SBOM with Grype
-        uses: anchore/scan-action@v3
+        uses: anchore/scan-action@v6
         with:
           image: ${{ matrix.image.name }}:sbom-scan
           fail-build: false
@@ -120,7 +120,7 @@ jobs:
           output-format: sarif
 
       - name: Upload container SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.image.name }}-sbom
           path: |
@@ -139,7 +139,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download all SBOMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: sboms
 
@@ -151,7 +151,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Attest API SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-name: ghcr.io/fliteaxis/truehour-api
           subject-digest: ${{ github.sha }}
@@ -159,7 +159,7 @@ jobs:
           push-to-registry: true
 
       - name: Attest Frontend SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v2
         with:
           subject-name: ghcr.io/fliteaxis/truehour-frontend
           subject-digest: ${{ github.sha }}
@@ -173,7 +173,7 @@ jobs:
     if: github.event_name == 'release'
     steps:
       - name: Download all SBOMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           path: sboms
 
@@ -195,7 +195,7 @@ jobs:
     if: always()
     steps:
       - name: Download all SBOMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
 
       - name: Create SBOM summary
         run: |

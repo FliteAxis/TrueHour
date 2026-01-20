@@ -4,16 +4,35 @@ import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 from app.database import Database
-from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
+from app.db_migrations import verify_and_migrate_schema
+from app.models import BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
-from app.routers import aircraft, expenses, user_data
+from app.routers import (
+    aircraft,
+    budget_cards,
+    budgets,
+    expense_budget_links,
+    expenses,
+    exports,
+    flights,
+    import_history,
+    user_data,
+)
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import FileResponse, HTMLResponse
 
-DB_PATH = os.getenv("DB_PATH", "/app/data/aircraft.db")
+# Determine FAA database path - try local path first, fall back to Docker path
+_local_db_path = os.path.join(os.path.dirname(__file__), "../data/aircraft.db")
+_default_db_path = _local_db_path if os.path.exists(_local_db_path) else "/app/data/aircraft.db"
+DB_PATH = os.getenv("DB_PATH", _default_db_path)
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 db: Optional[Database] = None
@@ -26,6 +45,13 @@ async def lifespan(app: FastAPI):
     # Initialize Postgres connection
     await postgres_db.connect()
     print("✅ PostgreSQL connection pool initialized")
+
+    # Verify and migrate database schema
+    migrations = await verify_and_migrate_schema(postgres_db)
+    if migrations:
+        print(f"✅ Applied {len(migrations)} database migration(s)")
+    else:
+        print("✅ Database schema is up-to-date")
 
     # Phase 0: Allow startup without FAA database
     if os.path.exists(DB_PATH):
@@ -58,6 +84,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:8000",
+        "http://localhost:8181",
         "https://truehour.app",
         "https://www.truehour.app",
     ],
@@ -68,7 +95,13 @@ app.add_middleware(
 
 # Include routers
 app.include_router(aircraft.router)
+app.include_router(budget_cards.router)
+app.include_router(budgets.router)
 app.include_router(expenses.router)
+app.include_router(expense_budget_links.router)
+app.include_router(exports.router)
+app.include_router(flights.router)
+app.include_router(import_history.router)
 app.include_router(user_data.router)
 
 
@@ -222,21 +255,54 @@ async def custom_redoc_html():
     return HTMLResponse(content=html_with_footer)
 
 
-@app.get("/api/v1/aircraft/{tail}", response_model=AircraftResponse)
+@app.get("/api/v1/aircraft/{tail}")
 async def get_aircraft(tail: str):
-    """Lookup aircraft by N-number (e.g., N172SP, 172SP, N-172SP)."""
-    if db is None:
-        raise HTTPException(503, "FAA database not available. Run update_faa_data.py to build it.")
+    """
+    Lookup aircraft by N-number from FAA registry with enriched data.
 
+    Returns aircraft details including gear type, complexity, and performance characteristics.
+    Uses the internal lookup function that queries PostgreSQL FAA database.
+
+    Args:
+        tail: Aircraft tail number (e.g., N172SP, 172SP, N-172SP)
+
+    Returns:
+        Aircraft details with gear_type, is_complex, is_high_performance, etc.
+    """
+    from app.routers.user_data import _lookup_faa_aircraft
+
+    # Normalize tail number (remove N prefix, spaces, dashes)
     normalized = normalize_tail(tail)
     if not normalized:
         raise HTTPException(400, "Invalid tail number")
 
-    aircraft = db.lookup(normalized)
-    if not aircraft:
-        raise HTTPException(404, f"Aircraft N{normalized} not found")
+    try:
+        # Call internal lookup function with enrichment
+        aircraft_data = await _lookup_faa_aircraft(normalized, enable_faa_lookup=True)
 
-    return aircraft
+        if aircraft_data:
+            # Return enriched data with all fields the frontend expects
+            return {
+                "tail_number": f"N{normalized}",
+                "manufacturer": aircraft_data.get("make"),
+                "model": aircraft_data.get("model"),
+                "series": aircraft_data.get("type_code"),
+                "aircraft_type": aircraft_data.get("aircraft_class"),
+                "engine_type": aircraft_data.get("engine_type"),
+                "year_mfr": str(aircraft_data["year"]) if aircraft_data.get("year") else None,
+                "gear_type": aircraft_data.get("gear_type"),
+                "is_complex": aircraft_data.get("is_complex", False),
+                "is_high_performance": aircraft_data.get("is_high_performance", False),
+            }
+        else:
+            # Not found in FAA database
+            raise HTTPException(404, f"Aircraft N{normalized} not found in FAA registry")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[FAA Lookup] Error looking up {tail}: {e}")
+        raise HTTPException(status_code=500, detail="FAA lookup service error")
 
 
 @app.post("/api/v1/aircraft/bulk", response_model=BulkResponse)
@@ -300,3 +366,35 @@ async def stats():
     if db is None:
         raise HTTPException(503, "FAA database not available. Run update_faa_data.py to build it.")
     return db.get_stats()
+
+
+@app.delete("/api/data/delete-all")
+async def delete_all_data():
+    """Delete all user data including flights, expenses, budget cards, and aircraft."""
+    try:
+        async with postgres_db.acquire() as conn:
+            # Delete in order to respect foreign key constraints
+            await conn.execute("DELETE FROM expense_budget_links")
+            await conn.execute("DELETE FROM expenses")
+            await conn.execute("DELETE FROM flights")
+            await conn.execute("DELETE FROM budget_cards")
+            await conn.execute("DELETE FROM aircraft")
+            await conn.execute("DELETE FROM import_history")
+            await conn.execute("DELETE FROM user_sessions")
+            # Reset user settings to defaults but don't delete the row
+            await conn.execute(
+                """
+                UPDATE user_settings
+                SET auto_save_enabled = true,
+                    auto_save_interval = 3000,
+                    timezone = 'America/New_York',
+                    budget_state = NULL,
+                    default_aircraft_id = NULL,
+                    onboarding_completed = false,
+                    target_certification = NULL
+                """
+            )
+
+        return {"status": "success", "message": "All data deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete data: {str(e)}") from e

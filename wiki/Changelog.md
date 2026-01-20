@@ -1,205 +1,428 @@
 # Changelog
 
-All notable changes to the TrueHour are documented here.
+All notable changes to TrueHour will be documented in this file.
 
-## Latest Changes
-
-### Phase 3: Data Persistence 100% Complete (2025-12-04)
-- **Save/Load API endpoints**: Complete user data management
-  - `POST /api/user/save` - Persist all aircraft and budget state to PostgreSQL
-  - `GET /api/user/load` - Load all data (aircraft, expenses, flights, settings, budget state)
-  - `DELETE /api/user/data` - Safe delete with multi-step confirmation
-  - `GET/PUT /api/user/settings` - User settings management
-- **Budget/Training state persistence**: All training configuration now saved to database
-  - Certification goal (PPL, IR, CPL, CFI, etc.) saved and restored
-  - Current flight hours from ForeFlight import persisted
-  - All 14 training settings (instructor rates, costs, contingency %) saved
-  - Survives localStorage.clear() and browser session changes
-  - Stored as JSONB column in user_settings table
-  - Auto-save triggers on any certification or settings change
-- **Auto-save system**: Debounced auto-save with 3-second delay
-  - Triggers automatically on aircraft add/update/delete
-  - Triggers on certification goal changes (targetCert dropdown)
-  - Triggers on all 14 training settings field changes
-  - Toggle on/off via hamburger menu
-  - Status indicators show pending/saving/success/error states
-  - Last saved timestamp persists to database and displays in menu
-- **Custom modal dialogs**: No more browser popups
-  - Three-step delete confirmation process
-  - Live validation (type "DELETE" to confirm)
-  - Keyboard shortcuts (Enter to confirm, Escape to cancel)
-  - Centered dropdown menu with improved text alignment
-- **Export/Import config**: Download and upload JSON configuration files
-  - Exports all aircraft with metadata
-  - Exports budget state (certification, hours, settings)
-  - Import with option to save to database or load temporarily
-- **Form accessibility improvements**: Full WCAG compliance
-  - All 14 settings inputs have proper `<label>` elements with `for` attributes
-  - All inputs have `name` attributes for better form handling
-  - No more console warnings about missing labels or form field attributes
-- **UI improvements**: Refined hamburger menu dropdown
-  - All menu text centered for better visual balance
-  - Consistent alignment for "Auto-Save: ON" and "Last saved:" timestamp
-  - Clean, modern appearance with proper spacing
-- **Session tracking**: UUID-based sessions with last-saved timestamps
-- **Data persistence**: All aircraft and training data now survives localStorage.clear()
-- **Onboarding improvements**: Auto-skips onboarding when data exists in database
-
-### Phase 1: Backend Foundation Complete (2025-12-02)
-- **PostgreSQL integration**: Full async PostgreSQL support with connection pooling
-- **User aircraft CRUD API**: Complete REST API for managing personal aircraft
-  - `GET /api/user/aircraft` - List all user aircraft with optional filtering
-  - `GET /api/user/aircraft/{id}` - Get single aircraft details
-  - `POST /api/user/aircraft` - Add new aircraft
-  - `PUT /api/user/aircraft/{id}` - Update aircraft details
-  - `DELETE /api/user/aircraft/{id}` - Remove aircraft
-- **Expense tracking API**: Full expense management with filtering and aggregation
-  - `GET /api/expenses` - List expenses with filtering (by aircraft, category, date range)
-  - `GET /api/expenses/{id}` - Get single expense
-  - `GET /api/expenses/summary` - Aggregated summary by category with statistics
-  - `POST /api/expenses` - Add new expense
-  - `PUT /api/expenses/{id}` - Update expense
-  - `DELETE /api/expenses/{id}` - Delete expense
-- **ForeFlight CSV import**: Full logbook import from ForeFlight exports (already working)
-  - Multi-section CSV format support
-  - Aircraft and flight data import
-  - Simulator vs aircraft distinction
-  - Automatic FAA data lookup for N-numbers
-  - Deduplication on re-import
-- **GHCR migration complete**: All workflows now push to GitHub Container Registry
-  - `ghcr.io/fliteaxis/truehour-api:latest` - Stable API releases
-  - `ghcr.io/fliteaxis/truehour-api:develop` - Development builds
-  - `ghcr.io/fliteaxis/truehour-api:nightly` - Nightly FAA data updates
-  - `ghcr.io/fliteaxis/truehour-frontend:latest` - Stable frontend
-  - `ghcr.io/fliteaxis/truehour-frontend:develop` - Development frontend
-- **Multi-platform images**: All images built for linux/amd64 and linux/arm64
-- **Database schema**: Complete PostgreSQL schema with aircraft, expenses, flights, budgets, and reminders tables
-- **Automated testing**: Comprehensive endpoint testing with 21 test cases covering CRUD, filtering, and error handling
-
-### Automated Release System (2025-11-28)
-- **Automatic releases on main branch merges**: Creates GitHub releases when PRs from develop are merged
-- **Semantic versioning**: Automatic version bumping based on commit message conventions
-  - `breaking:` or `major:` → Major version bump (x.0.0)
-  - `feat:` or `feature:` → Minor version bump (0.x.0)
-  - All other commits → Patch version bump (0.0.x)
-- **Release notes generation**: Automatically extracts content from this changelog
-- **Docker image tagging**: Images tagged with both `latest` and version number
-- **Comprehensive release documentation**: Created [Release Process](Release-Process) guide
-
-### FAA Lookup Bug Fixes & UX Improvements (2025-11-28)
-- **Fixed API endpoint mismatch**: Updated health check to use `/tail-lookup-api/api/v1/health`
-- **Fixed data source persistence**: Aircraft imported with FAA lookup now correctly save `source: 'faa'` property
-- **Added data source badges**:
-  - "✓ FAA Verified" badge (green) for FAA-sourced aircraft data
-  - "ForeFlight" badge (blue) for ForeFlight CSV data
-  - Badges display consistently in both CSV import modal and Manage Aircraft screen
-- **Browser cache issue resolved**: Updated JavaScript correctly served after container rebuild
-- **Example deployment configurations**:
-  - `infrastructure/examples/docker-compose.basic.yml` - Simple deployment without FAA lookup
-  - `infrastructure/examples/docker-compose.with-faa-lookup.yml` - Full deployment with tail-lookup
-  - `infrastructure/examples/README.md` - Comprehensive deployment documentation
-
-### tail-lookup Integration (2025-11-28)
-- **Integrated tail-lookup service** for FAA aircraft data verification
-- **Lightweight Python + SQLite architecture** (256MB memory)
-- Profile-based conditional deployment (`profiles: [faa-lookup]`)
-- Internal networking only (`expose: ["8080"]`)
-- Environment variables:
-  - `ENABLE_FAA_LOOKUP` - Toggle FAA lookup feature
-  - `TAIL_LOOKUP_API_URL=http://tail-lookup:8080`
-- Automatic daily FAA data updates via tail-lookup nightly builds
-- Simpler service architecture with single lightweight container
-- Verified working with local testing (N172SP, N55350)
-
-### Build Performance Optimization (2025-11-28)
-- **Parallelized multi-architecture builds** using GitHub Actions matrix strategy
-- Split workflows into prepare, build (parallel), and merge jobs
-- Build each platform separately using push-by-digest strategy
-- Merge platform images into single multi-platform manifest
-- Per-platform cache scoping for better efficiency
-- Applied to: `docker-build.yml`, `docker-build-develop.yml`, `cron.yml`
-- **Expected build time**: ~15 minutes (down from 45+ minutes, 3x speedup)
-
-### Platform Support Changes (2025-11-28)
-- **Dropped ARM v7 support** from all workflows (too slow, rarely used)
-- Kept `linux/amd64` and `linux/arm64` (most common platforms)
-- Updated all documentation to remove arm/v7 references
-
-## Features
-
-### Aircraft Import UI Redesign
-- Replaced single "Aircraft Name" field with separate fields for Tail Number, Year, Make, and Model
-- Fields display in 2x2 grid with larger text boxes for easier editing
-- All fields pre-fill from logbook CSV data
-- Added purple gradient button styling matching app theme
-- Dropdown format changed to `[TailNumber] Type` (e.g., `[N52440] Cessna P172 Skyhawk Powermatic`)
-
-### Simulator Support
-- Fixed AATD simulator not appearing in import list
-- Simulator time properly tracked from `SimulatedFlight` column
-- Simulator fields auto-populate: "N/A" for Year/Make, type for Model (e.g., "AATD Simulator")
-
-### Set as Default Feature
-- Added "★ Set as Default" button to aircraft management form
-- Button appears when viewing a non-default aircraft
-- Matches existing button styling (btn-secondary)
-- Automatically hides when aircraft is already default
-- Updates dropdown to show ★ indicator after setting default
-- Added "★ Set as default aircraft" checkbox to CSV import modal
-- First aircraft in import list is checked by default
-- Only one aircraft can be marked as default at a time
-- Default aircraft is set automatically during import
-
-### FAA Aircraft Lookup (Self-Hosted via tail-lookup)
-- Automatic aircraft details lookup from FAA Registry for US aircraft (N-numbers)
-- **Fully self-contained** - runs entirely in your infrastructure with no external API dependencies
-- **Conditional deployment** - Enable/disable via environment flag (`ENABLE_FAA_LOOKUP`)
-- Self-hosted tail-lookup service runs as Docker sidecar container using Compose profiles
-- **No CORS issues** - dynamically proxied through nginx at `/tail-lookup-api/`
-- Profile-based conditional deployment
-- Opt-in feature (disabled by default) with checkbox toggle in UI
-- Only attempts lookup for tail numbers starting with 'N'
-- Shows data source badges: "✓ FAA Verified" (green), "ForeFlight" (blue)
-- 24-hour cache duration to improve performance and reduce API calls
-- Graceful fallback to ForeFlight CSV data if lookup fails or is disabled
-- JSON API integration - no HTML scraping required
-- Three deployment modes: Basic (no lookup), with tail-lookup service
-- Dynamic nginx configuration based on deployment mode
-- Automated deployment script with automatic profile selection
-- Full Portainer support with native profile integration
-- Automated daily database updates via tail-lookup nightly builds
-- Environment configuration template with feature flags
-- Debug function available in console: `AircraftLookup.testLookup('N12345')`
-
-## Bug Fixes
-
-- **CSV Format**: Dynamic header row detection for ForeFlight format changes
-- **Data Loss**: Fixed aircraft import modal clearing data before use
-- **Year Field**: Fixed Year field data flow from CSV to UI
-- **equipType Field**: Fixed simulator detection by checking both `equipType (FAA)` and `equipType` fields
-- **Default Values**: Pre-filled rate fields with defaults ($150 wet, $120 dry, $6/gal, 8 gal/hr)
-- **Duplicate IDs**: Added random component to ID generation
-- **Name Formatting**: Removed "Aircraft" suffix and replaced "AICSA" with "Piper"
-- **Certification Reset**: Fixed certification dropdown not resetting aircraft hours to 0 when "None" is selected
-- **FAA Lookup UX**: Replaced system alerts with inline status messages that auto-hide after 4 seconds
-- **FAA Lookup Availability**: Checkbox automatically detects if tail-lookup API is available; disables and greys out with
-  informational message when FAA lookup is not enabled in deployment
-
-## Documentation
-
-### Docs Folder Migration
-- Migrated all documentation from `docs/` to `wiki/` for GitHub Wiki integration
-- Updated `README.md` to reference wiki instead of docs
-- Updated `.dockerignore` to exclude wiki folders
-- Deleted `docs/` folder
-
-## Related Documentation
-
-- [Release Process](Release-Process) - How releases are created
-- [Branch Strategy](Branch-Strategy) - Git workflow
-- [GitHub Actions](GitHub-Actions) - CI/CD pipeline
-- [Deployment Guide](Deployment) - Production deployment
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-**Note**: This changelog is used to generate release notes when PRs are merged from develop to main. Keep it up to date with all changes!
+## [2.0.0] - 2026-01-03
+
+### 🎉 Complete Rewrite - Modern React Frontend
+
+TrueHour v2.0 is a ground-up rewrite with a modern React frontend, PostgreSQL database, and FastAPI backend.
+
+### ✨ Added
+
+#### Frontend & UI
+- **Modern React 18 Frontend** with TypeScript for type safety
+- **Vite** build system for fast development and optimized production builds
+- **Tailwind CSS** for responsive, modern styling
+- **Zustand** state management for efficient data flow
+- **Recharts** for interactive data visualizations
+- Dark-themed aviation-focused UI with custom color palette
+- Responsive mobile-first design
+- Hamburger navigation menu with all major sections
+
+#### Flight Logging
+- **ForeFlight CSV Import** with automatic aircraft detection
+- Manual flight entry with comprehensive field support
+- Import history tracking with hours breakdown
+- Duplicate flight detection during import
+- Flight filtering by date range, aircraft, and search terms
+- Flight sorting and pagination
+- Complete hour tracking:
+  - Total, PIC, SIC, Solo time
+  - Night, Cross-Country time
+  - Actual/Simulated Instrument time
+  - Dual Given/Received time
+  - Complex, High Performance time
+- Takeoff and landing counters (day/night)
+- Approach and hold tracking
+- Distance tracking for cross-country requirements
+- Route and comments fields
+
+#### Aircraft Management
+- **FAA Aircraft Database Integration** (308K+ aircraft)
+- Real-time N-number lookup from FAA registry
+- Auto-population of make, model, year, category/class
+- Gear type and engine type inference
+- Aircraft rate management:
+  - Wet rate (with fuel)
+  - Dry rate (without fuel)
+  - Fuel price per gallon
+  - Fuel burn rate (gal/hr)
+- Aircraft characteristics tracking:
+  - Complex (retractable gear, constant-speed prop)
+  - High Performance (>200hp)
+  - TAA (Technically Advanced Aircraft)
+  - Simulator/FTD designation
+- Active/inactive status for aircraft fleet management
+- Aircraft sorting by tail number, status, and type
+- FAA data source attribution
+
+#### Budget Cards v2.0
+- **Smart Budget Card System** with aircraft linkage
+- Budget card categories:
+  - Flight Hours
+  - Instruction
+  - Training
+  - Fees & Testing
+  - Equipment
+  - Medical
+  - Insurance
+  - Other (custom)
+- **Quick Start Templates** for common budget items:
+  - PPL training hours and instruction
+  - IR training hours and instruction
+  - CPL training requirements
+  - Written exams and checkride fees
+  - Equipment (headset, iPad, ForeFlight)
+  - Medical certificates
+  - Ground school
+- **Aircraft-Linked Budget Cards**:
+  - Auto-calculate cost from hours × aircraft rate
+  - Support for wet rate, dry rate, or fuel cost
+  - Recalculate when aircraft rates change
+- Manual amount budget cards
+- Budget card status (Active, Completed, Archived)
+- "When" date for budget planning (monthly, quarterly, yearly)
+- Real-time budget vs actual tracking
+- Budget summary by category with totals
+- Notes field for additional details
+
+#### Expense Tracking
+- Comprehensive expense management system
+- Expense categories matching budget categories
+- Payment method tracking (Cash, Credit, Debit, Check, Transfer, etc.)
+- Vendor tracking
+- **Budget Card Linking**:
+  - Link expenses to one or multiple budget cards
+  - Many-to-many expense-budget relationships
+  - Real-time "actual spent" calculations
+- Expense filtering by date range and category
+- Category-based expense summaries
+- Notes field for receipts and details
+
+#### Certification Progress Tracking
+- **Three Certification Types**: PPL, IR, CPL
+- Automatic hour calculations from flight logs
+- **Private Pilot (PPL) Requirements** (9 tracked):
+  - Total Time (40hrs)
+  - Dual Received (20hrs)
+  - Solo Time (10hrs)
+  - Solo Cross-Country (5hrs)
+  - Solo Long XC (150nm, 3 stops)
+  - Night Dual (3hrs)
+  - Night Solo (10 T/Os & Landings)
+  - Instrument Training (3hrs)
+  - Checkride Prep (3hrs recent)
+- **Instrument Rating (IR) Requirements** (6 tracked):
+  - Total Time (50hrs)
+  - Cross-Country PIC (50hrs)
+  - Instrument Time (40hrs)
+  - Instrument with Instructor (15hrs)
+  - 250nm Instrument XC with 3 approaches
+  - Approaches (50 total)
+- **Commercial Pilot (CPL) Requirements** (11 tracked):
+  - Total Time (250hrs)
+  - PIC (100hrs)
+  - Cross-Country PIC (50hrs)
+  - Night (5hrs)
+  - Night Towered Operations (10 T/Os & Landings)
+  - Solo/PIC (10hrs)
+  - Instrument Time (10hrs)
+  - Training in Complex/TAA (10hrs)
+  - Solo 2hr Day XC (100nm)
+  - Solo 2hr Night XC (100nm)
+  - Solo Long XC (300nm+, 3 stops, 1 leg 250nm+)
+- **Qualifying Flight Detection**:
+  - Automatic detection of flights satisfying specific requirements
+  - Distance-based XC detection
+  - Solo long cross-country identification
+  - Night operations tracking
+  - Approach counting
+- Progress bars and completion percentages
+- Detailed hour breakdowns by requirement
+- Visual progress indicators
+
+#### Dashboard
+- Summary cards:
+  - Total flight hours
+  - Budget overview (planned vs actual)
+  - Active budget card count
+  - Certification progress widget
+- **Budget Donut Chart** showing spending by category
+- Quick access to all major features
+- Real-time data updates
+
+#### Reports & Exports
+- **CSV Exports**:
+  - Flight log export with all fields and totals
+  - Budget cards export with aircraft linkage
+  - Expenses export with categories and vendors
+  - Aircraft export with specifications and rates
+  - Date-based filtering for flights and expenses
+- **PDF Reports**:
+  - Budget Summary Report (with donut chart)
+  - Certification Progress Report (PPL/IR/CPL with selector)
+  - Flight Log Report (formatted table with totals)
+  - Annual Budget Report (year-end summary)
+- Report year selection (current year + 5 years back)
+- Auto-generated filenames with export date
+- Professional formatting with TrueHour branding
+
+#### Settings & Configuration
+- **Target Certification Selection** (PPL, IR, CPL, CFI)
+- **Training Settings**:
+  - Instructor hourly rate
+  - Simulator hourly rate
+  - Training pace (lessons per week)
+  - Weekly buffer percentage
+- **Custom Budget Categories**:
+  - Add/remove budget categories
+  - Categories used across budget cards and expenses
+- Persistent settings storage
+- User data management
+
+### 🏗️ Technical Architecture
+
+#### Backend
+- **FastAPI** Python web framework
+- **PostgreSQL 16** primary database
+- **SQLite** FAA aircraft database
+- **asyncpg** for async PostgreSQL operations
+- **Pydantic** for data validation
+- RESTful API design
+- CORS configuration for frontend
+- Automatic database migrations
+- Health check endpoints
+- Comprehensive error handling
+
+#### Database Schema
+- `flights` table with 30+ columns
+- `aircraft` table with FAA data support
+- `budget_cards` table with aircraft linkage
+- `expenses` table with category tracking
+- `expense_budget_links` many-to-many relationship
+- `import_history` for ForeFlight imports
+- `user_data` JSON field for settings
+- Foreign key relationships
+- Indexes on frequently queried fields
+- Unique constraints where appropriate
+
+#### Deployment
+- **Docker Compose** multi-container setup
+- Three services: frontend, backend, database
+- Volume persistence for data
+- Health checks and auto-restart
+- Environment variable configuration
+- Multi-stage Docker builds for optimization
+- Production-ready containerization
+
+### 🔧 Changed
+
+- Complete UI redesign from HTML/CSS to React + Tailwind
+- Database migration from SQLite to PostgreSQL
+- Backend rewrite from Python scripts to FastAPI
+- Build system changed from simple HTML to Vite
+- State management moved to Zustand
+- Navigation changed to hamburger menu
+- Dark theme as primary design
+
+### 🗑️ Removed
+
+- Old HTML/CSS frontend
+- Phase 1/2 legacy code
+- SQLite as primary database (kept for FAA data only)
+- Inline JavaScript scripts
+- Manual HTML report generation
+
+### 🐛 Fixed
+
+- CSV import duplicate detection
+- Aircraft matching during ForeFlight import
+- Hour calculation accuracy for certifications
+- Cross-country distance requirements
+- Qualifying flight detection logic
+- Budget vs actual calculation errors
+- PDF export font readability (dark text on light background)
+- TypeScript compilation errors
+- React state management issues
+- CORS configuration for development
+
+### 📚 Documentation
+
+- Complete README rewrite for v2.0
+- Installation guide (Docker and development)
+- Comprehensive user guide
+- API documentation via FastAPI Swagger UI
+- Database schema documentation
+- Troubleshooting guide
+- Contributing guidelines
+- Changelog (this file)
+
+### 🚀 Performance
+
+- Fast React rendering with Zustand
+- Vite HMR for instant development updates
+- Async database operations
+- Efficient PostgreSQL queries with indexes
+- Lazy loading of components
+- Optimized Docker images
+- Production build optimizations
+
+### 🔒 Security
+
+- SQL injection prevention via parameterized queries
+- XSS protection via React's built-in escaping
+- CORS configuration
+- Environment variable secrets
+- No hardcoded credentials
+- Validated user inputs
+
+---
+
+## [1.x] - Legacy Version
+
+TrueHour v1.x was the original HTML/CSS/JavaScript implementation with SQLite database. It provided basic flight logging, aircraft management,
+and budget tracking functionality.
+
+### Features (v1.x)
+- Flight log with manual entry
+- Basic aircraft management
+- Simple budget tracking
+- HTML-based reports
+- SQLite database
+- Local-only operation
+
+**Note**: v1.x is deprecated. Users should migrate to v2.0.
+
+---
+
+## Roadmap
+
+### [2.1.0] - Planned (Q1-Q2 2026)
+
+#### Reports & Analysis
+- Expense report PDFs by category
+- Budget templates library
+- Multi-year budget planning
+- Flight history charts (burndown, monthly trends)
+- Budget vs actual visualizations
+- Cost per hour analysis
+- Training pace actual vs planned
+
+#### User Experience
+- Automatic training pace calculation from flight history
+- Checkride prep recent hours calculator (date-based)
+- Mobile responsive improvements
+- Onboarding wizard for new users
+- Tooltips and contextual help
+- Keyboard shortcuts
+
+#### Export Improvements
+- General CSV import (not just ForeFlight)
+- Custom PDF templates
+- Export to Excel with formulas
+- iCloud/Google Drive backup
+
+### [2.2.0] - Future (Q3-Q4 2026)
+
+#### Advanced Features
+- Currency tracking (instrument, night, passenger-carrying)
+- Reminders system:
+  - Medical certificate expiration
+  - Flight review due date
+  - Endorsement expirations
+  - Currency warnings
+- Calendar integration (Google Calendar, iCal)
+- Multi-user support with authentication
+- Cloud sync across devices
+- Tax reporting features
+
+#### Notifications
+- Slack/Discord webhooks
+- Email notifications
+- Push notifications (if mobile app)
+
+#### Mobile App
+- React Native mobile app
+- iOS and Android support
+- Offline-first design
+- Mobile-optimized UI
+
+### [3.0.0] - Vision (2027+)
+
+- AI-powered budget recommendations
+- Flight planning integration
+- Weather integration
+- Airport information database
+- Fuel price tracking
+- Maintenance tracking and reminders
+- Insurance policy tracking
+- Partnership with flight schools
+- Instructor portal
+- Student progress tracking (CFI features)
+- Multi-currency support
+- International certification tracking (EASA, Transport Canada, etc.)
+
+---
+
+## Upgrade Guide
+
+### Upgrading from v1.x to v2.0
+
+**⚠️ Breaking Changes**: v2.0 is a complete rewrite and cannot directly upgrade from v1.x.
+
+**Migration Path**:
+
+1. **Export data from v1.x**:
+   - Export your logbook to CSV if possible
+   - Note your aircraft list
+   - Save budget information
+
+2. **Install v2.0** (see [INSTALLATION.md](INSTALLATION.md))
+
+3. **Import data into v2.0**:
+   - Use ForeFlight CSV import if you have it
+   - Or manually re-enter aircraft and flights
+   - Recreate budget cards using Quick Start templates
+   - Re-enter expenses
+
+**Data Migration Tools**:
+- v1.x SQLite to v2.0 PostgreSQL converter (planned for v2.0.1)
+
+### Upgrading v2.0.x
+
+```bash
+# With Docker
+cd infrastructure
+docker-compose down
+git pull origin main
+docker-compose up -d --build
+
+# Development mode
+git pull origin main
+cd backend && pip install -r requirements.txt --upgrade
+cd frontend-react && npm install
+```
+
+Database migrations run automatically on startup.
+
+---
+
+## Contributors
+
+- **Ryan Kelch** - Original Author & Lead Developer
+
+## License
+
+TrueHour is released under the [MIT License](../LICENSE).
+
+---
+
+**Questions or issues?** Open an issue on [GitHub](https://github.com/FliteAxis/TrueHour/issues)
+
+**Happy Flying!** 🛩️

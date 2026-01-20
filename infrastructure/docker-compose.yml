@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   frontend:
+    container_name: truehour-frontend
     build:
       context: ..
-      dockerfile: infrastructure/Dockerfile.frontend
+      dockerfile: infrastructure/Dockerfile.frontend-react
     ports:
       - "${APP_PORT:-8181}:80"
     depends_on:
@@ -16,6 +15,7 @@ services:
       - .env
 
   api:
+    container_name: truehour-api
     build:
       context: ../backend
       dockerfile: Dockerfile
@@ -37,14 +37,15 @@ services:
       - .env
 
   db:
-    image: postgres:16-alpine
+    container_name: truehour-db
+    image: postgres:18-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
-      - POSTGRES_USER=truehour
-      - POSTGRES_PASSWORD=truehour
-      - POSTGRES_DB=truehour
+      - POSTGRES_USER=${POSTGRES_USER:-truehour}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-truehour}
+      - POSTGRES_DB=${POSTGRES_DB:-truehour}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U truehour"]
       interval: 5s
@@ -53,9 +54,8 @@ services:
     restart: unless-stopped
     networks:
       - truehour-network
-      # Uncomment to access directly for debugging:
-      # ports:
-      #   - "5432:5432"
+    ports:
+      - "5432:5432"
 
 volumes:
   postgres_data:

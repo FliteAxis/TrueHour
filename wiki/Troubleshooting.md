@@ -1,543 +1,583 @@
-# Troubleshooting
+# Troubleshooting Guide
 
-Common issues, solutions, and debugging strategies for tail-lookup.
+Common issues and solutions for TrueHour development.
 
-## Common Issues
+## Installation Issues
 
-### API Issues
+### Understanding Installation Locations
 
-#### Aircraft Not Found (404)
+**IMPORTANT**: The setup script installs tools in different locations:
 
-**Symptom**: `GET /api/v1/aircraft/N12345` returns 404
+| Tool Type | Location | Scope |
+|-----------|----------|-------|
+| **Python packages** | `venv/` | Isolated, venv-only |
+| **System tools** | Homebrew (`/opt/homebrew/bin/` or `/usr/local/bin/`) | Global |
+| **Node.js packages** | npm global (`~/.npm-global/bin/` or `/usr/local/bin/`) | Global |
 
-**Possible Causes**:
-1. Tail number not in FAA database (deregistered, never registered)
-2. Tail number format incorrect
-3. Database is stale or incomplete
+**Key Point**: All Python packages (black, flake8, pylint, etc.) are installed **ONLY** in the virtual environment. No changes are made to your system Python.
 
-**Solutions**:
+**To verify isolation**:
 ```bash
-# Verify tail number exists in FAA registry
-https://registry.faa.gov/aircraftinquiry/Search/NNumberInquiry
+# Outside venv - should fail
+deactivate
+black --version
+# Error: command not found
 
-# Check database has records
-curl http://localhost:8080/api/v1/health
-
-# Try different formats
-curl http://localhost:8080/api/v1/aircraft/N12345
-curl http://localhost:8080/api/v1/aircraft/12345
-
-# Check database directly
-sqlite3 data/aircraft.db "SELECT * FROM master WHERE n_number LIKE '12345%'"
-```
-
-#### Bulk Lookup Returns Errors
-
-**Symptom**: Some results have `"error": "Not found"`
-
-**This is expected behavior** - bulk endpoint doesn't fail if some tail numbers are invalid. Check individual results.
-
-#### 422 Validation Error
-
-**Symptom**: `422 Unprocessable Entity` response
-
-**Causes**:
-- Too many tail numbers in bulk request (>50)
-- Invalid JSON format
-- Wrong Content-Type header
-
-**Solutions**:
-```bash
-# Check request format
-curl -X POST http://localhost:8080/api/v1/aircraft/bulk \
-  -H "Content-Type: application/json" \
-  -d '{"tail_numbers": ["N172SP"]}'
-
-# Ensure max 50 tail numbers
-tail_numbers=($(head -50 file.txt))
-
-# Verify JSON is valid
-echo '{"tail_numbers": ["N172SP"]}' | jq
+# Inside venv - should work
+source venv/bin/activate
+black --version
+# black, 24.x.x
 ```
 
 ---
 
-### Database Issues
+### asyncpg Installation Failure
 
-#### Database File Not Found
-
-**Symptom**: API fails to start with "database file not found"
-
-**Solutions**:
-```bash
-# Local development - build database
-python scripts/update_faa_data.py data/aircraft.db
-
-# Docker - use official image (has database baked in)
-docker pull ryakel/tail-lookup:latest
-
-# Or download from releases
-curl -L -o data/aircraft.db \
-  https://github.com/ryakel/tail-lookup/releases/latest/download/aircraft.db
+**Symptom**:
+```
+ERROR: Failed building wheel for asyncpg
+× Failed to build installable wheels for some pyproject.toml based projects
 ```
 
-#### Zero Records in Database
-
-**Symptom**: Health check shows `record_count: 0`
-
-**Causes**:
-- Database build failed
-- FAA data format changed
-- Parsing logic broken
+**Cause**: `asyncpg` is a Python PostgreSQL driver that requires C extensions to be compiled. It needs a C compiler and Python development headers.
 
 **Solutions**:
+
+#### macOS
+
+1. **Install Xcode Command Line Tools** (required):
+   ```bash
+   xcode-select --install
+   ```
+
+   Follow the GUI prompts to complete installation.
+
+2. **Verify installation**:
+   ```bash
+   xcode-select -p
+   # Should output: /Library/Developer/CommandLineTools
+   ```
+
+3. **If you installed Python from python.org**, consider switching to Homebrew Python:
+   ```bash
+   brew install python@3.12
+   ```
+
+   Then recreate your venv:
+   ```bash
+   rm -rf venv
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r backend/requirements.txt
+   ```
+
+4. **Alternative: Use pre-compiled wheels**:
+   ```bash
+   # Upgrade pip first
+   pip install --upgrade pip setuptools wheel
+
+   # Try installing again
+   pip install asyncpg
+   ```
+
+#### Linux (Ubuntu/Debian)
+
+1. **Install build dependencies**:
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y \
+     python3-dev \
+     build-essential \
+     libpq-dev \
+     gcc
+   ```
+
+2. **Install asyncpg**:
+   ```bash
+   source venv/bin/activate
+   pip install asyncpg
+   ```
+
+#### Linux (RHEL/CentOS/Fedora)
+
+1. **Install build dependencies**:
+   ```bash
+   sudo dnf install -y \
+     python3-devel \
+     gcc \
+     postgresql-devel
+   ```
+
+2. **Install asyncpg**:
+   ```bash
+   source venv/bin/activate
+   pip install asyncpg
+   ```
+
+---
+
+## Virtual Environment Issues
+
+### "Command not found" after venv activation
+
+**Symptom**:
 ```bash
-# Check database file exists and has size
-ls -lh data/aircraft.db
-
-# Inspect database
-sqlite3 data/aircraft.db "SELECT COUNT(*) FROM master"
-sqlite3 data/aircraft.db "SELECT * FROM master LIMIT 5"
-
-# Rebuild database
-rm data/aircraft.db
-python scripts/update_faa_data.py data/aircraft.db
-
-# Check build script output for errors
-python scripts/update_faa_data.py data/aircraft.db 2>&1 | tee build.log
+source venv/bin/activate
+black --version
+# bash: black: command not found
 ```
 
-#### Stale Database
+**Cause**: Tools installed in venv, but venv not properly activated or PATH issue.
 
-**Symptom**: `last_updated` is more than 24 hours old
-
-**Solutions**:
+**Solution**:
 ```bash
-# Docker - pull latest image
-docker pull ryakel/tail-lookup:latest
-docker stop tail-lookup && docker rm tail-lookup
-docker run -d --name tail-lookup -p 8080:8080 ryakel/tail-lookup:latest
+# Deactivate and reactivate
+deactivate
+source venv/bin/activate
 
-# Local - rebuild database
-python scripts/update_faa_data.py data/aircraft.db
+# Verify venv is active
+which python
+# Should show: /path/to/truehour/venv/bin/python
 
-# Check GitHub Actions for nightly build failures
-https://github.com/ryakel/tail-lookup/actions/workflows/nightly-build.yml
+# Reinstall tools if needed
+pip install black isort flake8
 ```
 
 ---
 
-### Docker Issues
+### Multiple Python versions causing issues
 
-#### Container Won't Start
+**Symptom**: Tools installed but using wrong Python version
 
-**Symptom**: `docker run` exits immediately
-
-**Diagnosis**:
+**Solution**:
 ```bash
-# Check logs
-docker logs tail-lookup
+# Always use python3 explicitly
+python3 -m venv venv
 
-# Run interactively to see errors
-docker run --rm -it -p 8080:8080 ryakel/tail-lookup:latest
-```
+# Activate
+source venv/bin/activate
 
-**Common Causes**:
-1. Port 8080 already in use
-2. Database file missing in custom build
-3. Python errors in application code
+# Verify version inside venv
+python --version  # Should be 3.12+
 
-**Solutions**:
-```bash
-# Use different port
-docker run -d --name tail-lookup -p 8081:8080 ryakel/tail-lookup:latest
-
-# Verify database in image
-docker run --rm ryakel/tail-lookup:latest ls -lh /app/data/aircraft.db
-
-# Check image is official
-docker pull ryakel/tail-lookup:latest
-```
-
-#### Health Check Failing
-
-**Symptom**: `docker ps` shows "(unhealthy)"
-
-**Diagnosis**:
-```bash
-# Check container health
-docker inspect --format='{{json .State.Health}}' tail-lookup | jq
-
-# Manual health check
-docker exec tail-lookup curl -f http://localhost:8080/api/v1/health
-```
-
-**Solutions**:
-- Wait for startup period (5 seconds)
-- Check application logs: `docker logs tail-lookup`
-- Verify database exists: `docker exec tail-lookup ls /app/data/`
-- Restart container: `docker restart tail-lookup`
-
-#### Can't Access API from Host
-
-**Symptom**: `curl http://localhost:8080` fails with "Connection refused"
-
-**Causes**:
-1. Port not mapped correctly
-2. Container not running
-3. Firewall blocking connection
-
-**Solutions**:
-```bash
-# Check container is running
-docker ps
-
-# Verify port mapping
-docker port tail-lookup
-# Should show: 8080/tcp -> 0.0.0.0:8080
-
-# Check if process is listening
-docker exec tail-lookup netstat -tuln | grep 8080
-
-# Try from inside container
-docker exec tail-lookup curl http://localhost:8080/api/v1/health
+# Use pip from venv
+python -m pip install --upgrade pip
+python -m pip install -r backend/requirements.txt
 ```
 
 ---
 
-### CI/CD Issues
+## Pre-commit Hook Issues
 
-#### Nightly Build Not Running
+### Pre-commit hooks not running
 
-**Symptom**: No builds in last 24 hours
+**Symptom**: Commit succeeds without running checks
 
-**Causes**:
-1. Repository inactive >60 days (GitHub disables)
-2. Workflow file syntax error
-3. GitHub Actions service issue
+**Cause**: Hooks not installed
 
-**Solutions**:
+**Solution**:
 ```bash
-# Trigger manual run
-gh workflow run nightly-build.yml
+# Install pre-commit framework
+pip install pre-commit
 
-# Or via GitHub UI:
-# Actions → Nightly Build → Run workflow
+# Install hooks
+pre-commit install
 
-# Check workflow file syntax
-cat .github/workflows/nightly-build.yml | yq
-
-# Check GitHub status
-https://www.githubstatus.com/
-```
-
-#### Docker Push Fails
-
-**Symptom**: Workflow fails at "Build and push" step
-
-**Error messages**:
-- "unauthorized: authentication required"
-- "denied: requested access to the resource is denied"
-
-**Solutions**:
-```bash
-# Verify secrets are set
-# GitHub: Settings → Secrets and variables → Actions
-# Required: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
-
-# Regenerate Docker Hub token
-# https://hub.docker.com/settings/security
-# Create new token with Read & Write permissions
-
-# Update repository secret with new token
-```
-
-#### Release Not Created
-
-**Symptom**: No GitHub Release after nightly build
-
-**Causes**:
-- `contents: write` permission missing
-- Release step failed
-- Tag already exists
-
-**Solutions**:
-```bash
-# Check workflow permissions
-cat .github/workflows/nightly-build.yml | grep -A 5 permissions
-
-# View workflow logs for release step
-# Actions → Latest run → Update GitHub Release
-
-# Delete existing tag if conflict
-git push origin :refs/tags/data-2025-11-28
+# Test
+pre-commit run --all-files
 ```
 
 ---
 
-### Development Issues
+### Pre-commit fails with "command not found"
 
-#### Import Errors
-
-**Symptom**: `ModuleNotFoundError` when running locally
-
-**Solutions**:
-```bash
-# Activate virtual environment
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Verify installation
-pip list | grep fastapi
+**Symptom**:
+```
+[INFO] Installing environment for https://github.com/psf/black.
+[ERROR] An unexpected error has occurred: CalledProcessError: command: ('/usr/bin/python3', '-mvirtualenv', ...)
 ```
 
-#### Server Won't Start
+**Cause**: Pre-commit trying to use system Python instead of venv
 
-**Symptom**: `uvicorn app.main:app` fails
-
-**Common Errors**:
-1. "No module named 'app'"
-2. "Database file not found"
-3. "Address already in use"
-
-**Solutions**:
+**Solution**:
 ```bash
-# Error 1: Run from project root
-cd /path/to/tail-lookup
+# Ensure venv is activated
+source venv/bin/activate
+
+# Reinstall pre-commit in venv
+pip install --force-reinstall pre-commit
+
+# Reinstall hooks
+pre-commit clean
+pre-commit install
+```
+
+---
+
+### Can't skip pre-commit hooks
+
+**Symptom**: Need to commit without running hooks
+
+**Solution**:
+```bash
+# Skip all hooks for one commit
+git commit --no-verify -m "message"
+
+# Or use environment variable
+SKIP=black,isort git commit -m "message"
+```
+
+---
+
+## Linting Issues
+
+### Black and Flake8 conflicts
+
+**Symptom**: Black formats code that Flake8 rejects
+
+**Cause**: Configuration mismatch
+
+**Solution**: Already configured correctly in `.flake8`:
+```ini
+[flake8]
+max-line-length = 120
+extend-ignore = E203, W503
+```
+
+If still having issues:
+```bash
+# Format with Black first
+black backend/
+
+# Then check with Flake8
+flake8 backend/
+```
+
+---
+
+### isort changing imports that Black reformats
+
+**Symptom**: Infinite loop of formatting changes
+
+**Cause**: isort and Black have different opinions
+
+**Solution**: Already configured with `--profile black` in `.pre-commit-config.yaml`.
+
+If still having issues:
+```bash
+# Run in correct order
+isort backend/
+black backend/
+```
+
+---
+
+### Pylint score too low
+
+**Symptom**: `pylint` fails with score < 8.0
+
+**Solution**:
+```bash
+# See detailed report
+pylint backend/app --max-line-length=120
+
+# Disable specific checks if needed (in pyproject.toml)
+# But fix real issues first!
+```
+
+**Common issues**:
+- Missing docstrings: Add docstrings to public functions/classes
+- Too many arguments: Refactor or use dataclasses
+- Too complex: Break down large functions
+
+---
+
+## Security Scanning Issues
+
+### Bandit false positives
+
+**Symptom**: Bandit reports issues that aren't security risks
+
+**Solution**: Use `# nosec` comments with justification:
+```python
+# This is safe because we control the input
+password = input("Enter password: ")  # nosec B105
+```
+
+**Better**: Add to configuration to skip globally:
+```yaml
+# In .pre-commit-config.yaml
+- id: bandit
+  args: ["-ll", "-r", "backend/app", "--skip", "B105,B106"]
+```
+
+---
+
+### Gitleaks false positives
+
+**Symptom**: Gitleaks detects fake secrets in test data
+
+**Solution**: Create `.gitleaksignore`:
+```
+# Test data - not real secrets
+backend/tests/fixtures/fake_keys.py:25
+backend/tests/test_api.py:42:fake_api_key
+```
+
+**Note**: Add comment explaining why it's safe!
+
+---
+
+### Safety/pip-audit finding vulnerabilities
+
+**Symptom**: Security tools report CVEs in dependencies
+
+**Solution**:
+1. **Check if vulnerability applies to your usage**
+2. **Update the affected package**:
+   ```bash
+   pip install --upgrade package-name
+   pip freeze > backend/requirements.txt
+   ```
+3. **If no fix available**, document decision in `SECURITY.md`
+
+---
+
+## Docker Issues
+
+### Hadolint warnings about DL3008/DL3013
+
+**Symptom**:
+```
+DL3008: Pin versions in apt get install
+DL3013: Pin versions in pip
+```
+
+**Solution**: These are intentionally ignored (configured in `.pre-commit-config.yaml`):
+- DL3008: Acceptable for base images
+- DL3013: We use requirements.txt for pinning
+
+---
+
+### Docker Compose validation fails
+
+**Symptom**:
+```
+ERROR: yaml.scanner.ScannerError: mapping values are not allowed here
+```
+
+**Cause**: YAML syntax error in `docker-compose.ghcr.yml`
+
+**Solution**:
+```bash
+# Check YAML syntax
+yamllint infrastructure/docker-compose.ghcr.yml
+
+# Validate structure
+docker-compose -f infrastructure/docker-compose.ghcr.yml config
+```
+
+---
+
+## Tool Installation Issues
+
+### Homebrew package fails to install
+
+**Symptom**: `Error: No available formula for <package>`
+
+**Solution**:
+```bash
+# Update Homebrew
+brew update
+
+# Try installing again
+brew install <package>
+
+# For Syft specifically
+brew tap anchore/syft
+brew install syft
+```
+
+---
+
+### Node.js package permission error
+
+**Symptom**:
+```
+npm ERR! Error: EACCES: permission denied
+```
+
+**Solution**:
+```bash
+# Don't use sudo! Fix npm permissions:
+mkdir ~/.npm-global
+npm config set prefix '~/.npm-global'
+
+# Add to ~/.zshrc or ~/.bashrc:
+export PATH=~/.npm-global/bin:$PATH
+
+# Reload shell
+source ~/.zshrc  # or ~/.bashrc
+
+# Install packages
+npm install -g htmlhint markdownlint-cli2
+```
+
+---
+
+## Runtime Issues
+
+### Import errors when running backend
+
+**Symptom**:
+```python
+ModuleNotFoundError: No module named 'fastapi'
+```
+
+**Cause**: Not running in virtual environment
+
+**Solution**:
+```bash
+# Always activate venv first
+source venv/bin/activate
+
+# Verify
+which python  # Should show venv path
+
+# Run application
 uvicorn app.main:app --reload
-
-# Error 2: Set DB_PATH
-export DB_PATH=data/aircraft.db
-python scripts/update_faa_data.py data/aircraft.db
-
-# Error 3: Use different port
-uvicorn app.main:app --reload --port 8081
-
-# Or kill existing process
-lsof -ti:8080 | xargs kill -9
-```
-
-#### Auto-reload Not Working
-
-**Symptom**: Code changes don't reflect without manual restart
-
-**Solutions**:
-- Ensure using `--reload` flag
-- Check file is being saved
-- Try restarting server manually
-- Verify you're editing correct file (not cached copy)
-
----
-
-### Performance Issues
-
-#### Slow API Responses
-
-**Symptom**: Requests take >1 second
-
-**Normal Performance**:
-- Single lookup: 1-5ms
-- Bulk (50): 5-20ms
-- Health check: <1ms
-
-**Diagnosis**:
-```bash
-# Time a request
-time curl http://localhost:8080/api/v1/aircraft/N172SP
-
-# Check database size
-du -h data/aircraft.db  # Should be ~25MB
-
-# Verify index exists
-sqlite3 data/aircraft.db ".indices master"
-# Should include: idx_mfr_mdl_code
-```
-
-**Solutions**:
-- Rebuild database (index might be missing)
-- Check system resources (CPU, RAM, disk I/O)
-- Verify database file isn't corrupted
-- Restart application
-
-#### High Memory Usage
-
-**Normal**: 100-200MB RAM
-
-**High**: >500MB RAM
-
-**Diagnosis**:
-```bash
-# Docker
-docker stats tail-lookup
-
-# Local process
-ps aux | grep uvicorn
-```
-
-**Solutions**:
-- Restart application
-- Check for memory leaks in custom code
-- Update to latest image/code
-- Increase container memory limit if needed
-
----
-
-### Network Issues
-
-#### CORS Errors in Browser
-
-**Symptom**: "No 'Access-Control-Allow-Origin' header" in browser console
-
-**Current behavior**: CORS is enabled for all origins
-
-**If you added CORS restrictions**:
-```python
-# app/main.py
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://yourdomain.com"],  # Add your domain
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-#### Can't Access from External IP
-
-**Symptom**: API works on localhost but not from other machines
-
-**Solutions**:
-```bash
-# Verify server is listening on 0.0.0.0 (not 127.0.0.1)
-uvicorn app.main:app --host 0.0.0.0 --port 8080
-
-# Check firewall
-# Allow port 8080
-sudo ufw allow 8080/tcp  # Linux
-# Or configure firewall in cloud provider console
-
-# Verify with:
-curl http://<external-ip>:8080/api/v1/health
 ```
 
 ---
 
-## Debugging Strategies
+### Database connection errors
 
-### Enable Debug Logging
-
-```python
-# Add to app/main.py
-import logging
-
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+**Symptom**:
+```
+asyncpg.exceptions.ConnectionDoesNotExistError
 ```
 
-### Inspect Requests/Responses
+**Cause**: PostgreSQL not running or wrong connection string
 
+**Solution**:
 ```bash
-# Verbose curl
-curl -v http://localhost:8080/api/v1/aircraft/N172SP
+# Start database
+docker-compose -f infrastructure/docker-compose.ghcr.yml up -d db
 
-# Use httpx for debugging
-python -c "
-import httpx
-response = httpx.get('http://localhost:8080/api/v1/aircraft/N172SP')
-print(f'Status: {response.status_code}')
-print(f'Headers: {response.headers}')
-print(f'Body: {response.text}')
-"
+# Check connection
+docker-compose -f infrastructure/docker-compose.ghcr.yml ps
+
+# Check logs
+docker-compose -f infrastructure/docker-compose.ghcr.yml logs db
 ```
 
-### Check Database Contents
+---
 
+## Platform-Specific Issues
+
+### macOS: "xcrun: error: invalid active developer path"
+
+**Symptom**: Git or command-line tools fail after macOS update
+
+**Solution**:
 ```bash
-# Open database
-sqlite3 data/aircraft.db
-
-# Useful queries
-SELECT COUNT(*) FROM master;
-SELECT COUNT(*) FROM acftref;
-SELECT * FROM master WHERE n_number = '172SP';
-SELECT * FROM metadata;
-.schema
-.quit
+xcode-select --install
 ```
 
-### Monitor Application
+---
 
+### macOS: Python SSL certificate errors
+
+**Symptom**: `pip` fails with SSL certificate verification errors
+
+**Solution**:
 ```bash
-# Docker logs (live)
-docker logs -f --tail=100 tail-lookup
+# Run the install certificates script
+cd /Applications/Python\ 3.12/
+./Install\ Certificates.command
 
-# Process monitoring
-top -p $(pgrep -f uvicorn)
+# Or use Homebrew Python
+brew install python@3.12
+```
 
-# Network monitoring
-netstat -tuln | grep 8080
+---
+
+### Linux: "pg_config not found"
+
+**Symptom**: asyncpg installation fails with pg_config error
+
+**Solution**:
+```bash
+# Ubuntu/Debian
+sudo apt-get install libpq-dev
+
+# RHEL/CentOS
+sudo dnf install postgresql-devel
 ```
 
 ---
 
 ## Getting Help
 
-1. **Check this troubleshooting guide** - Most issues covered here
-2. **Search existing issues**: https://github.com/ryakel/tail-lookup/issues
-3. **Check workflow logs**: https://github.com/ryakel/tail-lookup/actions
-4. **Create new issue**: https://github.com/ryakel/tail-lookup/issues/new
-5. **Discussions**: https://github.com/ryakel/tail-lookup/discussions
+If you're still having issues:
 
-### Information to Include
+1. **Check tool versions**:
+   ```bash
+   python3 --version
+   pip --version
+   black --version
+   ```
 
-When reporting issues, include:
-- Operating system and version
-- Python version (`python --version`)
-- Docker version (`docker --version`)
-- Error messages (full output)
-- Steps to reproduce
-- Expected vs actual behavior
-- Relevant logs
+2. **Check your environment**:
+   ```bash
+   # Are you in venv?
+   which python
 
-### Example Issue
+   # What's your OS?
+   uname -a
 
-```markdown
-**Describe the bug**
-API returns 500 error for specific tail number N12345
+   # What's installed?
+   pip list
+   ```
 
-**To Reproduce**
-1. Run: `curl http://localhost:8080/api/v1/aircraft/N12345`
-2. See error: {"detail": "Internal server error"}
+3. **Clean slate**:
+   ```bash
+   # Remove venv
+   deactivate
+   rm -rf venv
 
-**Expected behavior**
-Should return aircraft data or 404 if not found
+   # Recreate
+   python3 -m venv venv
+   source venv/bin/activate
 
-**Environment**
-- OS: macOS 14.1
-- Python: 3.12.0
-- Docker: 24.0.6
-- Image: ryakel/tail-lookup:2025-11-28
+   # Run setup script
+   ./scripts/setup-dev-environment.sh
+   ```
 
-**Logs**
-```
-[Include relevant logs here]
-```
-
-**Database**
-```
-Record count: 297431
-Last updated: 2025-11-28T06:15:23Z
-```
-```
+4. **Open an issue**:
+   - Go to: https://github.com/FliteAxis/TrueHour/issues
+   - Include:
+     - Error message (full output)
+     - OS version
+     - Python version
+     - Steps to reproduce
 
 ---
 
-## References
+## Quick Fixes Reference
 
-- [FastAPI Debugging](https://fastapi.tiangolo.com/tutorial/debugging/)
-- [Docker Troubleshooting](https://docs.docker.com/config/containers/troubleshooting/)
-- [SQLite Troubleshooting](https://www.sqlite.org/faq.html)
-- [GitHub Actions Debugging](https://docs.github.com/en/actions/monitoring-and-troubleshooting-workflows/enabling-debug-logging)
+| Problem | Quick Fix |
+|---------|-----------|
+| asyncpg won't install | `xcode-select --install` (macOS) or `apt-get install python3-dev` (Linux) |
+| Command not found | `source venv/bin/activate` |
+| Pre-commit not running | `pre-commit install` |
+| Black/Flake8 conflict | Already fixed in config, run `black` first |
+| Permission denied | `chmod +x scripts/*.sh` |
+| Docker compose error | `docker-compose config` to validate YAML |
+| Import error in Python | Activate venv: `source venv/bin/activate` |
+| Homebrew formula missing | `brew update && brew install <package>` |
+
+---
+
+**Last Updated**: December 7, 2025
+**Version**: 1.0.0

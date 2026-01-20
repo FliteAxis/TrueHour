@@ -32,6 +32,9 @@ ENV PATH=/root/.local/bin:$PATH
 # Copy application code
 COPY app/ ./app/
 
+# Copy scripts directory
+COPY scripts/ ./scripts/
+
 # Copy data directory (includes FAA database if built)
 COPY data/ ./data/
 
