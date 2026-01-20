@@ -7,7 +7,7 @@ on:
       - develop
     paths:
       - 'backend/**'
-      - 'frontend/**'
+      - 'frontend-react/**'
       - 'infrastructure/**'
       - '.github/workflows/build-develop.yml'
 
@@ -136,7 +136,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: infrastructure/Dockerfile.frontend
+          file: infrastructure/Dockerfile.frontend-react
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.FRONTEND_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=frontend-develop-${{ steps.platform.outputs.name }}

@@ -10,8 +10,8 @@ type ManualStep = "hours" | "aircraft" | "certification" | "review";
 interface WizardData {
   // ForeFlight import data
   importedFlights?: number;
-  importedAircraft?: any[];
-  calculatedHours?: any;
+  importedAircraft?: unknown[];
+  calculatedHours?: unknown;
 
   // Manual entry data
   manualHours?: {
@@ -38,7 +38,7 @@ export default function OnboardingWizard() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [importSummary, setImportSummary] = useState<{ aircraft: number; flights: number } | null>(null);
-  const [aircraft, setAircraft] = useState<any[]>([]);
+  const [aircraft, setAircraft] = useState<unknown[]>([]);
   const [filePreview, setFilePreview] = useState<{ aircraft: number; flights: number } | null>(null);
   const [validating, setValidating] = useState(false);
   const [flightSummary, setFlightSummary] = useState<FlightSummary | null>(null);

@@ -67,7 +67,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
     }
   };
 
-  const handleChange = (field: keyof UserAircraftUpdate, value: any) => {
+  const handleChange = (field: keyof UserAircraftUpdate, value: string | number | boolean | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

@@ -4,7 +4,7 @@ export interface UserSettings {
   auto_save_interval: number;
   default_aircraft_id?: number | null;
   timezone: string;
-  budget_state?: any;
+  budget_state?: unknown;
   onboarding_completed: boolean;
   target_certification?: string | null;
   enable_faa_lookup?: boolean;
@@ -137,7 +137,7 @@ export interface Flight {
   night_landings_full_stop: number;
   all_landings: number;
   holds: number;
-  approaches?: any | null;
+  approaches?: unknown | null;
   instructor_name?: string | null;
   instructor_comments?: string | null;
   pilot_comments?: string | null;
@@ -290,7 +290,7 @@ export interface ImportHistory {
 
 export interface UserDataResponse {
   aircraft: Aircraft[];
-  expenses: any[];
+  expenses: unknown[];
   flights: Flight[];
   settings: UserSettings;
   last_saved_at?: string;
@@ -299,7 +299,7 @@ export interface UserDataResponse {
 export interface SaveDataRequest {
   aircraft?: Aircraft[];
   flights?: Flight[];
-  budget_state?: any;
+  budget_state?: unknown;
 }
 
 // User Aircraft (v2 - database backed)

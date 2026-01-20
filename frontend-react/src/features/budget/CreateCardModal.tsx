@@ -98,7 +98,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
         aircraft_id: settings.default_training_aircraft_id?.toString() || "",
       }));
     }
-  }, [isOpen, settings?.default_training_aircraft_id]);
+  }, [isOpen, settings?.default_training_aircraft_id, formData.aircraft_id, formData.category]);
 
   // Calculate suggested hours based on certification progress and training settings
   const getSuggestedHours = () => {
@@ -356,7 +356,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
                   value={formData.category}
                   onChange={(e) => {
                     const newCategory = e.target.value;
-                    const updates: any = { category: newCategory };
+                    const updates: { category: string; aircraft_id?: string } = { category: newCategory };
 
                     // Auto-populate default training aircraft when aircraft-eligible category is selected
                     if (shouldShowAircraftFields(newCategory) && settings?.default_training_aircraft_id) {

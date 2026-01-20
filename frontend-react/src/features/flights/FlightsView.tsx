@@ -78,8 +78,8 @@ export function FlightsView() {
 
   const getSortedFlights = () => {
     return [...flights].sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
+      let aVal: string | number | undefined;
+      let bVal: string | number | undefined;
 
       switch (sortColumn) {
         case "date":

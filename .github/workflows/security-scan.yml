@@ -124,7 +124,7 @@ jobs:
             dockerfile: backend/Dockerfile
             name: truehour-api
           - context: .
-            dockerfile: infrastructure/Dockerfile.frontend
+            dockerfile: infrastructure/Dockerfile.frontend-react
             name: truehour-frontend
     steps:
       - name: Checkout repository
@@ -186,7 +186,7 @@ jobs:
       - name: Run hadolint on frontend
         uses: hadolint/hadolint-action@v3.3.0
         with:
-          dockerfile: infrastructure/Dockerfile.frontend
+          dockerfile: infrastructure/Dockerfile.frontend-react
           format: sarif
           output-file: hadolint-frontend.sarif
           failure-threshold: warning

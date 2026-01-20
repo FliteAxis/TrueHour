@@ -124,7 +124,7 @@ export function AircraftRatesView() {
 
     try {
       // Prepare update data based on rate type
-      const updateData: any = {};
+      const updateData: Partial<UserAircraft> = {};
 
       if (rates.rate_type === "wet") {
         if (!rates.hourly_rate_wet) {

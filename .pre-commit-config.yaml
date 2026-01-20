@@ -56,12 +56,12 @@ repos:
           - --strict
         files: \.(yaml|yml)$
 
-  # Markdown linting (disabled - no config file)
-  # - repo: https://github.com/igorshubovych/markdownlint-cli
-  #   rev: v0.42.0
-  #   hooks:
-  #     - id: markdownlint
-  #       args: ["--config", ".markdownlint.json"]
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: ["--config", ".markdownlint.json"]
 
   # Shell script linting
   - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -76,19 +76,19 @@ repos:
       - id: hadolint-docker
         args: ["--ignore", "DL3008", "--ignore", "DL3013"]
 
-  # TypeScript/JavaScript linting with ESLint (disabled - needs code fixes first)
-  # - repo: https://github.com/pre-commit/mirrors-eslint
-  #   rev: v9.17.0
-  #   hooks:
-  #     - id: eslint
-  #       files: ^frontend-react/.*\.[jt]sx?$
-  #       types: [file]
-  #       args: ["--fix", "--config=frontend-react/eslint.config.js"]
-  #       additional_dependencies:
-  #         - eslint@9.17.0
-  #         - typescript@5.7.2
-  #         - "@typescript-eslint/eslint-plugin@8.18.2"
-  #         - "@typescript-eslint/parser@8.18.2"
+  # TypeScript/JavaScript linting with ESLint
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.17.0
+    hooks:
+      - id: eslint
+        files: ^frontend-react/.*\.[jt]sx?$
+        types: [file]
+        args: ["--fix", "--config=frontend-react/eslint.config.js"]
+        additional_dependencies:
+          - eslint@9.17.0
+          - typescript@5.7.2
+          - "@typescript-eslint/eslint-plugin@8.18.2"
+          - "@typescript-eslint/parser@8.18.2"
 
   # Prettier formatting for frontend
   - repo: https://github.com/pre-commit/mirrors-prettier

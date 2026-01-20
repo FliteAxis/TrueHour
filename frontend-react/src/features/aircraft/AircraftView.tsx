@@ -1,7 +1,7 @@
 // TrueHour Aircraft Management View
 // Manage user aircraft with FAA lookup integration
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getUserAircraft } from "../../services/api";
 import type { UserAircraft } from "../../types/api";
 import { AddAircraftModal } from "./AddAircraftModal";
@@ -74,11 +74,7 @@ export function AircraftView() {
   const realAircraft = filterAndSortAircraft(aircraft.filter((ac) => !ac.is_simulator));
   const simulators = filterAndSortAircraft(aircraft.filter((ac) => ac.is_simulator));
 
-  useEffect(() => {
-    loadAircraft();
-  }, [showInactive]);
-
-  const loadAircraft = async () => {
+  const loadAircraft = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -90,7 +86,11 @@ export function AircraftView() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showInactive]);
+
+  useEffect(() => {
+    loadAircraft();
+  }, [loadAircraft]);
 
   const handleAircraftAdded = () => {
     setShowAddModal(false);

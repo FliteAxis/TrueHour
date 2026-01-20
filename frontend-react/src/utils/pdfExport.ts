@@ -269,7 +269,7 @@ export async function exportCertificationProgressPDF(
       value: ((hours.actual_instrument || 0) + (hours.simulated_instrument || 0)).toFixed(1),
     },
     { label: "Dual Received", value: (hours.dual_received || 0).toFixed(1) },
-    { label: "Solo Time", value: ((hours as any).solo || 0).toFixed(1) }, // Solo exists in data but not in type
+    { label: "Solo Time", value: ((hours as Record<string, number>).solo || 0).toFixed(1) }, // Solo exists in data but not in type
   ];
 
   stats.forEach((stat) => {
@@ -311,11 +311,11 @@ export async function exportCertificationProgressPDF(
     }
     if (req.key === "complex_taa") {
       // Complex + TAA hours (use 'as any' since these fields may not be in type)
-      return ((hours as any).complex || 0) + ((hours as any).taa || 0);
+      return ((hours as Record<string, number>).complex || 0) + ((hours as Record<string, number>).taa || 0);
     }
     if (req.key === "solo") {
       // Solo hours (use 'as any' since this field may not be in type)
-      return (hours as any).solo || 0;
+      return (hours as Record<string, number>).solo || 0;
     }
     const value = hours[req.key as keyof HoursData];
     return typeof value === "number" ? value : 0;
@@ -420,7 +420,7 @@ export async function exportFlightLogPDF(flights: Flight[]) {
   await addHeader(doc, "Flight Log Report");
 
   // Initialize totals
-  let totals = {
+  const totals = {
     total_time: 0,
     pic_time: 0,
     night_time: 0,
@@ -490,13 +490,13 @@ export async function exportFlightLogPDF(flights: Flight[]) {
     const approaches = flight.approaches ? JSON.parse(flight.approaches as string).length : 0;
 
     // Helper to safely format numeric values
-    const formatNum = (val: any): string => {
+    const formatNum = (val: unknown): string => {
       const num = typeof val === "number" ? val : parseFloat(val) || 0;
       return num.toFixed(1);
     };
 
     // Helper to get numeric value
-    const getNum = (val: any): number => {
+    const getNum = (val: unknown): number => {
       return typeof val === "number" ? val : parseFloat(val) || 0;
     };
 

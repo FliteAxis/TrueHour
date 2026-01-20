@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useUserStore } from "../../store/userStore";
 import type { HoursData } from "../../types/api";
 
@@ -39,14 +39,10 @@ const CERTIFICATION_REQUIREMENTS: Record<CertificationType, CertificationRequire
 
 export function CertificationProgress() {
   const { settings, currentHours, updateSettings } = useUserStore();
-  const [selectedCert, setSelectedCert] = useState<CertificationType | "">("");
-
-  useEffect(() => {
-    // Load saved certification on mount
-    if (settings?.target_certification) {
-      setSelectedCert(settings.target_certification as CertificationType);
-    }
-  }, [settings?.target_certification]);
+  const [selectedCert, setSelectedCert] = useState<CertificationType | "">(() => {
+    // Initialize from settings on mount
+    return (settings?.target_certification as CertificationType) || "";
+  });
 
   const handleCertChange = async (cert: CertificationType) => {
     setSelectedCert(cert);

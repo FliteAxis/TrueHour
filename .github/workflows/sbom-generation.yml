@@ -6,7 +6,7 @@ on:
     paths:
       - 'backend/requirements.txt'
       - 'backend/Dockerfile'
-      - 'infrastructure/Dockerfile.frontend'
+      - 'infrastructure/Dockerfile.frontend-react'
   pull_request:
   release:
     types: [published]
@@ -79,7 +79,7 @@ jobs:
             dockerfile: backend/Dockerfile
           - name: truehour-frontend
             context: .
-            dockerfile: infrastructure/Dockerfile.frontend
+            dockerfile: infrastructure/Dockerfile.frontend-react
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6

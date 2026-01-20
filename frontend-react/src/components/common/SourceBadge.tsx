@@ -7,6 +7,12 @@ interface SourceBadgeProps {
   size?: "sm" | "md";
 }
 
+function isDataStale(faaLastChecked: string | null | undefined): boolean {
+  if (!faaLastChecked) return false;
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+  return Date.now() - new Date(faaLastChecked).getTime() > thirtyDaysMs;
+}
+
 export function SourceBadge({ source, faaLastChecked, size = "sm" }: SourceBadgeProps) {
   const textSize = size === "sm" ? "text-xs" : "text-sm";
   const padding = size === "sm" ? "px-2 py-0.5" : "px-3 py-1";
@@ -25,12 +31,9 @@ export function SourceBadge({ source, faaLastChecked, size = "sm" }: SourceBadge
     );
   }
 
-  // Check if FAA data is stale (> 30 days)
-  const isStale =
-    source === "faa" && faaLastChecked && Date.now() - new Date(faaLastChecked).getTime() > 30 * 24 * 60 * 60 * 1000;
-
   // FAA source - green (fresh) or blue (cached/stale)
   if (source === "faa") {
+    const isStale = isDataStale(faaLastChecked);
     return (
       <span
         className={`${padding} ${textSize} rounded inline-flex items-center gap-1 ${

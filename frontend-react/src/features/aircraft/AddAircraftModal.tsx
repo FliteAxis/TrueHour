@@ -79,7 +79,7 @@ export function AddAircraftModal({ onClose, onSuccess }: AddAircraftModalProps) 
     }
   };
 
-  const handleChange = (field: keyof UserAircraftCreate, value: any) => {
+  const handleChange = (field: keyof UserAircraftCreate, value: string | number | boolean | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
