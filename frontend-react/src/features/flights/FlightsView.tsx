@@ -24,6 +24,7 @@ export function FlightsView() {
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rowsPerPage, currentPage]);
 
   const loadData = async () => {
