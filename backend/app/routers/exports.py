@@ -198,8 +198,7 @@ async def export_budget_cards_csv():
     """Export budget cards to CSV format."""
     try:
         async with postgres_db.acquire() as conn:
-            cards = await conn.fetch(
-                """
+            cards = await conn.fetch("""
                 SELECT
                     bc.*,
                     a.tail_number as aircraft_tail,
@@ -208,8 +207,7 @@ async def export_budget_cards_csv():
                 FROM budget_cards bc
                 LEFT JOIN aircraft a ON bc.aircraft_id = a.id
                 ORDER BY bc.when_date DESC, bc.category
-            """
-            )
+            """)
 
             if not cards:
                 raise HTTPException(status_code=404, detail="No budget cards found")
@@ -339,12 +337,10 @@ async def export_aircraft_csv():
     """Export aircraft to CSV format."""
     try:
         async with postgres_db.acquire() as conn:
-            aircraft = await conn.fetch(
-                """
+            aircraft = await conn.fetch("""
                 SELECT * FROM aircraft
                 ORDER BY is_active DESC, tail_number
-            """
-            )
+            """)
 
             if not aircraft:
                 raise HTTPException(status_code=404, detail="No aircraft found")

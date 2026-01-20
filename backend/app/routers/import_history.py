@@ -86,15 +86,13 @@ async def get_latest_import():
     """Get the most recent import history record."""
     try:
         async with postgres_db.acquire() as conn:
-            row = await conn.fetchrow(
-                """
+            row = await conn.fetchrow("""
                 SELECT id, import_type, file_name, flights_imported,
                        hours_imported, import_date, notes
                 FROM import_history
                 ORDER BY import_date DESC
                 LIMIT 1
-                """
-            )
+                """)
 
             if not row:
                 return None
