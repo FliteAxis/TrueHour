@@ -295,7 +295,8 @@ Before deploying TrueHour v2.0 to production:
 
 ✅ **Docker Compose setup is PRODUCTION READY**
 
-All services build, start, and operate correctly. The smoke test suite (14/14 tests) passes completely when run against the Docker containers. The FAA database is properly included and loaded. All API endpoints are functional.
+All services build, start, and operate correctly. The smoke test suite (14/14 tests) passes completely when run against the Docker containers.
+The FAA database is properly included and loaded. All API endpoints are functional.
 
 **Ready to deploy!** 🚀
 

@@ -286,7 +286,8 @@ TrueHour v2.0 is a ground-up rewrite with a modern React frontend, PostgreSQL da
 
 ## [1.x] - Legacy Version
 
-TrueHour v1.x was the original HTML/CSS/JavaScript implementation with SQLite database. It provided basic flight logging, aircraft management, and budget tracking functionality.
+TrueHour v1.x was the original HTML/CSS/JavaScript implementation with SQLite database. It provided basic flight logging, aircraft management,
+and budget tracking functionality.
 
 ### Features (v1.x)
 - Flight log with manual entry

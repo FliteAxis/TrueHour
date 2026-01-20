@@ -2,7 +2,8 @@
 
 **Personal aviation flight training management and expense tracking**
 
-TrueHour is a local-first web application for tracking flight training progress, managing aviation expenses, and planning your path to pilot certification. Built for pilots who want complete control over their data without relying on cloud services.
+TrueHour is a local-first web application for tracking flight training progress, managing aviation expenses, and planning your path to pilot
+certification. Built for pilots who want complete control over their data without relying on cloud services.
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)

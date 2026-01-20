@@ -7,7 +7,8 @@
 
 ## Overview
 
-TrueHour's expense tracking system allows you to record aviation expenses and link them to budget cards. This enables you to answer questions like "What did I spend this month?" and "Am I on track with my budget?"
+TrueHour's expense tracking system allows you to record aviation expenses and link them to budget cards. This enables you to answer questions
+like "What did I spend this month?" and "Am I on track with my budget?"
 
 ## Quick Start
 
