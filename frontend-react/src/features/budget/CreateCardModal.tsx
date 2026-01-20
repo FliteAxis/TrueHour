@@ -95,7 +95,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
     ) {
       setFormData((prev) => ({
         ...prev,
-        aircraft_id: settings.default_training_aircraft_id.toString(),
+        aircraft_id: settings.default_training_aircraft_id?.toString() || "",
       }));
     }
   }, [isOpen, settings?.default_training_aircraft_id]);
@@ -118,7 +118,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
     if (!cert) return null;
 
     const currentValue = currentHours[cert.field] || 0;
-    const remainingHours = Math.max(0, cert.totalHours - currentValue);
+    const remainingHours = Math.max(0, cert.totalHours - Number(currentValue));
 
     if (remainingHours === 0) return null;
 
@@ -183,7 +183,7 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
       const hoursWithBuffer = parseFloat(formData.associated_hours) * bufferMultiplier;
 
       const response = await fetch(
-        `http://localhost:8000/api/budget-cards/calculate-cost?aircraft_id=${formData.aircraft_id}&hours=${hoursWithBuffer}&rate_type=${formData.hourly_rate_type}`,
+        `http://localhost:8000/api/user/budget-cards/calculate-cost?aircraft_id=${formData.aircraft_id}&hours=${hoursWithBuffer}&rate_type=${formData.hourly_rate_type}`,
         { method: "POST" }
       );
 

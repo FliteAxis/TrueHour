@@ -44,10 +44,12 @@ const PRIVATE_REQUIREMENTS: DetailedRequirement[] = [
     required: 40,
     unit: "hours",
     calculate: (hours) => hours.total,
-    details: (hours) =>
-      hours.simulator_time > 0 ? (
-        <div className="text-xs text-slate-400 mt-1">({hours.simulator_time.toFixed(1)} SIMULATOR hours included)</div>
-      ) : null,
+    details: (hours) => {
+      const simTime = Number(hours.simulator_time) || 0;
+      return simTime > 0 ? (
+        <div className="text-xs text-slate-400 mt-1">({simTime.toFixed(1)} SIMULATOR hours included)</div>
+      ) : null;
+    },
   },
   {
     id: "dual",
@@ -81,34 +83,37 @@ const PRIVATE_REQUIREMENTS: DetailedRequirement[] = [
     required: 1,
     unit: "flight",
     calculate: (hours) => hours.private_long_xc || (hours.pic_xc >= 5 ? 1 : 0),
-    details: (hours) =>
-      hours.private_long_xc >= 1 ? (
+    details: (hours) => {
+      const flight = hours._qualifying_flights?.private_long_xc?.[0];
+      // Show flight if we have the data OR if the flag is set
+      return flight ? (
         <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
           <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
           <div className="grid grid-cols-4 gap-2 text-slate-400">
             <div>
               <div className="font-medium text-slate-300">Flight Date</div>
-              <div>2024-04-24</div>
+              <div>{flight.date}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Aircraft ID</div>
-              <div>N52440</div>
+              <div>{flight.aircraft_id}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Distance (nm)</div>
-              <div>207.7</div>
+              <div>{Number(flight.distance).toFixed(1)}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Type</div>
-              <div>Solo</div>
+              <div>{flight.type}</div>
             </div>
           </div>
           <div className="mt-1">
             <div className="font-medium text-slate-300">Route</div>
-            <div className="text-slate-400">KAMW → C17 → KALO → KAMW</div>
+            <div className="text-slate-400">{flight.route}</div>
           </div>
         </div>
-      ) : null,
+      ) : null;
+    },
   },
   {
     id: "towered_ops",
@@ -207,10 +212,12 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
     required: 250,
     unit: "hours",
     calculate: (hours) => hours.total,
-    details: (hours) =>
-      hours.simulator_time > 0 ? (
-        <div className="text-xs text-slate-400 mt-1">({hours.simulator_time.toFixed(1)} SIMULATOR hours included)</div>
-      ) : null,
+    details: (hours) => {
+      const simTime = Number(hours.simulator_time) || 0;
+      return simTime > 0 ? (
+        <div className="text-xs text-slate-400 mt-1">({simTime.toFixed(1)} SIMULATOR hours included)</div>
+      ) : null;
+    },
   },
   {
     id: "powered",
@@ -277,8 +284,8 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
     calculate: (hours) => hours.cpl_sim_instrument_training,
     details: (hours) => (
       <div className="text-xs text-slate-400 mt-1">
-        ({hours.cpl_sim_instrument_airplane.toFixed(1)} airplane + ~
-        {(hours.cpl_sim_instrument_training - hours.cpl_sim_instrument_airplane).toFixed(1)} simulator)
+        ({(hours.cpl_sim_instrument_airplane || 0).toFixed(1)} airplane + ~
+        {((hours.cpl_sim_instrument_training || 0) - (hours.cpl_sim_instrument_airplane || 0)).toFixed(1)} simulator)
       </div>
     ),
   },
@@ -306,34 +313,36 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
     required: 1,
     unit: "flight",
     calculate: (hours) => hours.cpl_2hr_day_xc,
-    details: (hours) =>
-      hours.cpl_2hr_day_xc >= 1 ? (
+    details: (hours) => {
+      const flight = hours._qualifying_flights?.cpl_2hr_day_xc?.[0];
+      return flight ? (
         <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
           <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
           <div className="grid grid-cols-4 gap-2 text-slate-400">
             <div>
               <div className="font-medium text-slate-300">Flight Date</div>
-              <div>2025-05-13</div>
+              <div>{flight.date}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Aircraft ID</div>
-              <div>N5274S</div>
+              <div>{flight.aircraft_id}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Total (hrs)</div>
-              <div>2.7</div>
+              <div>{Number(flight.duration).toFixed(1)}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Distance (nm)</div>
-              <div>230.2</div>
+              <div>{Number(flight.distance).toFixed(1)}</div>
             </div>
           </div>
           <div className="mt-1">
             <div className="font-medium text-slate-300">Route</div>
-            <div className="text-slate-400">KAMW → KSDA → KDSM → KAMW</div>
+            <div className="text-slate-400">{flight.route}</div>
           </div>
         </div>
-      ) : null,
+      ) : null;
+    },
   },
   {
     id: "night_xc",
@@ -369,34 +378,32 @@ const CPL_REQUIREMENTS: DetailedRequirement[] = [
     required: 1,
     unit: "flight",
     calculate: (hours) => hours.cpl_300nm_xc,
-    details: (hours) =>
-      hours.cpl_300nm_xc >= 1 ? (
+    details: (hours) => {
+      const flight = hours._qualifying_flights?.cpl_300nm_xc?.[0];
+      return flight ? (
         <div className="mt-2 p-2 bg-truehour-darker rounded text-xs">
           <div className="text-slate-300 font-medium mb-1">Qualifying Flight:</div>
           <div className="grid grid-cols-4 gap-2 text-slate-400">
             <div>
               <div className="font-medium text-slate-300">Flight Date</div>
-              <div>2025-09-11</div>
+              <div>{flight.date}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Aircraft ID</div>
-              <div>N5274S</div>
-            </div>
-            <div>
-              <div className="font-medium text-slate-300">Type</div>
-              <div>Solo</div>
+              <div>{flight.aircraft_id}</div>
             </div>
             <div>
               <div className="font-medium text-slate-300">Distance (nm)</div>
-              <div>310.1</div>
+              <div>{Number(flight.distance).toFixed(1)}</div>
+            </div>
+            <div>
+              <div className="font-medium text-slate-300">Route</div>
+              <div className="text-slate-400">{flight.route}</div>
             </div>
           </div>
-          <div className="mt-1">
-            <div className="font-medium text-slate-300">Route</div>
-            <div className="text-slate-400">KEOK → KFSW → KBRL → KIOW</div>
-          </div>
         </div>
-      ) : null,
+      ) : null;
+    },
   },
   {
     id: "night_vfr",

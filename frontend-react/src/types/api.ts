@@ -47,6 +47,43 @@ export interface HoursData {
   cpl_night_vfr: number; // Req 17: 5hrs night VFR solo/instructor-only
   cpl_night_takeoffs_towered: number; // Req 18: 10 night takeoffs at towered
   cpl_night_landings_towered: number; // Req 18: 10 night landings at towered
+  // Qualifying flights metadata
+  _qualifying_flights?: {
+    private_long_xc?: Array<{
+      date: string;
+      aircraft_id: string;
+      route: string;
+      distance: number;
+      type: string;
+    }>;
+    ir_250nm_xc?: Array<{
+      date: string;
+      aircraft_id: string;
+      route: string;
+      distance: number;
+      approach_count: number;
+    }>;
+    cpl_2hr_day_xc?: Array<{
+      date: string;
+      aircraft_id: string;
+      route: string;
+      distance: number;
+      duration: number;
+    }>;
+    cpl_2hr_night_xc?: Array<{
+      date: string;
+      aircraft_id: string;
+      route: string;
+      distance: number;
+      duration: number;
+    }>;
+    cpl_300nm_xc?: Array<{
+      date: string;
+      aircraft_id: string;
+      route: string;
+      distance: number;
+    }>;
+  };
 }
 
 export interface Aircraft {

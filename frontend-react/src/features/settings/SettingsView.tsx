@@ -53,7 +53,7 @@ export function SettingsView() {
   const [isLoadingAircraft, setIsLoadingAircraft] = useState(false);
 
   // Debounce timer for numeric inputs
-  const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load user settings on mount
   useEffect(() => {

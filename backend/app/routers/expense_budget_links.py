@@ -6,7 +6,7 @@ from app.models import ExpenseBudgetLinkCreate, ExpenseBudgetLinkResponse
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException
 
-router = APIRouter(prefix="/api/expense-budget-links", tags=["Expense Budget Links"])
+router = APIRouter(prefix="/api/user/expense-budget-links", tags=["Expense Budget Links"])
 
 
 @router.post("", response_model=ExpenseBudgetLinkResponse, status_code=201)

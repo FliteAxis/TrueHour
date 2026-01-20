@@ -34,8 +34,7 @@ export function HamburgerMenu({ onImportLogbook, onImportExpenses }: HamburgerMe
       title: "Backend",
       items: [
         { label: "Flight Log", path: "/flights" },
-        { label: "Import from ForeFlight", onClick: () => onImportLogbook() },
-        { label: "Manual Entry", path: "/flights", comingSoon: true },
+        { label: "Import Logbook", onClick: () => onImportLogbook() },
       ],
     },
     {
@@ -43,18 +42,15 @@ export function HamburgerMenu({ onImportLogbook, onImportExpenses }: HamburgerMe
       items: [
         { label: "My Aircraft", path: "/aircraft" },
         { label: "Aircraft Rates", path: "/aircraft/rates" },
-        { label: "Aircraft Management", path: "/aircraft/manage", comingSoon: true },
       ],
     },
     {
       title: "Finances",
       items: [
         { label: "Budget", path: "/budget" },
-        { label: "Expense List", path: "/expenses" },
+        { label: "Expenses", path: "/expenses" },
         { label: "Reports", path: "/reports" },
         { label: "Import Expenses", onClick: () => onImportExpenses() },
-        { label: "Create Expense", path: "/expenses/create", comingSoon: true },
-        { label: "Link to Budget Cards", path: "/expenses/link", comingSoon: true },
       ],
     },
     // Hidden for now - will be enabled later

@@ -396,15 +396,6 @@ export function ExpensesList({ expenses, budgetCards, onEditExpense }: ExpensesL
                                   top: `${dropdownPosition.top}px`,
                                   right: `${dropdownPosition.right}px`,
                                 }}
-                                ref={(el) => {
-                                  if (el) {
-                                    console.log(
-                                      "[ExpensesList] Dropdown rendered with",
-                                      budgetCards.length,
-                                      "budget cards"
-                                    );
-                                  }
-                                }}
                               >
                                 <div className="p-2 max-h-64 overflow-y-auto flex flex-col">
                                   <div className="text-xs text-slate-400 px-2 py-1 mb-1">Link to Budget Card</div>
@@ -420,10 +411,7 @@ export function ExpensesList({ expenses, budgetCards, onEditExpense }: ExpensesL
                                           Unlink from Budget
                                         </button>
                                       )}
-                                      {budgetCards.map((card, index) => {
-                                        console.log(
-                                          `[ExpensesList] Rendering card ${index + 1}/${budgetCards.length}: ${card.name} (${card.category})`
-                                        );
+                                      {budgetCards.map((card) => {
                                         return (
                                           <button
                                             key={card.id}

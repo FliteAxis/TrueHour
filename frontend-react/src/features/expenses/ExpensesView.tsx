@@ -29,21 +29,6 @@ export function ExpensesView() {
     loadData();
   }, [fetchExpenses, loadCards]);
 
-  // Debug: Log budget cards whenever they change
-  useEffect(() => {
-    console.log("[ExpensesView] Budget cards updated:", cards.length, cards);
-  }, [cards]);
-
-  // Debug: Log expenses to see budget_card_id
-  useEffect(() => {
-    console.log("[ExpensesView] Expenses updated:", expenses.length);
-    expenses.forEach((exp) => {
-      console.log(
-        `  Expense ${exp.id}: category=${exp.category}, amount=${exp.amount}, budget_card_id=${exp.budget_card_id}`
-      );
-    });
-  }, [expenses]);
-
   const handleCreateExpense = () => {
     setIsCreateModalOpen(true);
   };

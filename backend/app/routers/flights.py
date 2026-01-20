@@ -8,11 +8,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
 
+# Fix for _strptime threading issue - import at module level to initialize
+import _strptime  # noqa: F401
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field, condecimal
 
-router = APIRouter(prefix="/api/flights", tags=["Flights"])
+router = APIRouter(prefix="/api/user/flights", tags=["Flights"])
 
 
 class FlightCreate(BaseModel):
@@ -65,6 +67,7 @@ class FlightCreate(BaseModel):
     instructor_cost: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     rental_cost: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     other_costs: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    distance: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
 
 
 class FlightUpdate(BaseModel):
@@ -116,6 +119,7 @@ class FlightUpdate(BaseModel):
     landing_fees: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     instructor_cost: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     rental_cost: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    distance: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     other_costs: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
 
 
@@ -171,6 +175,7 @@ class FlightResponse(BaseModel):
     instructor_cost: Optional[Decimal] = None
     rental_cost: Optional[Decimal] = None
     other_costs: Optional[Decimal] = None
+    distance: Optional[Decimal] = None
     import_hash: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -421,9 +426,7 @@ async def import_flights(file: UploadFile = File(...)):
             aircraft_map = await _extract_and_import_aircraft(conn, flights_list, enable_faa_lookup, aircraft_data_dict)
             print(f"[Flight Import] Created {len(aircraft_map)} aircraft from import")
 
-            # Get existing import hashes from database
-            existing_hashes = await conn.fetch("SELECT DISTINCT import_hash FROM flights WHERE import_hash IS NOT NULL")
-            existing_hash_set = {row["import_hash"] for row in existing_hashes}
+            # Note: Duplicate detection is handled by ON CONFLICT in the INSERT query
 
             for row_num, row in enumerate(
                 reader, start=flights_table_start + 2
@@ -445,13 +448,15 @@ async def import_flights(file: UploadFile = File(...)):
                     # Create import hash for duplicate detection
                     import_hash = f"{row.get('Date')}_{row.get('From')}_{row.get('To')}_{row.get('TotalTime')}"
 
-                    # Check if already imported (in DB or in this batch)
-                    if import_hash in existing_hash_set or import_hash in import_hashes:
-                        errors.append(f"Row {row_num}: Duplicate flight (already imported)")
+                    # Check if duplicate within THIS import batch (skip those)
+                    if import_hash in import_hashes:
+                        errors.append(f"Row {row_num}: Duplicate flight within import batch")
                         skipped += 1
                         continue
 
                     import_hashes.add(import_hash)
+
+                    # Note: If flight exists in DB (in existing_hash_set), we'll UPDATE it via ON CONFLICT
 
                     # Parse date
                     flight_date = _safe_date(row.get("Date"))
@@ -475,7 +480,7 @@ async def import_flights(file: UploadFile = File(...)):
                         if aircraft_row:
                             aircraft_id = aircraft_row["id"]
 
-                    # Insert flight
+                    # Insert flight (with ON CONFLICT to update distance on duplicates)
                     await conn.execute(
                         """
                         INSERT INTO flights (
@@ -488,12 +493,14 @@ async def import_flights(file: UploadFile = File(...)):
                             night_takeoffs, night_landings_full_stop,
                             all_landings, holds, approaches,
                             instructor_name, pilot_comments,
-                            is_simulator_session, import_hash
+                            is_simulator_session, distance, import_hash
                         )
                         VALUES (
                             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
+                            $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
                         )
+                        ON CONFLICT (import_hash) DO UPDATE SET
+                            distance = EXCLUDED.distance
                         """,
                         aircraft_id,
                         tail_number,
@@ -524,6 +531,7 @@ async def import_flights(file: UploadFile = File(...)):
                         row.get("InstructorName"),
                         row.get("PilotComments"),
                         is_sim,
+                        _safe_float(row.get("Distance")),  # Add distance from ForeFlight CSV
                         import_hash,
                     )
                     imported += 1

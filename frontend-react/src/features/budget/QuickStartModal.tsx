@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useBudgetStore } from "../../store/budgetStore";
 import { useUserStore } from "../../store/userStore";
-import type { UserAircraft, CostCalculation } from "../../types/api";
+import type { UserAircraft } from "../../types/api";
 
 interface TemplateCard {
   name: string;
@@ -157,7 +157,7 @@ export function QuickStartModal({ isOpen, onClose }: QuickStartModalProps) {
     if (!cert) return null;
 
     const currentValue = currentHours[cert.field] || 0;
-    const remainingHours = Math.max(0, cert.totalHours - currentValue);
+    const remainingHours = Math.max(0, cert.totalHours - Number(currentValue));
 
     if (remainingHours === 0) return null;
 

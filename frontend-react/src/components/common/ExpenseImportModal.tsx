@@ -34,7 +34,7 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("/api/expenses/import", {
+      const response = await fetch("/api/user/expenses/import", {
         method: "POST",
         body: formData,
       });
@@ -44,8 +44,7 @@ export function ExpenseImportModal({ isOpen, onClose }: ExpenseImportModalProps)
         throw new Error(errorData.detail || "Import failed");
       }
 
-      const result = await response.json();
-      console.log("Import successful:", result);
+      await response.json();
 
       // Close modal and refresh data
       onClose();

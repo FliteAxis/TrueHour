@@ -280,6 +280,9 @@ async def _extract_and_import_aircraft(
                 "gear_type": ac_row.get("GearType") or None,
                 "engine_type": ac_row.get("EngineType") or None,
                 "aircraft_class": ac_row.get("aircraftClass (FAA)") or None,
+                "is_complex": ac_row.get("complexAircraft (FAA)") == "TRUE",
+                "is_taa": ac_row.get("taa (FAA)") == "TRUE",
+                "is_high_performance": ac_row.get("highPerformance (FAA)") == "TRUE",
             }
         else:
             # Fallback to extracting from flights
@@ -413,19 +416,29 @@ async def _save_flights(conn: Any, flights_data: List[Dict[str, Any]]) -> int:
     for flight in flights_data:
         print(f"[SAVE_FLIGHTS] Flight data: {flight}")
 
-        # Look up aircraft by tail number
+        # Look up aircraft by tail number and check if complex/TAA
         aircraft_id = None
+        is_complex_flight = False
+        is_high_perf_flight = False
         tail_number = flight.get("AircraftID")
         if tail_number and not tail_number.lower().startswith(("sim", "fsx", "x-plane", "aatd", "batd", "pfcmfd")):
             aircraft_row = await conn.fetchrow(
-                "SELECT id FROM aircraft WHERE UPPER(tail_number) = UPPER($1)", tail_number
+                "SELECT id, is_complex, is_taa, is_high_performance FROM aircraft WHERE UPPER(tail_number) = UPPER($1)",
+                tail_number,
             )
             if aircraft_row:
                 aircraft_id = aircraft_row["id"]
+                # If aircraft is complex or TAA, this flight counts as complex time
+                is_complex_flight = aircraft_row["is_complex"] or aircraft_row["is_taa"]
+                is_high_perf_flight = aircraft_row["is_high_performance"]
+
+        # Calculate complex/high performance time based on aircraft characteristics
+        # If aircraft is complex/TAA, use the flight's total time (not the cumulative [Hours]Complex column)
+        total_time = _safe_float(flight.get("TotalTime"))
+        complex_time = total_time if is_complex_flight else 0.0
+        high_perf_time = total_time if is_high_perf_flight else 0.0
 
         # Map ForeFlight CSV fields to database schema
-        # ForeFlight uses capitalized field names like TotalTime, PIC, etc.
-        # Custom fields use [Hours]Complex and [Hours]High Performance format
         await conn.execute(
             """
             INSERT INTO flights (
@@ -437,19 +450,21 @@ async def _save_flights(conn: Any, flights_data: List[Dict[str, Any]]) -> int:
                 day_takeoffs, day_landings_full_stop,
                 night_takeoffs, night_landings_full_stop, all_landings,
                 holds, approaches, instructor_name, pilot_comments,
-                is_simulator_session, import_hash
+                is_simulator_session, distance, import_hash
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+                $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
             )
+            ON CONFLICT (import_hash) DO UPDATE SET
+                distance = EXCLUDED.distance
             """,
             aircraft_id,
             _safe_date(flight.get("Date")),
             flight.get("From"),
             flight.get("To"),
             flight.get("Route"),
-            _safe_float(flight.get("TotalTime")),
+            total_time,
             _safe_float(flight.get("PIC")),
             _safe_float(flight.get("SIC")),
             _safe_float(flight.get("Night")),
@@ -460,8 +475,8 @@ async def _save_flights(conn: Any, flights_data: List[Dict[str, Any]]) -> int:
             _safe_float(flight.get("SimulatedFlight")),
             _safe_float(flight.get("DualGiven")),
             _safe_float(flight.get("DualReceived")),
-            _safe_float(flight.get("[Hours]Complex")),
-            _safe_float(flight.get("[Hours]High Performance")),
+            complex_time,  # Calculated from aircraft characteristics, not cumulative column
+            high_perf_time,  # Calculated from aircraft characteristics, not cumulative column
             _safe_int(flight.get("DayTakeoffs")),
             _safe_int(flight.get("DayLandingsFullStop")),
             _safe_int(flight.get("NightTakeoffs")),
@@ -472,6 +487,7 @@ async def _save_flights(conn: Any, flights_data: List[Dict[str, Any]]) -> int:
             flight.get("InstructorName"),
             flight.get("PilotComments"),
             flight.get("AircraftID", "").lower().startswith(("sim", "fsx", "x-plane", "aatd", "batd")),
+            _safe_float(flight.get("Distance")),
             # Create unique hash from date + airports + time to prevent duplicates
             f"{flight.get('Date')}_{flight.get('From')}_{flight.get('To')}_{flight.get('TotalTime')}",
         )

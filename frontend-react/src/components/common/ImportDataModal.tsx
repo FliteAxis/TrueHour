@@ -54,7 +54,7 @@ export function ImportDataModal({ isOpen, onClose }: ImportDataModalProps) {
       formData.append("file", file);
       formData.append("import_type", importType);
 
-      const response = await fetch("/api/flights/import", {
+      const response = await fetch("/api/user/flights/import", {
         method: "POST",
         body: formData,
       });
@@ -65,7 +65,6 @@ export function ImportDataModal({ isOpen, onClose }: ImportDataModalProps) {
       }
 
       const result: ImportResult = await response.json();
-      console.log("Import successful:", result);
 
       // Fetch aircraft details if we have IDs
       if (result.aircraft_created && result.aircraft_created.length > 0) {
@@ -152,32 +151,24 @@ export function ImportDataModal({ isOpen, onClose }: ImportDataModalProps) {
                   </button>
 
                   <button
-                    onClick={() => setImportType("myflightbook")}
-                    disabled={isImporting}
-                    className={`p-4 rounded-lg border-2 transition-all disabled:opacity-50 ${
-                      importType === "myflightbook"
-                        ? "border-truehour-blue bg-blue-500/10"
-                        : "border-truehour-border hover:border-truehour-blue/50"
-                    }`}
+                    disabled={true}
+                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-truehour-border"
                   >
                     <div className="text-center">
                       <div className="text-white font-medium mb-1">MyFlightbook</div>
                       <div className="text-xs text-slate-400">.csv export</div>
+                      <div className="text-xs text-amber-400 mt-1">Coming Soon</div>
                     </div>
                   </button>
 
                   <button
-                    onClick={() => setImportType("csv")}
-                    disabled={isImporting}
-                    className={`p-4 rounded-lg border-2 transition-all disabled:opacity-50 ${
-                      importType === "csv"
-                        ? "border-truehour-blue bg-blue-500/10"
-                        : "border-truehour-border hover:border-truehour-blue/50"
-                    }`}
+                    disabled={true}
+                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-truehour-border"
                   >
                     <div className="text-center">
                       <div className="text-white font-medium mb-1">Generic CSV</div>
                       <div className="text-xs text-slate-400">Custom format</div>
+                      <div className="text-xs text-amber-400 mt-1">Coming Soon</div>
                     </div>
                   </button>
                 </div>
@@ -257,7 +248,7 @@ export function ImportDataModal({ isOpen, onClose }: ImportDataModalProps) {
                     <div className="font-medium mb-1">Import Tips</div>
                     <ul className="list-disc list-inside space-y-1 text-xs">
                       <li>ForeFlight: Export your logbook as CSV from Settings → Logbook → Export</li>
-                      <li>MyFlightbook: Download your logbook CSV from the web interface</li>
+                      {/* <li>MyFlightbook: Download your logbook CSV from the web interface</li> */}
                       <li>Files are processed on the server and duplicate entries are automatically detected</li>
                       <li>Aircraft will be automatically looked up in the FAA registry when available</li>
                     </ul>

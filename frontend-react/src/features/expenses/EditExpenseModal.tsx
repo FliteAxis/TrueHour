@@ -117,7 +117,6 @@ export function EditExpenseModal({ isOpen, onClose, expense, budgetCards = [] }:
         await fetchExpenses();
       } else if (oldBudgetCardId != null && newBudgetCardId != null && amountChanged) {
         // Same budget card but amount changed - need to update the link
-        console.log("[EditExpenseModal] Updating link amount from", oldAmount, "to", newAmount);
         await unlinkFromBudgetCard(oldBudgetCardId, expense.id, true); // Skip refresh
         await linkToBudgetCard(expense.id, newBudgetCardId, newAmount, true); // Skip refresh
         // Refresh once at the end

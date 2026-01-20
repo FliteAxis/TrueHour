@@ -8,7 +8,7 @@ type CertificationType = "private" | "ir" | "cpl" | "cfi";
 
 export function SummaryView() {
   const { settings } = useUserStore();
-  const selectedCert = (settings?.target_certification as CertificationType) || "ir";
+  const selectedCert = (settings?.target_certification?.toLowerCase() || "ir") as CertificationType;
 
   return (
     <div className="space-y-6">

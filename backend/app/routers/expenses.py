@@ -11,7 +11,7 @@ from app.postgres_database import postgres_db
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field, condecimal
 
-router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
+router = APIRouter(prefix="/api/user/expenses", tags=["Expenses"])
 
 
 class ExpenseCreate(BaseModel):

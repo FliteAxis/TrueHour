@@ -53,14 +53,9 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       if (filters?.end_date) params.append("end_date", filters.end_date);
 
       const queryString = params.toString();
-      const url = `${API_BASE}/api/expenses${queryString ? `?${queryString}` : ""}`;
-      console.log("[expenseStore] Fetching expenses from:", url);
+      const url = `${API_BASE}/api/user/expenses${queryString ? `?${queryString}` : ""}`;
       const response = await fetch(url);
       const expenses = await handleResponse<Expense[]>(response);
-      console.log("[expenseStore] Received expenses:", expenses);
-      expenses.forEach((exp) => {
-        console.log(`  Expense ${exp.id}: budget_card_id=${exp.budget_card_id}`);
-      });
 
       set({ expenses, isLoading: false });
     } catch (error) {
@@ -80,7 +75,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
       if (filters?.group_by) params.append("group_by", filters.group_by);
 
       const queryString = params.toString();
-      const url = `${API_BASE}/api/expenses/summary${queryString ? `?${queryString}` : ""}`;
+      const url = `${API_BASE}/api/user/expenses/summary${queryString ? `?${queryString}` : ""}`;
       const response = await fetch(url);
       const summary = await handleResponse<ExpenseSummary[]>(response);
 
@@ -94,7 +89,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   createExpense: async (expense) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`${API_BASE}/api/expenses`, {
+      const response = await fetch(`${API_BASE}/api/user/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(expense),
@@ -117,7 +112,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   updateExpense: async (id, expense) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`${API_BASE}/api/expenses/${id}`, {
+      const response = await fetch(`${API_BASE}/api/user/expenses/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(expense),
@@ -140,7 +135,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   deleteExpense: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`${API_BASE}/api/expenses/${id}`, {
+      const response = await fetch(`${API_BASE}/api/user/expenses/${id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -162,7 +157,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
   linkToBudgetCard: async (expenseId, budgetCardId, amount, skipRefresh = false) => {
     try {
       const response = await fetch(
-        `${API_BASE}/api/budget-cards/${budgetCardId}/link-expense?expense_id=${expenseId}&amount=${amount}`,
+        `${API_BASE}/api/user/budget-cards/${budgetCardId}/link-expense?expense_id=${expenseId}&amount=${amount}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -181,7 +176,7 @@ export const useExpenseStore = create<ExpenseState>((set, get) => ({
 
   unlinkFromBudgetCard: async (budgetCardId, expenseId, skipRefresh = false) => {
     try {
-      const response = await fetch(`${API_BASE}/api/budget-cards/${budgetCardId}/unlink-expense/${expenseId}`, {
+      const response = await fetch(`${API_BASE}/api/user/budget-cards/${budgetCardId}/unlink-expense/${expenseId}`, {
         method: "DELETE",
       });
       if (!response.ok) {

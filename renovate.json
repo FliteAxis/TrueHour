@@ -111,12 +111,28 @@
       ]
     },
     {
-      "description": "Group GitHub Actions updates",
+      "description": "Group GitHub Actions updates (non-major)",
       "matchManagers": [
         "github-actions"
       ],
-      "groupName": "GitHub Actions",
-      "automerge": true
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "groupName": "GitHub Actions"
+    },
+    {
+      "description": "Group major GitHub Actions updates separately",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": "GitHub Actions (major)",
+      "schedule": [
+        "before 6am on the first day of the month"
+      ]
     },
     {
       "description": "FastAPI and Uvicorn should be updated together",
@@ -140,12 +156,9 @@
     },
     {
       "description": "Disable major version updates for stable APIs",
+      "enabled": false,
       "matchUpdateTypes": [
         "major"
-      ],
-      "enabled": false,
-      "schedule": [
-        "before 6am on the first day of the month"
       ],
       "matchPackageNames": [
         "/^fastapi$/",

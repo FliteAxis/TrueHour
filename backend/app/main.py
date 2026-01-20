@@ -11,7 +11,7 @@ load_dotenv()
 
 from app.database import Database
 from app.db_migrations import verify_and_migrate_schema
-from app.models import AircraftResponse, BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
+from app.models import BulkRequest, BulkResponse, BulkResult, HealthResponse, StatsResponse
 from app.postgres_database import postgres_db
 from app.routers import (
     aircraft,
@@ -19,6 +19,7 @@ from app.routers import (
     budgets,
     expense_budget_links,
     expenses,
+    exports,
     flights,
     import_history,
     user_data,
@@ -28,7 +29,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.responses import FileResponse, HTMLResponse
 
-DB_PATH = os.getenv("DB_PATH", "/app/data/aircraft.db")
+# Determine FAA database path - try local path first, fall back to Docker path
+_local_db_path = os.path.join(os.path.dirname(__file__), "../data/aircraft.db")
+_default_db_path = _local_db_path if os.path.exists(_local_db_path) else "/app/data/aircraft.db"
+DB_PATH = os.getenv("DB_PATH", _default_db_path)
 STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 db: Optional[Database] = None
@@ -95,6 +99,7 @@ app.include_router(budget_cards.router)
 app.include_router(budgets.router)
 app.include_router(expenses.router)
 app.include_router(expense_budget_links.router)
+app.include_router(exports.router)
 app.include_router(flights.router)
 app.include_router(import_history.router)
 app.include_router(user_data.router)
@@ -250,21 +255,54 @@ async def custom_redoc_html():
     return HTMLResponse(content=html_with_footer)
 
 
-@app.get("/api/v1/aircraft/{tail}", response_model=AircraftResponse)
+@app.get("/api/v1/aircraft/{tail}")
 async def get_aircraft(tail: str):
-    """Lookup aircraft by N-number (e.g., N172SP, 172SP, N-172SP)."""
-    if db is None:
-        raise HTTPException(503, "FAA database not available. Run update_faa_data.py to build it.")
+    """
+    Lookup aircraft by N-number from FAA registry with enriched data.
 
+    Returns aircraft details including gear type, complexity, and performance characteristics.
+    Uses the internal lookup function that queries PostgreSQL FAA database.
+
+    Args:
+        tail: Aircraft tail number (e.g., N172SP, 172SP, N-172SP)
+
+    Returns:
+        Aircraft details with gear_type, is_complex, is_high_performance, etc.
+    """
+    from app.routers.user_data import _lookup_faa_aircraft
+
+    # Normalize tail number (remove N prefix, spaces, dashes)
     normalized = normalize_tail(tail)
     if not normalized:
         raise HTTPException(400, "Invalid tail number")
 
-    aircraft = db.lookup(normalized)
-    if not aircraft:
-        raise HTTPException(404, f"Aircraft N{normalized} not found")
+    try:
+        # Call internal lookup function with enrichment
+        aircraft_data = await _lookup_faa_aircraft(normalized, enable_faa_lookup=True)
 
-    return aircraft
+        if aircraft_data:
+            # Return enriched data with all fields the frontend expects
+            return {
+                "tail_number": f"N{normalized}",
+                "manufacturer": aircraft_data.get("make"),
+                "model": aircraft_data.get("model"),
+                "series": aircraft_data.get("type_code"),
+                "aircraft_type": aircraft_data.get("aircraft_class"),
+                "engine_type": aircraft_data.get("engine_type"),
+                "year_mfr": str(aircraft_data["year"]) if aircraft_data.get("year") else None,
+                "gear_type": aircraft_data.get("gear_type"),
+                "is_complex": aircraft_data.get("is_complex", False),
+                "is_high_performance": aircraft_data.get("is_high_performance", False),
+            }
+        else:
+            # Not found in FAA database
+            raise HTTPException(404, f"Aircraft N{normalized} not found in FAA registry")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[FAA Lookup] Error looking up {tail}: {e}")
+        raise HTTPException(status_code=500, detail="FAA lookup service error")
 
 
 @app.post("/api/v1/aircraft/bulk", response_model=BulkResponse)

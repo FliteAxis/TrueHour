@@ -68,7 +68,8 @@ export function CertificationProgress() {
       // TODO: Calculate actual XC PIC from flights table
       current = Math.min(currentHours.cross_country, currentHours.pic);
     } else {
-      current = currentHours[req.key] || 0;
+      const value = currentHours[req.key];
+      current = typeof value === "number" ? value : 0;
     }
 
     const remaining = Math.max(0, req.required - current);

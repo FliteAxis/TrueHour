@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useUserStore } from "./store/userStore";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { SummaryView } from "./features/dashboard/SummaryView";
@@ -10,10 +10,10 @@ import { ReportsView } from "./features/reports/ReportsView";
 import { SettingsView } from "./features/settings/SettingsView";
 import { AircraftView } from "./features/aircraft/AircraftView";
 import { AircraftRatesView } from "./features/aircraft/AircraftRatesView";
+import OnboardingWizard from "./features/onboarding/OnboardingWizard";
 
 function App() {
-  const navigate = useNavigate();
-  const { settings, isLoading, error, loadSettings, loadCurrentHours, updateSettings } = useUserStore();
+  const { settings, isLoading, error, loadSettings, loadCurrentHours } = useUserStore();
 
   useEffect(() => {
     // Load user settings and hours on mount
@@ -28,9 +28,6 @@ function App() {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Always render something so we can see what's happening
-  console.log("[App] Render state:", { settings, isLoading, error });
 
   if (error) {
     return (
@@ -65,29 +62,7 @@ function App() {
 
   // Check if onboarding is needed
   if (settings && !settings.onboarding_completed) {
-    const handleSkipOnboarding = async () => {
-      try {
-        await updateSettings({ onboarding_completed: true });
-        navigate("/dashboard");
-      } catch (err) {
-        console.error("Failed to update onboarding status:", err);
-      }
-    };
-
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-truehour-dark">
-        <div className="bg-truehour-card border border-truehour-border p-8 rounded-lg max-w-md text-center">
-          <h2 className="text-2xl font-bold text-white mb-4">Welcome to TrueHour!</h2>
-          <p className="text-slate-300 mb-6">Onboarding flow will go here. For now, you can explore the app.</p>
-          <button
-            onClick={handleSkipOnboarding}
-            className="px-6 py-3 bg-truehour-blue text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            Skip to Dashboard
-          </button>
-        </div>
-      </div>
-    );
+    return <OnboardingWizard />;
   }
 
   // Main app

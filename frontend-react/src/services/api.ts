@@ -86,17 +86,17 @@ export async function getBudgetCards(year?: number, month?: number): Promise<Bud
     params.append("month", `${year}-${monthStr}-01`);
   }
 
-  const response = await fetch(`${API_BASE}/api/budget-cards/?${params}`);
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/?${params}`);
   return handleResponse<BudgetCard[]>(response);
 }
 
 export async function getBudgetCardsSummaryByCategory(year: number): Promise<BudgetCategorySummary[]> {
-  const response = await fetch(`${API_BASE}/api/budget-cards/summary/category?year=${year}`);
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/summary/category?year=${year}`);
   return handleResponse<BudgetCategorySummary[]>(response);
 }
 
 export async function createBudgetCard(card: BudgetCardCreate): Promise<BudgetCard> {
-  const response = await fetch(`${API_BASE}/api/budget-cards/`, {
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(card),
@@ -105,7 +105,7 @@ export async function createBudgetCard(card: BudgetCardCreate): Promise<BudgetCa
 }
 
 export async function updateBudgetCard(id: number, card: Partial<BudgetCard>): Promise<BudgetCard> {
-  const response = await fetch(`${API_BASE}/api/budget-cards/${id}`, {
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(card),
@@ -114,7 +114,7 @@ export async function updateBudgetCard(id: number, card: Partial<BudgetCard>): P
 }
 
 export async function deleteBudgetCard(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/budget-cards/${id}`, {
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) {
@@ -123,7 +123,7 @@ export async function deleteBudgetCard(id: number): Promise<void> {
 }
 
 export async function duplicateBudgetCard(id: number): Promise<BudgetCard> {
-  const response = await fetch(`${API_BASE}/api/budget-cards/${id}/duplicate`, {
+  const response = await fetch(`${API_BASE}/api/user/budget-cards/${id}/duplicate`, {
     method: "POST",
   });
   return handleResponse<BudgetCard>(response);
@@ -134,7 +134,7 @@ export async function duplicateBudgetCard(id: number): Promise<BudgetCard> {
 // ============================================================================
 
 export async function getLatestImportHistory(): Promise<ImportHistory | null> {
-  const response = await fetch(`${API_BASE}/api/import-history/latest`);
+  const response = await fetch(`${API_BASE}/api/user/import-history/latest`);
   if (response.status === 404) {
     return null;
   }
@@ -148,7 +148,7 @@ export async function createImportHistory(data: {
   hours_imported: HoursData;
   notes?: string;
 }): Promise<ImportHistory> {
-  const response = await fetch(`${API_BASE}/api/import-history/`, {
+  const response = await fetch(`${API_BASE}/api/user/import-history/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -174,7 +174,7 @@ export async function getFlights(params?: {
   if (params?.limit) queryParams.append("limit", params.limit.toString());
   if (params?.offset) queryParams.append("offset", params.offset.toString());
 
-  const response = await fetch(`${API_BASE}/api/flights?${queryParams}`);
+  const response = await fetch(`${API_BASE}/api/user/flights?${queryParams}`);
   return handleResponse<Flight[]>(response);
 }
 
@@ -183,17 +183,17 @@ export async function getFlightSummary(params?: { start_date?: string; end_date?
   if (params?.start_date) queryParams.append("start_date", params.start_date);
   if (params?.end_date) queryParams.append("end_date", params.end_date);
 
-  const response = await fetch(`${API_BASE}/api/flights/summary?${queryParams}`);
+  const response = await fetch(`${API_BASE}/api/user/flights/summary?${queryParams}`);
   return handleResponse<FlightSummary>(response);
 }
 
 export async function getFlight(id: number): Promise<Flight> {
-  const response = await fetch(`${API_BASE}/api/flights/${id}`);
+  const response = await fetch(`${API_BASE}/api/user/flights/${id}`);
   return handleResponse<Flight>(response);
 }
 
 export async function createFlight(flight: Partial<Flight>): Promise<Flight> {
-  const response = await fetch(`${API_BASE}/api/flights`, {
+  const response = await fetch(`${API_BASE}/api/user/flights`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(flight),
@@ -202,7 +202,7 @@ export async function createFlight(flight: Partial<Flight>): Promise<Flight> {
 }
 
 export async function updateFlight(id: number, flight: Partial<Flight>): Promise<Flight> {
-  const response = await fetch(`${API_BASE}/api/flights/${id}`, {
+  const response = await fetch(`${API_BASE}/api/user/flights/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(flight),
@@ -211,7 +211,7 @@ export async function updateFlight(id: number, flight: Partial<Flight>): Promise
 }
 
 export async function deleteFlight(id: number): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/flights/${id}`, {
+  const response = await fetch(`${API_BASE}/api/user/flights/${id}`, {
     method: "DELETE",
   });
   if (!response.ok) {

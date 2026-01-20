@@ -16,7 +16,7 @@ from app.models import (
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException, Query
 
-router = APIRouter(prefix="/api/budget-cards", tags=["Budget Cards"])
+router = APIRouter(prefix="/api/user/budget-cards", tags=["Budget Cards"])
 
 
 @router.get("/", response_model=List[BudgetCardResponse])

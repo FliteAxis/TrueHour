@@ -304,6 +304,49 @@ async def verify_and_migrate_schema(db) -> List[str]:
             )
             migrations_applied.append("Added budget_categories column to user_settings")
 
+        # Check if flights.distance column exists
+        result = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT FROM information_schema.columns
+                WHERE table_schema = 'public'
+                AND table_name = 'flights'
+                AND column_name = 'distance'
+            )
+            """
+        )
+
+        if not result:
+            logger.warning("flights.distance column missing - adding it")
+            await conn.execute(
+                """
+                ALTER TABLE flights ADD COLUMN distance NUMERIC(10,2);
+                COMMENT ON COLUMN flights.distance IS
+                    'Total distance flown in nautical miles (from ForeFlight Distance field)';
+                """
+            )
+            migrations_applied.append("Added distance column to flights table")
+
+        # Check if flights.import_hash has unique constraint
+        result = await conn.fetchval(
+            """
+            SELECT EXISTS (
+                SELECT FROM pg_constraint
+                WHERE conname = 'flights_import_hash_key'
+                AND conrelid = 'flights'::regclass
+            )
+            """
+        )
+
+        if not result:
+            logger.warning("flights.import_hash unique constraint missing - adding it")
+            await conn.execute(
+                """
+                ALTER TABLE flights ADD CONSTRAINT flights_import_hash_key UNIQUE (import_hash);
+                """
+            )
+            migrations_applied.append("Added unique constraint on flights.import_hash")
+
     if migrations_applied:
         logger.info(f"Applied {len(migrations_applied)} migrations:")
         for msg in migrations_applied:
