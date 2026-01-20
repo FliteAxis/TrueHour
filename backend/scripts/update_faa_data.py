@@ -7,6 +7,7 @@ Usage:
 
 Default output: ./aircraft.db
 """
+
 import csv
 import io
 import os
@@ -168,8 +169,7 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
     cur = conn.cursor()
 
     # Create tables
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE master (
             n_number TEXT PRIMARY KEY,
             mfr_mdl_code TEXT,
@@ -179,11 +179,9 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
             no_seats TEXT,
             year_mfr TEXT
         )
-    """
-    )
+    """)
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE acftref (
             code TEXT PRIMARY KEY,
             mfr TEXT,
@@ -192,17 +190,14 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
             no_eng TEXT,
             no_seats TEXT
         )
-    """
-    )
+    """)
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE metadata (
             key TEXT PRIMARY KEY,
             value TEXT
         )
-    """
-    )
+    """)
 
     # Insert ACFTREF data (need this for JOIN)
     acftref_data = [

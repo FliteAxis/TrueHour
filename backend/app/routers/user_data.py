@@ -620,12 +620,10 @@ async def load_user_data(session_id: Optional[str] = Header(None, alias="X-Sessi
                 )
             else:
                 # Create default settings if none exist
-                await conn.execute(
-                    """
+                await conn.execute("""
                     INSERT INTO user_settings (auto_save_enabled, auto_save_interval, timezone)
                     VALUES (true, 3000, 'America/New_York')
-                """
-                )
+                """)
                 settings = UserSettings()
 
             # Get last saved timestamp

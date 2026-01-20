@@ -382,8 +382,7 @@ async def delete_all_data():
             await conn.execute("DELETE FROM import_history")
             await conn.execute("DELETE FROM user_sessions")
             # Reset user settings to defaults but don't delete the row
-            await conn.execute(
-                """
+            await conn.execute("""
                 UPDATE user_settings
                 SET auto_save_enabled = true,
                     auto_save_interval = 3000,
@@ -392,8 +391,7 @@ async def delete_all_data():
                     default_aircraft_id = NULL,
                     onboarding_completed = false,
                     target_certification = NULL
-                """
-            )
+                """)
 
         return {"status": "success", "message": "All data deleted successfully"}
     except Exception as e:

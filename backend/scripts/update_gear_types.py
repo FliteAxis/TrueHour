@@ -5,6 +5,7 @@ Update existing aircraft records with inferred gear types.
 This script runs the gear inference logic on all aircraft in the database
 and updates their gear_type, is_complex, and is_high_performance fields.
 """
+
 import asyncio
 import os
 import sys
@@ -25,14 +26,12 @@ async def update_aircraft_gear_types():
     try:
         async with db.acquire() as conn:
             # Get all aircraft with make/model
-            aircraft_list = await conn.fetch(
-                """
+            aircraft_list = await conn.fetch("""
                 SELECT id, tail_number, make, model, gear_type
                 FROM aircraft
                 WHERE make IS NOT NULL AND model IS NOT NULL
                 ORDER BY id
-                """
-            )
+                """)
 
             print(f"Found {len(aircraft_list)} aircraft to update")
             updated_count = 0
