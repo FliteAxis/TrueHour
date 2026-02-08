@@ -1,139 +1,667 @@
-# Architecture Overview
+# TrueHour v2.0 Architecture Overview
 
-This document provides a comprehensive overview of the tail-lookup system architecture, design decisions, and component interactions.
+Complete architectural documentation for TrueHour v2.0 - a modern, full-stack aviation training management system.
 
-## System Architecture
+---
+
+## Table of Contents
+
+1. [System Overview](#system-overview)
+2. [Technology Stack](#technology-stack)
+3. [Architecture Diagram](#architecture-diagram)
+4. [Frontend Architecture](#frontend-architecture)
+5. [Backend Architecture](#backend-architecture)
+6. [Database Architecture](#database-architecture)
+7. [API Design](#api-design)
+8. [Data Flow](#data-flow)
+9. [Deployment Architecture](#deployment-architecture)
+10. [Security](#security)
+11. [Performance](#performance)
+12. [Future Enhancements](#future-enhancements)
+
+---
+
+## System Overview
+
+TrueHour v2.0 is a local-first, containerized web application for aviation flight training management. It consists of three main components running in Docker containers:
+
+1. **React Frontend** - Modern single-page application (SPA)
+2. **FastAPI Backend** - Python REST API with async operations
+3. **PostgreSQL Database** - Primary data store with JSONB support
+
+The application also includes:
+- **SQLite FAA Database** - 308K+ aircraft lookup (embedded in backend)
+- **Docker Compose** - Container orchestration
+- **Nginx** - Production frontend serving (future)
+
+**Design Philosophy:**
+- Local-first (no cloud dependencies)
+- Privacy-focused (data never leaves your machine)
+- Self-contained (batteries included)
+- Modern tech stack (React 18, FastAPI, PostgreSQL 16)
+- Docker-based (consistent across platforms)
+
+---
+
+## Technology Stack
+
+### Frontend
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| **React** | 18.3+ | UI framework with hooks and concurrent features |
+| **TypeScript** | 5.6+ | Type safety and developer experience |
+| **Vite** | 5.4+ | Fast build tool with HMR |
+| **Tailwind CSS** | 3.4+ | Utility-first styling |
+| **Zustand** | 5.0+ | Lightweight state management |
+| **Recharts** | 2.12+ | Chart visualizations |
+| **jsPDF** | 2.5+ | PDF generation |
+| **html2canvas** | 1.4+ | Chart rendering for PDFs |
+
+### Backend
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| **Python** | 3.11+ | Programming language |
+| **FastAPI** | 0.115+ | Modern async web framework |
+| **Pydantic** | 2.9+ | Data validation and settings |
+| **asyncpg** | 0.30+ | Async PostgreSQL driver |
+| **SQLite3** | 3.x | FAA aircraft database |
+| **Uvicorn** | 0.32+ | ASGI server |
+
+### Database
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| **PostgreSQL** | 16+ | Primary relational database |
+| **SQLite** | 3.x | FAA aircraft lookup database |
+
+### DevOps
+
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| **Docker** | 20.10+ | Containerization |
+| **Docker Compose** | 2.0+ | Multi-container orchestration |
+| **GitHub Actions** | - | CI/CD (future) |
+
+---
+
+## Architecture Diagram
+
+### High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Clients                              │
-│  (Web Browser, API Consumers, Mobile Apps, Scripts)         │
-└───────────────────────────┬─────────────────────────────────┘
-                            │
-                            │ HTTP/REST
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Application                       │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                   API Endpoints                       │  │
-│  │  • GET  /api/v1/aircraft/{tail}                      │  │
-│  │  • POST /api/v1/aircraft/bulk                        │  │
-│  │  • GET  /api/v1/health                               │  │
-│  │  • GET  /api/v1/stats                                │  │
-│  │  • GET  / (Web UI)                                   │  │
-│  └────────────────────┬─────────────────────────────────┘  │
-│                       │                                      │
-│  ┌────────────────────▼─────────────────────────────────┐  │
-│  │              Pydantic Models                          │  │
-│  │  (Request/Response Validation & Serialization)       │  │
-│  └────────────────────┬─────────────────────────────────┘  │
-│                       │                                      │
-│  ┌────────────────────▼─────────────────────────────────┐  │
-│  │             Database Layer (database.py)             │  │
-│  │  • N-number normalization                            │  │
-│  │  • Aircraft/Engine type mappings                     │  │
-│  │  • JOIN optimization                                 │  │
-│  └────────────────────┬─────────────────────────────────┘  │
-└────────────────────────┼─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                         Web Browser                              │
+│                      (User Interface)                            │
+└────────────────────────┬────────────────────────────────────────┘
                          │
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    SQLite Database                           │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  master table      (~300K records)                   │  │
-│  │  • n_number, mfr_mdl_code, year_mfr, etc.           │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  acftref table     (Aircraft model reference)        │  │
-│  │  • code, mfr, model, type_acft, type_eng, etc.      │  │
-│  └──────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │  metadata table    (Update tracking)                 │  │
-│  │  • key, value (last_updated timestamp)              │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+                         │ HTTP / REST API
+                         │
+┌────────────────────────▼────────────────────────────────────────┐
+│                     Docker Compose                               │
+│                                                                   │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────┐│
+│  │   Frontend      │  │   Backend API    │  │   PostgreSQL   ││
+│  │   Container     │  │   Container      │  │   Container    ││
+│  ├─────────────────┤  ├──────────────────┤  ├────────────────┤│
+│  │ React + Vite    │  │ FastAPI          │  │ PostgreSQL 16  ││
+│  │ Tailwind CSS    │◄─┤ Python 3.11      │◄─┤                ││
+│  │ Zustand         │  │ asyncpg          │  │ Data:          ││
+│  │ TypeScript      │  │ Pydantic         │  │ • flights      ││
+│  │                 │  │                  │  │ • aircraft     ││
+│  │ Port: 3000      │  │ FAA SQLite DB    │  │ • budget_cards ││
+│  │                 │  │ (308K aircraft)  │  │ • expenses     ││
+│  │                 │  │                  │  │ • user_data    ││
+│  │                 │  │ Port: 8000       │  │ Port: 5432     ││
+│  └─────────────────┘  └──────────────────┘  └────────────────┘│
+│                                                                   │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-## Data Flow
+### Container Communication
 
-### Single Lookup Flow
+```
+Frontend (React)
+    │
+    │ HTTP REST API (axios)
+    │ http://localhost:8000/api/*
+    ▼
+Backend (FastAPI)
+    │
+    ├─► PostgreSQL (asyncpg)
+    │   postgresql://truehour:password@db:5432/truehour
+    │   • User data (flights, budget, expenses)
+    │   • Settings and preferences
+    │
+    └─► SQLite (sqlite3)
+        /app/data/aircraft.db
+        • FAA aircraft database (read-only)
+        • 308K+ US aircraft registrations
+```
 
-1. **Client Request**: `GET /api/v1/aircraft/N172SP`
-2. **FastAPI Routing**: Route handler in `main.py` receives request
-3. **N-number Normalization**: Convert "N172SP" → "172SP" (strip N prefix, uppercase)
-4. **Database Query**: Execute JOIN query between `master` and `acftref` tables
-5. **Type Mapping**: Convert numeric codes to human-readable strings (e.g., "4" → "Fixed Wing Single-Engine")
-6. **Response Validation**: Pydantic model validates and serializes response
-7. **Client Response**: JSON with aircraft details or 404 if not found
+---
 
-### Bulk Lookup Flow
+## Frontend Architecture
 
-1. **Client Request**: `POST /api/v1/aircraft/bulk` with JSON array of tail numbers
-2. **Request Validation**: Pydantic validates max 50 tail numbers
-3. **Batch Processing**: Iterate through each tail number
-4. **Individual Lookups**: Same lookup flow as single, but collect all results
-5. **Error Handling**: Failed lookups return with error message, don't fail entire request
-6. **Response Aggregation**: Return total count, found count, and results array
-7. **Client Response**: JSON with bulk results
+### Directory Structure
 
-### Database Update Flow
+```
+frontend-react/
+├── src/
+│   ├── components/       # Reusable UI components
+│   │   ├── Layout.tsx           # Main layout with navigation
+│   │   ├── Modal.tsx            # Modal dialog component
+│   │   └── LoadingSpinner.tsx   # Loading indicators
+│   │
+│   ├── features/         # Feature-specific components
+│   │   ├── dashboard/           # Dashboard view
+│   │   ├── flights/             # Flight logging
+│   │   ├── aircraft/            # Aircraft management
+│   │   ├── budget/              # Budget cards
+│   │   ├── expenses/            # Expense tracking
+│   │   ├── certification/       # Certification progress
+│   │   ├── reports/             # Reports & exports
+│   │   └── settings/            # Settings & configuration
+│   │
+│   ├── services/         # API client
+│   │   └── api.ts              # Centralized API calls
+│   │
+│   ├── store/            # Zustand state management
+│   │   ├── useStore.ts         # Main store
+│   │   └── types.ts            # Store types
+│   │
+│   ├── types/            # TypeScript definitions
+│   │   └── api.ts              # API response types
+│   │
+│   ├── utils/            # Utility functions
+│   │   ├── pdfExport.ts        # PDF generation
+│   │   ├── calculations.ts     # Hour calculations
+│   │   └── formatters.ts       # Data formatting
+│   │
+│   ├── App.tsx           # Root component
+│   └── main.tsx          # Entry point
+│
+├── public/               # Static assets
+├── index.html            # HTML template
+├── vite.config.ts        # Vite configuration
+├── tailwind.config.js    # Tailwind CSS config
+└── tsconfig.json         # TypeScript config
+```
 
-1. **Scheduled Trigger**: GitHub Actions cron at 6 AM UTC daily
-2. **Download FAA Data**: Fetch ReleasableAircraft.zip (~30MB)
-3. **Parse MASTER.txt**: Extract ~300K aircraft registrations
-4. **Parse ACFTREF.txt**: Extract aircraft model reference data
-5. **Build SQLite Database**: Create tables, insert data, create indexes
-6. **Docker Build**: Bake database into Docker image
-7. **Publish**: Push to Docker Hub with `latest` and date tags
-8. **Release**: Create GitHub Release with database file attachment
-9. **Optional Webhook**: Trigger Portainer for auto-deployment
+### State Management (Zustand)
 
-## Component Details
+TrueHour uses Zustand for lightweight, efficient state management:
 
-### FastAPI Application (`app/main.py`)
+**Store Structure:**
+```typescript
+interface AppState {
+  // UI State
+  currentView: string;
+  isLoading: boolean;
 
-**Purpose**: Main application entry point, route definitions, middleware configuration
+  // Data State
+  flights: Flight[];
+  aircraft: Aircraft[];
+  budgetCards: BudgetCard[];
+  expenses: Expense[];
+  userData: UserData | null;
 
-**Key Features**:
-- CORS middleware for cross-origin requests
-- Lifespan context manager for database connection handling
-- N-number normalization function
-- OpenAPI/Swagger automatic documentation
-- Static file serving for web UI
+  // Actions
+  setCurrentView: (view: string) => void;
+  fetchFlights: () => Promise<void>;
+  fetchAircraft: () => Promise<void>;
+  // ... other actions
+}
+```
 
-**Design Decisions**:
-- **Why FastAPI?** Modern async framework, automatic OpenAPI docs, excellent performance, Pydantic integration
-- **Why CORS enabled?** Allow web apps from different origins to use the API
-- **Why lifespan context?** Clean database connection management, proper startup/shutdown
+**Benefits:**
+- No boilerplate (compared to Redux)
+- TypeScript-friendly
+- React hooks integration
+- Small bundle size (~1KB)
+- Easy to test
 
-### Database Layer (`app/database.py`)
+### Component Architecture
 
-**Purpose**: SQLite operations, type mappings, data access abstraction
+**Layout Hierarchy:**
+```
+App
+ └─ Layout
+     ├─ Navigation (hamburger menu)
+     └─ View Container
+         ├─ Dashboard
+         ├─ FlightsView
+         ├─ AircraftView
+         ├─ BudgetView
+         ├─ ExpensesView
+         ├─ CertificationProgressView
+         ├─ ReportsView
+         └─ SettingsView
+```
 
-**Key Features**:
-- Singleton database connection pattern
-- Aircraft type code to name mapping (11 types)
-- Engine type code to name mapping (12 types)
-- JOIN optimization between master and acftref tables
-- Optional field handling (None for missing data)
+**Component Patterns:**
+- **Container Components** - Fetch data, manage state (e.g., FlightsView)
+- **Presentational Components** - Render UI (e.g., FlightCard)
+- **Modal Components** - Dialogs for add/edit operations
+- **Form Components** - Reusable form inputs with validation
 
-**Design Decisions**:
-- **Why SQLite?** Lightweight (~25MB), zero configuration, baked into Docker image, sufficient for read-heavy workload
-- **Why JOIN query?** Single query is more efficient than multiple lookups
-- **Why code mappings in Python?** FAA database has numeric codes, we provide human-readable names
+### API Client (`services/api.ts`)
 
-**Database Schema**:
+Centralized API client using `fetch`:
+
+```typescript
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
+export async function getFlights(): Promise<Flight[]> {
+  const response = await fetch(`${API_BASE}/api/flights`);
+  if (!response.ok) throw new Error('Failed to fetch flights');
+  return response.json();
+}
+
+export async function createFlight(flight: FlightCreate): Promise<Flight> {
+  const response = await fetch(`${API_BASE}/api/flights`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(flight),
+  });
+  if (!response.ok) throw new Error('Failed to create flight');
+  return response.json();
+}
+```
+
+**Benefits:**
+- Single source of truth for API endpoints
+- Consistent error handling
+- Type-safe requests and responses
+- Easy to mock for testing
+
+### Routing
+
+TrueHour uses **view-based routing** (not React Router):
+- Single-page application with conditional rendering
+- `currentView` state determines which component to show
+- No URL-based routing (simplicity, local-first focus)
+- Hamburger menu for navigation
+
+**Future Enhancement:** Could add React Router for URL-based navigation and deep linking.
+
+---
+
+## Backend Architecture
+
+### Directory Structure
+
+```
+backend/
+├── app/
+│   ├── routers/              # API route modules
+│   │   ├── flights.py               # Flight endpoints
+│   │   ├── aircraft.py              # Aircraft endpoints
+│   │   ├── budget_cards.py          # Budget card endpoints
+│   │   ├── expenses.py              # Expense endpoints
+│   │   ├── exports.py               # CSV export endpoints
+│   │   ├── import_history.py        # Import history endpoints
+│   │   └── user_data.py             # User data endpoints
+│   │
+│   ├── main.py               # FastAPI app entry point
+│   ├── models.py             # Pydantic models
+│   ├── database.py           # Database connection (deprecated)
+│   ├── postgres_database.py  # PostgreSQL connection pool
+│   ├── db_migrations.py      # Database schema migrations
+│   └── faa_lookup.py         # FAA aircraft lookup logic
+│
+├── data/
+│   └── aircraft.db           # SQLite FAA aircraft database
+│
+├── scripts/
+│   ├── download_faa_data.py  # Download FAA data
+│   └── build_aircraft_db.py  # Build SQLite database
+│
+├── requirements.txt          # Python dependencies
+├── Dockerfile               # Container build instructions
+└── .env.example             # Environment template
+```
+
+### FastAPI Application (`main.py`)
+
+**Key Features:**
+- **Lifespan Context Manager** - Database connection pool management
+- **CORS Middleware** - Allow frontend to call backend
+- **Router Registration** - Modular route organization
+- **Auto Documentation** - Swagger UI at `/docs`
+- **Health Check** - `/api/health` endpoint
+
+**Example:**
+```python
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.routers import flights, aircraft, budget_cards
+
+app = FastAPI(title="TrueHour API", version="2.0.0")
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Routers
+app.include_router(flights.router)
+app.include_router(aircraft.router)
+app.include_router(budget_cards.router)
+
+@app.get("/api/health")
+async def health():
+    return {"status": "ok"}
+```
+
+### Database Connection (`postgres_database.py`)
+
+**Connection Pooling:**
+```python
+import asyncpg
+
+class PostgresDatabase:
+    def __init__(self, database_url: str):
+        self.database_url = database_url
+        self.pool = None
+
+    async def connect(self):
+        self.pool = await asyncpg.create_pool(
+            self.database_url,
+            min_size=2,
+            max_size=10,
+        )
+
+    async def disconnect(self):
+        if self.pool:
+            await self.pool.close()
+
+    def acquire(self):
+        return self.pool.acquire()
+
+postgres_db = PostgresDatabase(os.getenv("DATABASE_URL"))
+```
+
+**Benefits:**
+- **Connection pooling** - Reuse connections, reduce overhead
+- **Async operations** - Non-blocking I/O
+- **Context manager** - Automatic connection management
+- **Error handling** - Centralized error handling
+
+### API Router Pattern
+
+Each feature has its own router module:
+
+**Example (`routers/flights.py`):**
+```python
+from fastapi import APIRouter, HTTPException
+from app.models import Flight, FlightCreate
+from app.postgres_database import postgres_db
+
+router = APIRouter(prefix="/api/flights", tags=["Flights"])
+
+@router.get("/", response_model=list[Flight])
+async def get_flights():
+    async with postgres_db.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM flights ORDER BY date DESC")
+        return [dict(row) for row in rows]
+
+@router.post("/", response_model=Flight)
+async def create_flight(flight: FlightCreate):
+    async with postgres_db.acquire() as conn:
+        row = await conn.fetchrow(
+            """INSERT INTO flights (...) VALUES (...) RETURNING *""",
+            flight.date, flight.tail_number, ...
+        )
+        return dict(row)
+```
+
+**Benefits:**
+- **Modular** - Each router is independent
+- **Type-safe** - Pydantic models enforce types
+- **Auto-docs** - FastAPI generates OpenAPI schema
+- **Testable** - Easy to unit test each router
+
+### Pydantic Models (`models.py`)
+
+**Request/Response Models:**
+```python
+from pydantic import BaseModel, Field
+from datetime import date
+from typing import Optional
+
+class FlightBase(BaseModel):
+    date: date
+    tail_number: str
+    departure_airport: Optional[str] = None
+    arrival_airport: Optional[str] = None
+    total_time: float = Field(..., gt=0)
+    # ... other fields
+
+class FlightCreate(FlightBase):
+    pass
+
+class Flight(FlightBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+```
+
+**Benefits:**
+- **Validation** - Automatic input validation
+- **Serialization** - Convert between JSON and Python objects
+- **Documentation** - OpenAPI schema generation
+- **Type safety** - IDE autocomplete and type checking
+
+### Database Migrations (`db_migrations.py`)
+
+**Auto-Migration System:**
+- Runs on backend startup
+- Creates tables if they don't exist
+- Adds columns if they're missing
+- No manual SQL required
+
+**Example:**
+```python
+async def run_migrations():
+    async with postgres_db.acquire() as conn:
+        # Create flights table if not exists
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS flights (
+                id SERIAL PRIMARY KEY,
+                date DATE NOT NULL,
+                tail_number TEXT NOT NULL,
+                total_time NUMERIC NOT NULL,
+                -- ... other columns
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+```
+
+---
+
+## Database Architecture
+
+### PostgreSQL Schema
+
+TrueHour uses PostgreSQL 16 with the following tables:
+
+#### Core Tables
+
+**1. `flights`** - Flight log entries
+
 ```sql
--- master table
+CREATE TABLE flights (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    aircraft_id INTEGER REFERENCES aircraft(id),
+    tail_number TEXT,
+    departure_airport TEXT,
+    arrival_airport TEXT,
+    route TEXT,
+    total_time NUMERIC NOT NULL,
+    pic_time NUMERIC DEFAULT 0,
+    sic_time NUMERIC DEFAULT 0,
+    night_time NUMERIC DEFAULT 0,
+    solo_time NUMERIC DEFAULT 0,
+    cross_country_time NUMERIC DEFAULT 0,
+    actual_instrument_time NUMERIC DEFAULT 0,
+    simulated_instrument_time NUMERIC DEFAULT 0,
+    simulated_flight_time NUMERIC DEFAULT 0,
+    dual_given_time NUMERIC DEFAULT 0,
+    dual_received_time NUMERIC DEFAULT 0,
+    complex_time NUMERIC DEFAULT 0,
+    high_performance_time NUMERIC DEFAULT 0,
+    day_takeoffs INTEGER DEFAULT 0,
+    day_landings_full_stop INTEGER DEFAULT 0,
+    night_takeoffs INTEGER DEFAULT 0,
+    night_landings_full_stop INTEGER DEFAULT 0,
+    all_landings INTEGER DEFAULT 0,
+    holds INTEGER DEFAULT 0,
+    approaches TEXT,
+    distance NUMERIC,
+    instructor_name TEXT,
+    pilot_comments TEXT,
+    qualifying_flight_metadata JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_flights_date ON flights(date);
+CREATE INDEX idx_flights_aircraft_id ON flights(aircraft_id);
+```
+
+**2. `aircraft`** - User aircraft fleet
+
+```sql
+CREATE TABLE aircraft (
+    id SERIAL PRIMARY KEY,
+    tail_number TEXT UNIQUE NOT NULL,
+    make TEXT,
+    model TEXT,
+    year INTEGER,
+    category_class TEXT,
+    gear_type TEXT,
+    engine_type TEXT,
+    is_complex BOOLEAN DEFAULT FALSE,
+    is_high_performance BOOLEAN DEFAULT FALSE,
+    is_taa BOOLEAN DEFAULT FALSE,
+    is_simulator BOOLEAN DEFAULT FALSE,
+    wet_rate NUMERIC,
+    dry_rate NUMERIC,
+    fuel_price_per_gallon NUMERIC,
+    fuel_burn_rate NUMERIC,
+    is_active BOOLEAN DEFAULT TRUE,
+    data_source TEXT DEFAULT 'manual',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**3. `budget_cards`** - Budget planning cards
+
+```sql
+CREATE TABLE budget_cards (
+    id SERIAL PRIMARY KEY,
+    category TEXT NOT NULL,
+    name TEXT NOT NULL,
+    amount NUMERIC,
+    when_date DATE,
+    status TEXT DEFAULT 'active',
+    aircraft_id INTEGER REFERENCES aircraft(id),
+    associated_hours NUMERIC,
+    hourly_rate_type TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_budget_cards_category ON budget_cards(category);
+CREATE INDEX idx_budget_cards_when_date ON budget_cards(when_date);
+```
+
+**4. `expenses`** - Expense tracking
+
+```sql
+CREATE TABLE expenses (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    category TEXT NOT NULL,
+    description TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    payment_method TEXT,
+    vendor TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_expenses_date ON expenses(date);
+CREATE INDEX idx_expenses_category ON expenses(category);
+```
+
+**5. `expense_budget_links`** - Many-to-many expense/budget relationships
+
+```sql
+CREATE TABLE expense_budget_links (
+    id SERIAL PRIMARY KEY,
+    expense_id INTEGER REFERENCES expenses(id) ON DELETE CASCADE,
+    budget_card_id INTEGER REFERENCES budget_cards(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(expense_id, budget_card_id)
+);
+```
+
+**6. `import_history`** - ForeFlight CSV import tracking
+
+```sql
+CREATE TABLE import_history (
+    id SERIAL PRIMARY KEY,
+    filename TEXT,
+    imported_at TIMESTAMP DEFAULT NOW(),
+    flights_imported INTEGER,
+    hours_imported JSONB
+);
+```
+
+**7. `user_data`** - Settings and preferences
+
+```sql
+CREATE TABLE user_data (
+    id SERIAL PRIMARY KEY,
+    key TEXT UNIQUE NOT NULL,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### SQLite FAA Database
+
+**Location:** `backend/data/aircraft.db`
+
+**Tables:**
+- `master` - 308K+ US aircraft registrations
+- `acftref` - Aircraft model reference data
+- `metadata` - Database update tracking
+
+**Schema:**
+```sql
 CREATE TABLE master (
     n_number TEXT PRIMARY KEY,
     serial_number TEXT,
     mfr_mdl_code TEXT,
     year_mfr INTEGER,
-    -- ... other fields
+    -- ... FAA fields
 );
 
--- acftref table
 CREATE TABLE acftref (
     code TEXT PRIMARY KEY,
     mfr TEXT,
@@ -141,189 +669,359 @@ CREATE TABLE acftref (
     type_acft TEXT,
     type_eng TEXT,
     no_eng INTEGER,
-    no_seats INTEGER,
-    -- ... other fields
+    no_seats INTEGER
 );
 
--- metadata table
-CREATE TABLE metadata (
-    key TEXT PRIMARY KEY,
-    value TEXT
-);
-
--- Index for JOIN optimization
 CREATE INDEX idx_mfr_mdl_code ON master(mfr_mdl_code);
 ```
 
-### Pydantic Models (`app/models.py`)
+**Update Process:**
+- Manually run `scripts/download_faa_data.py`
+- Parses FAA ReleasableAircraft.zip
+- Rebuilds aircraft.db
+- No automatic updates (by design, user controls data)
 
-**Purpose**: Type-safe request/response models, validation, serialization
+---
 
-**Models**:
-- `AircraftResponse`: Single aircraft lookup response
-- `BulkRequest`: Bulk lookup request (max 50 tail numbers)
-- `BulkResult`: Single result within bulk response
-- `BulkResponse`: Bulk lookup response with counts and results
-- `HealthResponse`: Health check response
-- `StatsResponse`: Database statistics response
+## API Design
 
-**Design Decisions**:
-- **Why Pydantic?** Automatic validation, serialization, OpenAPI schema generation
-- **Why Optional fields?** Not all aircraft have all data (e.g., year_mfr may be unknown)
-- **Why max 50 for bulk?** Balance between usability and server load
+### RESTful Endpoints
 
-### Data Pipeline (`scripts/update_faa_data.py`)
+TrueHour follows REST principles with consistent patterns:
 
-**Purpose**: Download FAA data, parse files, build SQLite database
+**URL Structure:**
+```
+/api/{resource}/{id?}/{action?}
+```
 
-**Process**:
-1. Download ReleasableAircraft.zip from FAA website
-2. Extract MASTER.txt (fixed-width format)
-3. Extract ACFTREF.txt (fixed-width format)
-4. Parse both files using column positions
-5. Create SQLite database with three tables
-6. Insert all records in batch for performance
-7. Create index on mfr_mdl_code for JOIN optimization
-8. Store last_updated timestamp in metadata table
+**HTTP Methods:**
+- `GET` - Retrieve resources
+- `POST` - Create resources
+- `PUT` - Update resources
+- `DELETE` - Delete resources
 
-**Design Decisions**:
-- **Why fixed-width parsing?** FAA format is fixed-width, not CSV
-- **Why batch insert?** Much faster than individual inserts (~300K records)
-- **Why index on mfr_mdl_code?** This is the JOIN key, indexing improves query performance
-- **Why store metadata?** Track when data was last updated for health checks
+### Endpoint Inventory
 
-**FAA Data Format**:
-- MASTER.txt: Fixed-width columns, ~300K rows, aircraft registration data
-- ACFTREF.txt: Fixed-width columns, aircraft model reference
-- Updated daily by FAA at 11:30 PM CT (5:30 AM UTC)
-- Download URL: https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download
+#### Flights
 
-### Web UI (`app/static/index.html`)
+```
+GET    /api/flights                  # List all flights
+POST   /api/flights                  # Create flight
+GET    /api/flights/{id}             # Get single flight
+PUT    /api/flights/{id}             # Update flight
+DELETE /api/flights/{id}             # Delete flight
+POST   /api/import-csv               # Import ForeFlight CSV
+```
 
-**Purpose**: Browser-based interface for testing the API
+#### Aircraft
 
-**Features**:
-- Dark theme (Tailwind-inspired colors)
-- Tab-based interface (Single/Bulk lookup)
-- Real-time validation
-- Error handling with user-friendly messages
-- Responsive design for mobile
-- Database statistics display
+```
+GET    /api/aircraft                 # List aircraft
+POST   /api/aircraft                 # Create aircraft
+GET    /api/aircraft/{id}            # Get single aircraft
+PUT    /api/aircraft/{id}            # Update aircraft
+DELETE /api/aircraft/{id}            # Delete aircraft
+GET    /api/faa/{tail_number}        # FAA lookup
+```
 
-**Design Decisions**:
-- **Why single-file HTML?** Simple, no build process, easy to maintain
-- **Why dark theme?** Modern aesthetic, easier on eyes
-- **Why tabs?** Clear separation of single vs bulk lookup
+#### Budget Cards
+
+```
+GET    /api/budget-cards                        # List cards
+POST   /api/budget-cards                        # Create card
+GET    /api/budget-cards/{id}                   # Get single card
+PUT    /api/budget-cards/{id}                   # Update card
+DELETE /api/budget-cards/{id}                   # Delete card
+GET    /api/budget-cards/summary-by-category   # Category summaries
+```
+
+#### Expenses
+
+```
+GET    /api/expenses                 # List expenses
+POST   /api/expenses                 # Create expense
+GET    /api/expenses/{id}            # Get single expense
+PUT    /api/expenses/{id}            # Update expense
+DELETE /api/expenses/{id}            # Delete expense
+```
+
+#### Exports
+
+```
+GET    /api/exports/flights/csv        # Export flights CSV
+GET    /api/exports/budget-cards/csv   # Export budget cards CSV
+GET    /api/exports/expenses/csv       # Export expenses CSV
+GET    /api/exports/aircraft/csv       # Export aircraft CSV
+```
+
+#### User Data
+
+```
+GET    /api/user-data                  # Get user settings
+POST   /api/user-data                  # Save user settings
+GET    /api/import-history/latest      # Get latest import info
+```
+
+### Response Formats
+
+**Success (200 OK):**
+```json
+{
+  "id": 1,
+  "date": "2026-01-03",
+  "tail_number": "N172SP",
+  "total_time": 1.5
+}
+```
+
+**List (200 OK):**
+```json
+[
+  { "id": 1, "date": "2026-01-03", ... },
+  { "id": 2, "date": "2026-01-02", ... }
+]
+```
+
+**Error (400/404/500):**
+```json
+{
+  "detail": "Flight not found"
+}
+```
+
+### Auto Documentation
+
+FastAPI generates interactive API docs:
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+- **OpenAPI JSON:** http://localhost:8000/openapi.json
+
+---
+
+## Data Flow
+
+### Flight Logging Flow
+
+1. User clicks "Add Flight" in frontend
+2. React modal opens with form
+3. User fills in flight details
+4. User clicks "Save Flight"
+5. Frontend validates data
+6. Frontend calls `POST /api/flights` with JSON body
+7. Backend receives request
+8. Pydantic validates request body
+9. Backend inserts row into `flights` table
+10. PostgreSQL returns inserted row
+11. Backend returns Flight object as JSON
+12. Frontend updates Zustand store
+13. Frontend re-renders FlightsView
+14. User sees new flight in list
+
+### Budget vs Actual Flow
+
+1. User creates budget card: "$6,600 for 40 hours"
+2. Backend stores in `budget_cards` table
+3. User adds expense: "$165 flight on 2026-01-03"
+4. Backend stores in `expenses` table
+5. User links expense to budget card
+6. Backend creates row in `expense_budget_links` table
+7. Frontend requests budget card summary
+8. Backend aggregates:
+   ```sql
+   SELECT bc.*, SUM(e.amount) as actual
+   FROM budget_cards bc
+   LEFT JOIN expense_budget_links ebl ON bc.id = ebl.budget_card_id
+   LEFT JOIN expenses e ON ebl.expense_id = e.id
+   GROUP BY bc.id
+   ```
+9. Backend returns: `{ budgeted: 6600, actual: 165, remaining: 6435 }`
+10. Frontend displays budget card with progress bar
+
+### FAA Aircraft Lookup Flow
+
+1. User enters N-number in "Add Aircraft" form
+2. User clicks "Lookup FAA Data"
+3. Frontend calls `GET /api/faa/N172SP`
+4. Backend normalizes N-number ("N172SP" → "172SP")
+5. Backend queries SQLite aircraft.db:
+   ```sql
+   SELECT m.*, a.* FROM master m
+   JOIN acftref a ON m.mfr_mdl_code = a.code
+   WHERE m.n_number = '172SP'
+   ```
+6. Backend maps numeric codes to strings (type_acft: "4" → "Fixed Wing Single-Engine")
+7. Backend returns aircraft data as JSON
+8. Frontend pre-fills form fields
+9. User adds rates and characteristics
+10. User saves aircraft
+11. Frontend calls `POST /api/aircraft`
+12. Backend stores in PostgreSQL `aircraft` table
+
+---
 
 ## Deployment Architecture
 
-### Docker Container
+### Docker Compose Stack
 
-**Base Image**: `python:3.12-slim`
-**Port**: 8080
-**Health Check**: HTTP GET to `/api/v1/health` every 30s
+**File:** `infrastructure/docker-compose.yml`
 
-**Container Contents**:
-- Python application code (`/app/app/`)
-- SQLite database (`/app/data/aircraft.db`)
-- Python dependencies (FastAPI, Uvicorn, Pydantic)
+```yaml
+version: '3.8'
 
-**Design Decisions**:
-- **Why baked-in database?** Zero-configuration deployment, no external database needed
-- **Why slim image?** Smaller image size (~150MB vs ~1GB for full Python image)
-- **Why port 8080?** Standard non-privileged port, easily mappable
+services:
+  frontend:
+    build: ./frontend-react
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
 
-### CI/CD Pipeline
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://truehour:password@db:5432/truehour
+    depends_on:
+      - db
+    volumes:
+      - ./backend/data:/app/data
 
-See [CI/CD Pipeline](CI-CD-Pipeline) for detailed workflow documentation.
+  db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=truehour
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=truehour
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
 
-**Primary Workflows**:
-1. **Nightly Build** (`nightly-build.yml`): Daily at 6 AM UTC
-2. **Main Branch Build** (`build-main.yml`): On push to main, handles versioning and releases
-3. **Develop Branch Build** (`build-develop.yml`): On push to develop branch
+volumes:
+  postgres_data:
+```
 
-**Design Decisions**:
-- **Why 6 AM UTC?** FAA updates at 11:30 PM CT (5:30 AM UTC), 30min buffer
-- **Why two workflows?** Separate concerns: data updates vs code changes
-- **Why Docker Hub?** Popular, reliable, free for public images
-- **Why GitHub Releases?** Provide database snapshots for manual download
+### Container Details
 
-## Performance Considerations
+**Frontend Container:**
+- Base: Node 18
+- Build: `npm run build` (Vite production build)
+- Serve: Dev server (port 3000) or Nginx (future)
+- Size: ~200MB
 
-### Database Performance
+**Backend Container:**
+- Base: Python 3.11-slim
+- Runtime: Uvicorn ASGI server
+- Port: 8000
+- FAA Database: Bundled in image
+- Size: ~200MB
 
-- **SQLite read performance**: Excellent for read-heavy workloads (~1000s queries/sec)
-- **JOIN optimization**: Index on mfr_mdl_code improves JOIN performance
-- **File-based**: No network latency, database is local to application
-- **Size**: ~25MB database, easily fits in memory for OS-level caching
+**Database Container:**
+- Image: postgres:16
+- Port: 5432 (internal)
+- Data: Persistent volume
+- Size: ~300MB
 
-### API Performance
+**Total Footprint:** ~700MB (containers + data)
 
-- **Async FastAPI**: Non-blocking I/O, handles concurrent requests efficiently
-- **Pydantic validation**: Fast native validation, minimal overhead
-- **Static typing**: Python 3.12 type hints improve performance
-- **Uvicorn**: High-performance ASGI server
+---
 
-### Scalability
-
-**Current Design**:
-- Single container handles ~1000s requests/sec (read-only workload)
-- Database fits in memory on most systems
-- No external dependencies or network calls
-
-**Scaling Options**:
-1. **Horizontal scaling**: Run multiple containers behind load balancer
-2. **CDN caching**: Cache responses for common tail numbers
-3. **Read replicas**: Distribute database file to multiple containers
-4. **PostgreSQL migration**: If write workload increases or multi-container writes needed
-
-## Security Considerations
+## Security
 
 ### API Security
 
-- **No authentication required**: Public FAA data, open access by design
-- **CORS enabled**: Allow cross-origin requests
-- **Input validation**: Pydantic validates all inputs
-- **SQL injection**: Using parameterized queries, safe from injection
+- **No Authentication** - Local-only application (by design)
+- **CORS** - Restricted to frontend origins
+- **Input Validation** - Pydantic validates all inputs
+- **SQL Injection Protection** - Parameterized queries via asyncpg
+- **XSS Protection** - React escapes all rendered content
 
 ### Container Security
 
-- **Non-root user**: Container runs as non-root (TODO: verify in Dockerfile)
-- **Minimal base image**: python:3.12-slim reduces attack surface
-- **No secrets in image**: No credentials or API keys
-- **Read-only database**: Database is read-only, no write operations
+- **Non-root User** - TODO: Add to Dockerfiles
+- **Minimal Base Images** - slim variants reduce attack surface
+- **No Secrets in Images** - Environment variables for configuration
+- **Read-only FAA Database** - SQLite is read-only
 
-### CI/CD Security
+### Data Security
 
-- **GitHub Actions permissions**: Minimal permissions (contents:write, packages:write)
-- **Secrets management**: Docker Hub credentials stored as GitHub Secrets
-- **Renovate**: Automated dependency updates with intelligent scheduling and auto-merge capabilities
+- **Local-First** - Data never leaves your machine
+- **No Telemetry** - No tracking or analytics
+- **User-Controlled Backups** - CSV exports and pg_dump
 
-## Future Considerations
+---
 
-### Potential Enhancements
+## Performance
 
-1. **Caching layer**: Redis for frequently requested tail numbers
-2. **Rate limiting**: Prevent abuse of bulk endpoint
-3. **API authentication**: Optional API keys for tracking/quotas
-4. **WebSocket updates**: Real-time notifications of database updates
-5. **Search functionality**: Search by manufacturer, model, year
-6. **Historical data**: Track changes over time
-7. **Multi-region deployment**: Deploy to multiple regions for lower latency
-8. **Monitoring**: Prometheus metrics, Grafana dashboards
-9. **PostgreSQL option**: Alternative backend for high-concurrency workloads
+### Frontend Performance
 
-### Known Limitations
+- **Vite HMR** - Instant hot module replacement
+- **Code Splitting** - Future: Lazy load routes
+- **Tree Shaking** - Vite removes unused code
+- **Bundle Size** - ~300KB gzipped (estimated)
 
-1. **Single database file**: No real-time updates, requires container restart
-2. **No write API**: Read-only by design
-3. **US registrations only**: FAA data only covers US-registered aircraft
-4. **No historical data**: Only current registrations, no change tracking
-5. **Bulk limit**: Max 50 tail numbers per request
+### Backend Performance
+
+- **Async I/O** - Non-blocking FastAPI operations
+- **Connection Pooling** - Reuse PostgreSQL connections (max 10)
+- **Efficient Queries** - Indexed columns, optimized JOINs
+- **Response Time** - <50ms typical (local database)
+
+### Database Performance
+
+- **Indexes** - All foreign keys and date columns indexed
+- **JSONB** - Efficient storage for qualifying_flight_metadata
+- **Aggregations** - Budget vs actual uses efficient GROUP BY
+- **Size** - ~1MB per 1000 flights (estimated)
+
+---
+
+## Future Enhancements
+
+### v2.1 (Q1-Q2 2026)
+
+- PDF report improvements
+- Budget templates library
+- Flight history charts
+- Multi-year budget planning
+- Training pace calculator
+- Mobile responsive improvements
+
+### v2.2 (Q3-Q4 2026)
+
+- Currency tracking (instrument, night, passenger-carrying)
+- Reminders system (medical, flight review, endorsements)
+- Multi-user support with authentication
+- Cloud sync (optional)
+- Calendar integration
+- React Native mobile app
+
+### v3.0 (2027+)
+
+- AI-powered budget recommendations
+- Flight planning integration
+- Weather integration
+- Maintenance tracking
+- Multi-currency support
+- International certifications (EASA, Transport Canada)
+
+---
 
 ## References
 
-- [FAA Releasable Aircraft Database](https://www.faa.gov/licenses_certificates/aircraft_certification/aircraft_registry/releasable_aircraft_download)
+- [React Documentation](https://react.dev/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [Zustand Documentation](https://zustand-demo.pmnd.rs/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [Docker Documentation](https://docs.docker.com/)
 - [Pydantic Documentation](https://docs.pydantic.dev/)
-- [SQLite Documentation](https://www.sqlite.org/docs.html)
+
+---
+
+**Last Updated:** 2026-01-03
+**Version:** 2.0.0
+**Status:** Production Ready

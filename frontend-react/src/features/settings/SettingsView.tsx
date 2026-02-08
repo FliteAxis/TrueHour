@@ -1,0 +1,1041 @@
+// Settings View
+// Central settings page for customization
+
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { getUserSettings, updateUserSettings } from "../../services/api";
+import type { UserSettings, UserAircraft } from "../../types/api";
+
+export function SettingsView() {
+  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState<"tags" | "categories" | "general" | "training">("general");
+
+  // User settings
+  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  // Delete All Data confirmation
+  const [showDeleteWarning, setShowDeleteWarning] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteSuccess, setShowDeleteSuccess] = useState(false);
+  const [showDeleteError, setShowDeleteError] = useState(false);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState("");
+
+  // Tags management
+  const [customTags, setCustomTags] = useState<string[]>(["PPL", "IR", "CPL", "CFI", "Priority", "Optional"]);
+  const [newTag, setNewTag] = useState("");
+
+  // Categories management
+  const DEFAULT_CATEGORIES = [
+    "Administrative",
+    "Aircraft Rental",
+    "Certifications",
+    "Equipment",
+    "Exams & Checkrides",
+    "Fuel",
+    "Ground School",
+    "Insurance",
+    "Maintenance",
+    "Medical",
+    "Membership",
+    "Other",
+    "Subscriptions",
+    "Training",
+  ];
+  const [customCategories, setCustomCategories] = useState<string[]>(DEFAULT_CATEGORIES);
+  const [newCategory, setNewCategory] = useState("");
+
+  // Aircraft for training settings
+  const [aircraft, setAircraft] = useState<UserAircraft[]>([]);
+  const [isLoadingAircraft, setIsLoadingAircraft] = useState(false);
+
+  // Debounce timer for numeric inputs
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load user settings on mount
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await getUserSettings();
+        setSettings(data);
+        // Load categories from settings or use defaults
+        if (data.budget_categories && data.budget_categories.length > 0) {
+          setCustomCategories(data.budget_categories.sort());
+        } else {
+          // Initialize database with default categories on first load
+          try {
+            await updateUserSettings({ ...data, budget_categories: DEFAULT_CATEGORIES });
+            setCustomCategories(DEFAULT_CATEGORIES);
+          } catch (error) {
+            console.error("Failed to initialize default categories:", error);
+            setCustomCategories(DEFAULT_CATEGORIES);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load settings:", error);
+      } finally {
+        setIsLoadingSettings(false);
+      }
+    };
+    loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load aircraft when Training section is opened
+  useEffect(() => {
+    if (activeSection === "training" && aircraft.length === 0) {
+      const loadAircraft = async () => {
+        setIsLoadingAircraft(true);
+        try {
+          const response = await fetch("http://localhost:8000/api/user/aircraft?is_active=true");
+          if (response.ok) {
+            const data = await response.json();
+            setAircraft(data);
+          }
+        } catch (error) {
+          console.error("Failed to load aircraft:", error);
+        } finally {
+          setIsLoadingAircraft(false);
+        }
+      };
+      loadAircraft();
+    }
+  }, [activeSection, aircraft.length]);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const handleToggleFAALookup = async (enabled: boolean) => {
+    if (!settings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const updatedSettings = { ...settings, enable_faa_lookup: enabled };
+      await updateUserSettings(updatedSettings);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error("Failed to update FAA lookup setting:", error);
+      // Revert on error
+      setSettings({ ...settings });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleUpdateTrainingSetting = async (updates: Partial<UserSettings>) => {
+    if (!settings) return;
+
+    setIsSavingSettings(true);
+    try {
+      const updatedSettings = { ...settings, ...updates };
+      await updateUserSettings(updatedSettings);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error("Failed to update training setting:", error);
+      // Revert on error
+      setSettings({ ...settings });
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  // Debounced version for numeric inputs (delays save for 1 second after last keystroke)
+  const handleUpdateTrainingSettingDebounced = (updates: Partial<UserSettings>) => {
+    if (!settings) return;
+
+    // Update local state immediately for responsive UI
+    setSettings({ ...settings, ...updates });
+
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    // Set new timer to save after 1 second of no typing
+    saveTimerRef.current = setTimeout(() => {
+      handleUpdateTrainingSetting(updates);
+    }, 1000);
+  };
+
+  const handleAddTag = () => {
+    const trimmed = newTag.trim();
+    if (trimmed && !customTags.includes(trimmed)) {
+      setCustomTags([...customTags, trimmed]);
+      setNewTag("");
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setCustomTags(customTags.filter((t) => t !== tag));
+  };
+
+  const handleAddCategory = async () => {
+    const trimmed = newCategory.trim();
+    if (trimmed && !customCategories.includes(trimmed)) {
+      const updatedCategories = [...customCategories, trimmed].sort();
+      setCustomCategories(updatedCategories);
+      setNewCategory("");
+      // Save to settings
+      if (settings) {
+        try {
+          await updateUserSettings({ ...settings, budget_categories: updatedCategories });
+        } catch (error) {
+          console.error("Failed to save categories:", error);
+        }
+      }
+    }
+  };
+
+  const handleRemoveCategory = async (category: string) => {
+    if (customCategories.length > 1) {
+      const updatedCategories = customCategories.filter((c) => c !== category).sort();
+      setCustomCategories(updatedCategories);
+      // Save to settings
+      if (settings) {
+        try {
+          await updateUserSettings({ ...settings, budget_categories: updatedCategories });
+        } catch (error) {
+          console.error("Failed to save categories:", error);
+        }
+      }
+    }
+  };
+
+  const handleDeleteAllDataClick = () => {
+    setShowDeleteWarning(true);
+  };
+
+  const handleContinueToConfirm = () => {
+    setShowDeleteWarning(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteWarning(false);
+    setShowDeleteConfirm(false);
+    setDeleteConfirmText("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmText !== "DELETE") {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Call API to delete all data
+      const response = await fetch("/api/data/delete-all", {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete data");
+      }
+
+      // Close modals and show success
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText("");
+      setShowDeleteSuccess(true);
+    } catch (error) {
+      console.error("Failed to delete all data:", error);
+      setShowDeleteConfirm(false);
+      setDeleteConfirmText("");
+      setDeleteErrorMessage(error instanceof Error ? error.message : "Failed to delete data. Please try again.");
+      setShowDeleteError(true);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleSuccessClose = () => {
+    setShowDeleteSuccess(false);
+    navigate("/dashboard");
+  };
+
+  const handleErrorClose = () => {
+    setShowDeleteError(false);
+    setDeleteErrorMessage("");
+  };
+
+  return (
+    <div className="p-6 max-w-6xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
+          </button>
+          <h1 className="text-3xl font-bold text-white">Settings</h1>
+          <p className="text-slate-400 mt-1">Customize your TrueHour experience</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        {/* Sidebar Navigation */}
+        <div className="md:col-span-1">
+          <nav className="space-y-1 bg-truehour-card border border-truehour-border rounded-lg p-2">
+            <button
+              onClick={() => setActiveSection("general")}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                activeSection === "general"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
+              }`}
+            >
+              General
+            </button>
+            <button
+              onClick={() => setActiveSection("training")}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                activeSection === "training"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
+              }`}
+            >
+              Training
+            </button>
+            <button
+              onClick={() => setActiveSection("tags")}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                activeSection === "tags"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
+              }`}
+            >
+              Tags
+            </button>
+            <button
+              onClick={() => setActiveSection("categories")}
+              className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
+                activeSection === "categories"
+                  ? "bg-truehour-blue text-white"
+                  : "text-slate-300 hover:bg-truehour-darker hover:text-white"
+              }`}
+            >
+              Categories
+            </button>
+          </nav>
+        </div>
+
+        {/* Main Content */}
+        <div className="md:col-span-3">
+          {/* General Settings */}
+          {activeSection === "general" && (
+            <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">General Settings</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-4" />
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Appearance</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-truehour-darker rounded-lg">
+                      <div>
+                        <div className="text-white font-medium">Theme</div>
+                        <div className="text-xs text-slate-500">Currently: Dark Mode</div>
+                      </div>
+                      <span className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Coming Soon
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Aircraft Import</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-truehour-darker rounded-lg">
+                      <div className="flex-1">
+                        <div className="text-white font-medium">FAA Registry Lookup</div>
+                        <div className="text-xs text-slate-400 mt-1 max-w-xl">
+                          Automatically query the FAA aircraft registry during ForeFlight imports to populate aircraft
+                          details. If disabled, only ForeFlight CSV data will be used.
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer ml-4">
+                        <input
+                          type="checkbox"
+                          checked={settings?.enable_faa_lookup ?? true}
+                          onChange={(e) => handleToggleFAALookup(e.target.checked)}
+                          disabled={isLoadingSettings || isSavingSettings}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Data Management</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-truehour-darker rounded-lg">
+                      <div>
+                        <div className="text-white font-medium">Auto-save</div>
+                        <div className="text-xs text-slate-500">Automatically save changes</div>
+                      </div>
+                      <span className="text-xs px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Coming Soon
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                      <div>
+                        <div className="text-white font-medium">Delete All Data</div>
+                        <div className="text-xs text-slate-500">
+                          Permanently delete all aircraft, expenses, flights, and settings
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleDeleteAllDataClick}
+                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                      >
+                        Delete All Data
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">About</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Version</span>
+                        <span className="text-white">2.0.0</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Developer</span>
+                        <span className="text-white">FliteAxis</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Training Settings */}
+          {activeSection === "training" && (
+            <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Training Configuration</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-6">
+                Configure how TrueHour calculates your training timeline and budget projections
+              </p>
+
+              <div className="space-y-6">
+                {/* Target Certification */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Target Certification</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Current Certification Goal</label>
+                    <select
+                      value={settings?.target_certification || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSetting({
+                          target_certification: e.target.value || null,
+                        })
+                      }
+                      disabled={isLoadingSettings || isSavingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    >
+                      <option value="">None selected</option>
+                      <option value="private">Private Pilot (PPL)</option>
+                      <option value="ir">Instrument Rating (IR)</option>
+                      <option value="cpl">Commercial Pilot (CPL)</option>
+                      <option value="cfi">Certified Flight Instructor (CFI)</option>
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      This determines which certification requirements are tracked on your dashboard and used for budget
+                      calculations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Training Pace Mode */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Training Pace</h3>
+                  <div className="space-y-3">
+                    <div className="p-4 bg-truehour-darker rounded-lg">
+                      <label className="block text-sm font-medium text-slate-300 mb-2">Calculation Mode</label>
+                      <select
+                        value={settings?.training_pace_mode || "manual"}
+                        onChange={(e) =>
+                          handleUpdateTrainingSetting({
+                            training_pace_mode: e.target.value as "auto" | "manual",
+                          })
+                        }
+                        disabled={isLoadingSettings || isSavingSettings}
+                        className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      >
+                        <option value="manual">Manual - Set specific hours per week</option>
+                        <option value="auto">Automatic - Calculate from recent flight history (3+ months)</option>
+                      </select>
+                      <p className="text-xs text-slate-500 mt-2">
+                        {settings?.training_pace_mode === "auto"
+                          ? "Timeline will be calculated based on your average flying rate over the last 3 months"
+                          : "Set your expected training hours per week below"}
+                      </p>
+                    </div>
+
+                    {/* Hours Per Week (only show if manual mode) */}
+                    {(!settings?.training_pace_mode || settings?.training_pace_mode === "manual") && (
+                      <div className="p-4 bg-truehour-darker rounded-lg">
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Expected Hours Per Week</label>
+                        <input
+                          type="number"
+                          value={settings?.training_hours_per_week || 2.0}
+                          onChange={(e) =>
+                            handleUpdateTrainingSettingDebounced({
+                              training_hours_per_week: parseFloat(e.target.value) || 2.0,
+                            })
+                          }
+                          disabled={isLoadingSettings}
+                          className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                          step="0.5"
+                          min="0.5"
+                          max="40"
+                        />
+                        <p className="text-xs text-slate-500 mt-2">
+                          How many hours per week do you plan to fly? (e.g., 2.0 for part-time, 10+ for full-time
+                          training)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Default Aircraft */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Default Training Aircraft</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Aircraft</label>
+                    <select
+                      value={settings?.default_training_aircraft_id || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSetting({
+                          default_training_aircraft_id: e.target.value ? parseInt(e.target.value) : null,
+                        })
+                      }
+                      disabled={isLoadingSettings || isSavingSettings || isLoadingAircraft}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    >
+                      <option value="">None selected</option>
+                      {aircraft.map((ac) => (
+                        <option key={ac.id} value={ac.id}>
+                          {ac.tail_number} - {ac.make} {ac.model}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-slate-500 mt-2">
+                      Select the primary aircraft you'll use for training. This will be used for cost calculations in
+                      the Timeline dashboard.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Ground Instruction Rate */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Ground Instruction</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Hourly Rate ($/hr)</label>
+                    <input
+                      type="number"
+                      value={settings?.ground_instruction_rate || ""}
+                      onChange={(e) =>
+                        handleUpdateTrainingSettingDebounced({
+                          ground_instruction_rate: e.target.value ? parseFloat(e.target.value) : null,
+                        })
+                      }
+                      disabled={isLoadingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      placeholder="0.00"
+                      step="1.00"
+                      min="0"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Optional: Set your ground instruction rate for more accurate budget calculations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Budget Buffer */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Budget Buffer</h3>
+                  <div className="p-4 bg-truehour-darker rounded-lg">
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Buffer Percentage (%)</label>
+                    <input
+                      type="number"
+                      value={settings?.budget_buffer_percentage || 10}
+                      onChange={(e) =>
+                        handleUpdateTrainingSettingDebounced({
+                          budget_buffer_percentage: parseInt(e.target.value) || 10,
+                        })
+                      }
+                      disabled={isLoadingSettings}
+                      className="w-full bg-truehour-card border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                      step="5"
+                      min="0"
+                      max="100"
+                    />
+                    <p className="text-xs text-slate-500 mt-2">
+                      Add a buffer to timeline and budget calculations to account for unexpected costs or delays
+                      (recommended: 10-20%)
+                    </p>
+                  </div>
+                </div>
+
+                {/* Info Box */}
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                  <div className="flex gap-3">
+                    <svg
+                      className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <div className="text-sm text-blue-300">
+                      <div className="font-medium mb-1">How this affects TrueHour</div>
+                      <div>
+                        These settings drive the Timeline calculations on your dashboard and provide smart suggestions
+                        when creating budget cards. Your training pace and aircraft selection help estimate completion
+                        timeframes and costs for your target certification.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tags Settings */}
+          {activeSection === "tags" && (
+            <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Custom Tags</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-6">
+                Manage tags that can be applied to budget cards for better organization
+              </p>
+
+              {/* Add New Tag */}
+              <div className="mb-6">
+                <label htmlFor="new-tag" className="block text-sm font-medium text-slate-300 mb-2">
+                  Add New Tag
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="new-tag"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddTag()}
+                    className="flex-1 bg-truehour-darker border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    placeholder="Enter tag name"
+                  />
+                  <button
+                    onClick={handleAddTag}
+                    className="px-6 py-2 bg-truehour-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Add Tag
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Tags */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-300 mb-3">Available Tags ({customTags.length})</h3>
+                <div className="flex flex-wrap gap-2">
+                  {customTags.map((tag, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-2 text-sm px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                    >
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        className="hover:text-blue-300 transition-colors"
+                        aria-label={`Remove ${tag} tag`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <div className="flex gap-3">
+                  <svg
+                    className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <div className="text-sm text-blue-300">
+                    <div className="font-medium mb-1">Note about tags</div>
+                    <div>
+                      Tags help you organize budget cards by certification level (PPL, IR, CPL), priority, or any custom
+                      categories you need. These changes are saved locally and will persist across sessions.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Categories Settings */}
+          {activeSection === "categories" && (
+            <div className="bg-truehour-card border border-truehour-border rounded-lg p-6">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-2xl font-bold text-white">Budget Categories</h2>
+                <div className="flex items-center gap-2 text-sm text-slate-400">
+                  {isSavingSettings ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Changes saved automatically</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="text-slate-400 mb-6">
+                Customize the expense categories available when creating budget cards and expenses
+              </p>
+
+              {/* Add New Category */}
+              <div className="mb-6">
+                <label htmlFor="new-category" className="block text-sm font-medium text-slate-300 mb-2">
+                  Add New Category
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    id="new-category"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+                    className="flex-1 bg-truehour-darker border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-truehour-blue"
+                    placeholder="Enter category name"
+                  />
+                  <button
+                    onClick={handleAddCategory}
+                    className="px-6 py-2 bg-truehour-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                  >
+                    Add Category
+                  </button>
+                </div>
+              </div>
+
+              {/* Existing Categories */}
+              <div>
+                <h3 className="text-sm font-medium text-slate-300 mb-3">
+                  Available Categories ({customCategories.length})
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {customCategories.map((category, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 bg-truehour-darker border border-truehour-border rounded-lg"
+                    >
+                      <span className="text-white text-sm">{category}</span>
+                      <button
+                        onClick={() => handleRemoveCategory(category)}
+                        disabled={customCategories.length === 1}
+                        className="p-1 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        aria-label={`Remove ${category} category`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <div className="flex gap-3">
+                  <svg
+                    className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                  <div className="text-sm text-amber-300">
+                    <div className="font-medium mb-1">Important</div>
+                    <div>
+                      Removing a category won't delete existing budget cards or expenses that use it. However, you won't
+                      be able to create new items with that category. At least one category must remain.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Delete Warning Modal (Step 1) */}
+      {showDeleteWarning && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-truehour-card border border-red-500/50 rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">Delete All Data?</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">
+                    This will permanently delete all of your aircraft, expenses, flights, budget cards, and settings.
+                    This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  onClick={handleCancelDelete}
+                  className="px-4 py-2 text-slate-300 hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleContinueToConfirm}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (Step 2) */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-truehour-card border border-red-500/50 rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white mb-2">Type DELETE to Confirm</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed mb-4">
+                    This is your last chance to cancel. Type{" "}
+                    <span className="font-mono font-bold text-red-400">DELETE</span> below to permanently delete all
+                    your data.
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="Type DELETE"
+                    className="w-full bg-truehour-darker border border-truehour-border text-white rounded-lg px-4 py-2 focus:outline-none focus:border-red-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  onClick={handleCancelDelete}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={deleteConfirmText !== "DELETE" || isDeleting}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    "Continue"
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Success Modal */}
+      {showDeleteSuccess && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-truehour-card border border-green-500/50 rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-white">Success</h3>
+              </div>
+              <p className="text-slate-300 mb-6">All data has been successfully deleted.</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleSuccessClose}
+                  className="px-6 py-2 bg-truehour-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Error Modal */}
+      {showDeleteError && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-truehour-card border border-red-500/50 rounded-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-white">Error</h3>
+              </div>
+              <p className="text-slate-300 mb-6">{deleteErrorMessage}</p>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleErrorClose}
+                  className="px-6 py-2 bg-truehour-blue hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

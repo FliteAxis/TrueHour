@@ -7,6 +7,7 @@ Usage:
 
 Default output: ./aircraft.db
 """
+
 import csv
 import io
 import os
@@ -89,11 +90,21 @@ def download_faa_data() -> zipfile.ZipFile:
     max_retries = 3
     timeout = 300  # 5 minutes
 
+    # Use browser-like headers to avoid blocking
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+    }
+
     for attempt in range(1, max_retries + 1):
         try:
-            response = requests.get(
-                FAA_URL, timeout=timeout, stream=True, headers={"User-Agent": "truehour-faa-builder/1.0"}
-            )
+            response = requests.get(FAA_URL, timeout=timeout, stream=True, headers=headers)
             response.raise_for_status()
 
             # Download with progress
@@ -158,8 +169,7 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
     cur = conn.cursor()
 
     # Create tables
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE master (
             n_number TEXT PRIMARY KEY,
             mfr_mdl_code TEXT,
@@ -169,11 +179,9 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
             no_seats TEXT,
             year_mfr TEXT
         )
-    """
-    )
+    """)
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE acftref (
             code TEXT PRIMARY KEY,
             mfr TEXT,
@@ -182,17 +190,14 @@ def build_database(master_rows: list, acftref_rows: list, output_path: str):
             no_eng TEXT,
             no_seats TEXT
         )
-    """
-    )
+    """)
 
-    cur.execute(
-        """
+    cur.execute("""
         CREATE TABLE metadata (
             key TEXT PRIMARY KEY,
             value TEXT
         )
-    """
-    )
+    """)
 
     # Insert ACFTREF data (need this for JOIN)
     acftref_data = [

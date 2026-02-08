@@ -6,23 +6,19 @@
 
 Welcome to the TrueHour documentation! TrueHour is a personal aviation expense tracking and flight management application.
 
-## Current Status: Phase 3 - 100% Complete
+## Current Status: v2.0 - Production Ready 🚀
 
-**Data Persistence (Phase 3)** is now 100% complete with:
-- PostgreSQL integration with async connection pooling
-- User aircraft management CRUD API
-- Expense tracking API with filtering and aggregation
-- Save/Load data management with session tracking
-- Budget/training state persistence (certification goals, flight hours, 14 settings)
-- Auto-save with debounce and toggle (triggers on aircraft, certification, and settings changes)
-- Export/Import config as JSON (includes all budget state data)
-- Multi-step delete confirmation with custom modals
-- Form accessibility improvements (proper labels and semantic HTML)
-- Refined UI with centered menu dropdown and improved alignment
-- Multi-platform Docker images on GHCR (amd64/arm64)
-- Automated nightly FAA data updates
-
-**Next:** Phase 4 - Budget tracking system
+**TrueHour v2.0** is a complete rewrite featuring:
+- **Modern React Frontend** - React 18 + Vite + Tailwind CSS + TypeScript
+- **PostgreSQL Database** - Full data persistence with async connection pooling
+- **Budget Card System** - Outcome-based budgeting with real-time calculations
+- **Flight Logging** - ForeFlight CSV import with 100+ logbook fields
+- **Aircraft Management** - FAA database with 308K+ aircraft, enriched data (complex, high-performance)
+- **Expense Tracking** - Multi-category expenses with budget card linking
+- **Training Progress** - Certification tracking (PPL, IR, CPL, CFI, etc.)
+- **Docker Deployment** - Multi-platform containers (amd64/arm64) on port 8181
+- **Automated Testing** - 14-test smoke test suite with test data generator
+- **Data Privacy** - Local-first, no cloud dependencies, data never leaves your machine
 
 ## 🚀 Quick Start
 
@@ -57,10 +53,12 @@ Welcome to the TrueHour documentation! TrueHour is a personal aviation expense t
 
 ```
 truehour/
-├── frontend/          # Static HTML/CSS/JS (nginx)
+├── frontend-react/    # React 18 + Vite + TypeScript frontend
 ├── backend/           # Python FastAPI application
-├── infrastructure/    # Docker configs and SQL schema
+├── infrastructure/    # Docker configs, Dockerfiles, .env
+├── tests/             # Smoke test suite and test data generator
 ├── data/             # Local config.json (gitignored)
+├── archive/          # Legacy v1 code (gitignored)
 └── wiki/             # Documentation source
 ```
 
