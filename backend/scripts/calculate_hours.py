@@ -161,10 +161,14 @@ def calculate_hours_from_csv(csv_path):
 
     with open(csv_path, "r", encoding="utf-8") as f:
         # Skip header rows until we find "Date,"
+        headers = None
         for line in f:
             if line.startswith("Date,"):
                 headers = line.strip().split(",")
                 break
+
+        if headers is None:
+            raise ValueError(f"Could not find header row starting with 'Date,' in: {csv_path}")
 
         reader = csv.DictReader(f, fieldnames=headers)
 
