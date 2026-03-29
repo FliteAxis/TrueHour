@@ -82,7 +82,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend-react
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         working-directory: frontend-react
