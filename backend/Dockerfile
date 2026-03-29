@@ -1,5 +1,5 @@
 # Build stage: Install build dependencies and compile extensions
-FROM python:3.12-slim as builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Runtime stage: Minimal image with only runtime dependencies
-FROM python:3.12-slim as base
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
@@ -40,7 +40,7 @@ COPY data/ ./data/
 
 # Create non-root user
 RUN useradd -m -u 1000 appuser && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app /root/.local
 
 USER appuser
 
@@ -52,5 +52,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Development target with additional tools
-FROM base as development
+FROM base AS development
 RUN pip install --no-cache-dir watchdog
