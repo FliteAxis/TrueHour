@@ -119,7 +119,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                 <input
                   type="text"
                   value={formData.make || ""}
-                  onChange={(e) => handleChange("make", e.target.value || null)}
+                  onChange={(e) => handleChange("make", e.target.value || undefined)}
                   placeholder="Cessna"
                   className="w-full px-3 py-2 bg-truehour-card border border-truehour-border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-truehour-blue"
                 />
@@ -130,7 +130,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                 <input
                   type="text"
                   value={formData.model || ""}
-                  onChange={(e) => handleChange("model", e.target.value || null)}
+                  onChange={(e) => handleChange("model", e.target.value || undefined)}
                   placeholder="172"
                   className="w-full px-3 py-2 bg-truehour-card border border-truehour-border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-truehour-blue"
                 />
@@ -141,7 +141,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                 <input
                   type="number"
                   value={formData.year || ""}
-                  onChange={(e) => handleChange("year", e.target.value ? parseInt(e.target.value) : null)}
+                  onChange={(e) => handleChange("year", e.target.value ? parseInt(e.target.value) : undefined)}
                   placeholder="2020"
                   min="1900"
                   max="2100"
@@ -153,7 +153,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                 <label className="block text-sm font-medium text-slate-300 mb-2">Category</label>
                 <select
                   value={formData.category || "rental"}
-                  onChange={(e) => handleChange("category", e.target.value || null)}
+                  onChange={(e) => handleChange("category", e.target.value || undefined)}
                   className="w-full px-3 py-2 bg-truehour-card border border-truehour-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-truehour-blue"
                 >
                   <option value="rental">Rental</option>
@@ -166,7 +166,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                 <label className="block text-sm font-medium text-slate-300 mb-2">Gear Type</label>
                 <select
                   value={formData.gear_type || ""}
-                  onChange={(e) => handleChange("gear_type", e.target.value || null)}
+                  onChange={(e) => handleChange("gear_type", e.target.value || undefined)}
                   className="w-full px-3 py-2 bg-truehour-card border border-truehour-border rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-truehour-blue"
                 >
                   <option value="">Select...</option>
@@ -232,7 +232,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                     type="number"
                     value={formData.hourly_rate_wet || ""}
                     onChange={(e) =>
-                      handleChange("hourly_rate_wet", e.target.value ? parseFloat(e.target.value) : null)
+                      handleChange("hourly_rate_wet", e.target.value ? parseFloat(e.target.value) : undefined)
                     }
                     placeholder="0.00"
                     step="0.01"
@@ -250,7 +250,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
                     type="number"
                     value={formData.hourly_rate_dry || ""}
                     onChange={(e) =>
-                      handleChange("hourly_rate_dry", e.target.value ? parseFloat(e.target.value) : null)
+                      handleChange("hourly_rate_dry", e.target.value ? parseFloat(e.target.value) : undefined)
                     }
                     placeholder="0.00"
                     step="0.01"
@@ -266,7 +266,7 @@ export function EditAircraftModal({ aircraft, onClose, onSuccess }: EditAircraft
               <label className="block text-sm font-medium text-slate-300 mb-2">Notes</label>
               <textarea
                 value={formData.notes || ""}
-                onChange={(e) => handleChange("notes", e.target.value || null)}
+                onChange={(e) => handleChange("notes", e.target.value || undefined)}
                 placeholder="Additional notes about this aircraft..."
                 rows={3}
                 className="w-full px-3 py-2 bg-truehour-card border border-truehour-border rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-truehour-blue resize-none"

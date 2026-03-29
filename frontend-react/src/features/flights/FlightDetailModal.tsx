@@ -206,7 +206,7 @@ export function FlightDetailModal({ flight, isOpen, onClose }: FlightDetailModal
           </div>
 
           {/* Approaches */}
-          {flight.approaches && Object.keys(flight.approaches).length > 0 && (
+          {flight.approaches != null && Object.keys(flight.approaches as Record<string, unknown>).length > 0 && (
             <div>
               <h3 className="text-lg font-semibold text-white mb-4">Approaches</h3>
               <div className="bg-truehour-card border border-truehour-border rounded-lg p-4">

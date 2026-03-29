@@ -702,7 +702,7 @@ class PostgresDatabase:
                 SET {', '.join(set_clauses)}, updated_at = NOW()
                 WHERE id = ${param_count}
                 RETURNING *
-            """
+            """  # nosec B608 - column names derived from Pydantic model fields, not user input
             params.append(flight_id)
 
             row = await conn.fetchrow(query, *params)
@@ -1047,7 +1047,7 @@ class PostgresDatabase:
                 UPDATE budget_cards
                 SET {", ".join(set_clauses)}
                 WHERE id = ${param_count}
-            """
+            """  # nosec B608 - field names from hardcoded allowlist, not user input
 
             result = await conn.execute(query, *params)
             return result == "UPDATE 1"

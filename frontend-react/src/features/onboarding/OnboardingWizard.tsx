@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useUserStore } from "../../store/userStore";
-import type { FlightSummary } from "../../types/api";
+import type { FlightSummary, UserAircraft } from "../../types/api";
 import { getFlightSummary } from "../../services/api";
 
 type OnboardingPath = "foreflight" | "manual" | "skip";
@@ -10,7 +10,7 @@ type ManualStep = "hours" | "aircraft" | "certification" | "review";
 interface WizardData {
   // ForeFlight import data
   importedFlights?: number;
-  importedAircraft?: unknown[];
+  importedAircraft?: UserAircraft[];
   calculatedHours?: unknown;
 
   // Manual entry data
@@ -38,7 +38,7 @@ export default function OnboardingWizard() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [importSummary, setImportSummary] = useState<{ aircraft: number; flights: number } | null>(null);
-  const [aircraft, setAircraft] = useState<unknown[]>([]);
+  const [aircraft, setAircraft] = useState<UserAircraft[]>([]);
   const [filePreview, setFilePreview] = useState<{ aircraft: number; flights: number } | null>(null);
   const [validating, setValidating] = useState(false);
   const [flightSummary, setFlightSummary] = useState<FlightSummary | null>(null);
@@ -569,7 +569,7 @@ export default function OnboardingWizard() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Aircraft Added</span>
-                <span className="text-white">{wizardData.importedAircraft || aircraft.length || 0}</span>
+                <span className="text-white">{(wizardData.importedAircraft?.length ?? aircraft.length) || 0}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Target Certification</span>

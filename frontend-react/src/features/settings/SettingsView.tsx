@@ -81,6 +81,7 @@ export function SettingsView() {
       }
     };
     loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load aircraft when Training section is opened

@@ -1,13 +1,13 @@
 # Build stage: Build the React application
-FROM node:20-alpine as builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
 COPY frontend-react/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install instead of ci to handle lock file drift from devDep additions)
+RUN npm install
 
 # Copy source code
 COPY frontend-react/ ./
@@ -27,8 +27,20 @@ COPY --from=builder /app/dist /usr/share/nginx/html/
 # Copy custom nginx config for API proxying
 COPY infrastructure/nginx.conf /etc/nginx/conf.d/default.conf
 
+# Create non-root user and set permissions
+RUN addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    chown -R appuser:appuser /usr/share/nginx/html /var/cache/nginx /var/run /var/log/nginx && \
+    touch /var/run/nginx.pid && \
+    chown -R appuser:appuser /var/run/nginx.pid
+
+USER appuser
+
 # Expose port 80
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]

@@ -7,6 +7,7 @@ Usage:
 
 Default output: ./aircraft.db
 """
+
 import csv
 import io
 import os

@@ -5,6 +5,7 @@ Update existing aircraft records with inferred gear types.
 This script runs the gear inference logic on all aircraft in the database
 and updates their gear_type, is_complex, and is_high_performance fields.
 """
+
 import asyncio
 import os
 import sys
