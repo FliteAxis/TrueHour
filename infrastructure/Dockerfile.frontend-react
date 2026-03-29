@@ -16,10 +16,10 @@ COPY frontend-react/ ./
 RUN npm run build
 
 # Production stage: Serve with nginx
-FROM nginx:alpine
+FROM nginx:alpine AS production
 
-# Remove default nginx website
-RUN rm -rf /usr/share/nginx/html/*
+# Upgrade base packages (CVE-2026-22184 zlib fix) and remove default site
+RUN apk upgrade --no-cache && rm -rf /usr/share/nginx/html/*
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html/
