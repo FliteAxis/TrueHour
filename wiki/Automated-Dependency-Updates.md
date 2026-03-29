@@ -8,7 +8,8 @@ This document explains how to automate dependency updates for the TrueHour, incl
 
 ## The Challenge
 
-We vendor CDN libraries locally (PapaParse, Chart.js, html2pdf.js) which aren't in `package.json`, so standard tools like Dependabot can't automatically detect updates.
+We vendor CDN libraries locally (PapaParse, Chart.js, html2pdf.js) which aren't in `package.json`,
+so standard tools like Dependabot can't automatically detect updates.
 
 **Our vendored libraries:**
 - `app/libs/papaparse.min.js`
