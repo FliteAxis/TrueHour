@@ -77,9 +77,8 @@ repos:
         args: ["--ignore", "DL3008", "--ignore", "DL3013"]
 
   # TypeScript/JavaScript linting with ESLint
-  # NOTE: Using local eslint via system hook since ESLint 10 is not yet
-  # available in the mirrors-eslint pre-commit repo. The project's own
-  # eslint (installed via npm) is used instead.
+  # NOTE: Using local eslint via system hook to ensure the pre-commit hook
+  # uses the same eslint version as the project (installed via npm).
   - repo: local
     hooks:
       - id: eslint
