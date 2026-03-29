@@ -366,15 +366,15 @@ DL3013: Pin versions in pip
 ERROR: yaml.scanner.ScannerError: mapping values are not allowed here
 ```
 
-**Cause**: YAML syntax error in `docker-compose.ghcr.yml`
+**Cause**: YAML syntax error in `docker compose.ghcr.yml`
 
 **Solution**:
 ```bash
 # Check YAML syntax
-yamllint infrastructure/docker-compose.ghcr.yml
+yamllint infrastructure/docker compose.ghcr.yml
 
 # Validate structure
-docker-compose -f infrastructure/docker-compose.ghcr.yml config
+docker compose -f infrastructure/docker compose.ghcr.yml config
 ```
 
 ---
@@ -462,13 +462,13 @@ asyncpg.exceptions.ConnectionDoesNotExistError
 **Solution**:
 ```bash
 # Start database
-docker-compose -f infrastructure/docker-compose.ghcr.yml up -d db
+docker compose -f infrastructure/docker compose.ghcr.yml up -d db
 
 # Check connection
-docker-compose -f infrastructure/docker-compose.ghcr.yml ps
+docker compose -f infrastructure/docker compose.ghcr.yml ps
 
 # Check logs
-docker-compose -f infrastructure/docker-compose.ghcr.yml logs db
+docker compose -f infrastructure/docker compose.ghcr.yml logs db
 ```
 
 ---
@@ -573,7 +573,7 @@ If you're still having issues:
 | Pre-commit not running | `pre-commit install` |
 | Black/Flake8 conflict | Already fixed in config, run `black` first |
 | Permission denied | `chmod +x scripts/*.sh` |
-| Docker compose error | `docker-compose config` to validate YAML |
+| Docker compose error | `docker compose config` to validate YAML |
 | Import error in Python | Activate venv: `source venv/bin/activate` |
 | Homebrew formula missing | `brew update && brew install <package>` |
 

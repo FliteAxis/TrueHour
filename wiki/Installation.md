@@ -101,16 +101,16 @@ FRONTEND_PORT=3000
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs (optional)
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 4. Access TrueHour
 
 Open your browser to:
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:8181
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 
@@ -118,12 +118,12 @@ Open your browser to:
 
 ```bash
 # Check all containers are running
-docker-compose ps
+docker compose ps
 
 # Should see:
-# - infrastructure-db-1        (postgres)
-# - infrastructure-backend-1   (fastapi)
-# - infrastructure-frontend-1  (react)
+# - truehour-db        (postgres)
+# - truehour-api   (fastapi)
+# - truehour-frontend  (react)
 ```
 
 All three containers should have status "Up".
@@ -132,10 +132,10 @@ All three containers should have status "Up".
 
 ```bash
 # Stop containers (preserves data)
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (⚠️ deletes all data)
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
@@ -171,7 +171,7 @@ psql postgres -c "GRANT ALL PRIVILEGES ON DATABASE truehour TO truehour;"
 
 ```bash
 sudo apt update
-sudo apt install postgresql-16
+sudo apt install postgresql-18
 
 # Create database and user
 sudo -u postgres psql
@@ -258,7 +258,7 @@ DATABASE_URL=postgresql://user:password@host:port/database
 # Optional
 ENABLE_FAA_LOOKUP=true                    # Enable FAA N-number lookups
 LOG_LEVEL=INFO                            # DEBUG, INFO, WARNING, ERROR
-CORS_ORIGINS=http://localhost:3000        # Allowed frontend origins
+CORS_ORIGINS=http://localhost:8181        # Allowed frontend origins
 ```
 
 ### Frontend Environment Variables
@@ -316,7 +316,7 @@ TrueHour automatically creates/updates database tables on startup. No manual SQL
 
 ```bash
 # Connect to database container
-docker exec -it infrastructure-db-1 psql -U truehour truehour
+docker exec -it truehour-db psql -U truehour truehour
 
 # List tables
 \dt
@@ -467,7 +467,7 @@ If you use ForeFlight:
 ```bash
 # Install dependencies
 sudo apt update
-sudo apt install python3.11 python3-pip nodejs npm postgresql-16
+sudo apt install python3.12 python3-pip nodejs npm postgresql-18
 
 # Install Docker
 curl -fsSL https://get.docker.com -o get-docker.sh
@@ -475,20 +475,20 @@ sudo sh get-docker.sh
 sudo usermod -aG docker $USER
 
 # Install Docker Compose
-sudo apt install docker-compose-plugin
+sudo apt install docker compose-plugin
 ```
 
 **Fedora/RHEL:**
 
 ```bash
-sudo dnf install python3.11 nodejs postgresql-server
-sudo dnf install docker docker-compose
+sudo dnf install python3.12 nodejs postgresql-server
+sudo dnf install docker docker compose
 ```
 
 **Arch Linux:**
 
 ```bash
-sudo pacman -S python nodejs postgresql docker docker-compose
+sudo pacman -S python nodejs postgresql docker docker compose
 ```
 
 ### Windows
@@ -529,39 +529,39 @@ lsof -i :3000  # macOS/Linux
 netstat -ano | findstr :3000  # Windows
 
 # Change port in infrastructure/.env
-FRONTEND_PORT=3001
+APP_PORT=8182
 ```
 
 **Problem: Containers won't start**
 
 ```bash
 # Check logs
-docker-compose logs backend
-docker-compose logs frontend
-docker-compose logs db
+docker compose logs backend
+docker compose logs frontend
+docker compose logs db
 
 # Restart services
-docker-compose restart
+docker compose restart
 
 # Full rebuild
-docker-compose down -v
-docker-compose up -d --build
+docker compose down -v
+docker compose up -d --build
 ```
 
 **Problem: Database connection failed**
 
 ```bash
 # Check database is running
-docker-compose ps
+docker compose ps
 
 # Check database logs
-docker-compose logs db
+docker compose logs db
 
 # Connect to database
-docker exec -it infrastructure-db-1 psql -U truehour truehour
+docker exec -it truehour-db psql -U truehour truehour
 
 # Verify DATABASE_URL in backend container
-docker exec -it infrastructure-backend-1 env | grep DATABASE_URL
+docker exec -it truehour-api env | grep DATABASE_URL
 ```
 
 ### Backend Issues
@@ -608,7 +608,7 @@ echo $ENABLE_FAA_LOOKUP
 cat frontend-react/.env
 
 # Verify backend is running
-curl http://localhost:8000/api/flights
+curl http://localhost:8000/api/v1/health
 
 # Check CORS configuration in backend
 ```
@@ -698,9 +698,9 @@ psql postgres -c "CREATE DATABASE truehour;"
 ```bash
 # With Docker
 cd infrastructure
-docker-compose down
+docker compose down
 git pull origin main
-docker-compose up -d --build
+docker compose up -d --build
 
 # Development mode
 git pull origin main
@@ -723,7 +723,7 @@ Database migrations run automatically on startup.
 
 ```bash
 # Backup database (Docker)
-docker exec infrastructure-db-1 pg_dump -U truehour truehour > backup_$(date +%Y%m%d).sql
+docker exec truehour-db pg_dump -U truehour truehour > backup_$(date +%Y%m%d).sql
 
 # Backup database (Local)
 pg_dump -U truehour truehour > backup_$(date +%Y%m%d).sql
@@ -736,7 +736,7 @@ cp infrastructure/.env infrastructure/.env.backup
 
 ```bash
 # Restore (Docker)
-cat backup_20260103.sql | docker exec -i infrastructure-db-1 psql -U truehour truehour
+cat backup_20260103.sql | docker exec -i truehour-db psql -U truehour truehour
 
 # Restore (Local)
 psql -U truehour truehour < backup_20260103.sql
@@ -757,10 +757,10 @@ psql -U truehour truehour < backup_20260103.sql
 
 **Quick Checks:**
 
-1. All containers running? `docker-compose ps`
-2. Backend responding? `curl http://localhost:8000/api/flights`
-3. Frontend loading? Open http://localhost:3000
-4. Check logs: `docker-compose logs -f`
+1. All containers running? `docker compose ps`
+2. Backend responding? `curl http://localhost:8000/api/v1/health`
+3. Frontend loading? Open http://localhost:8181
+4. Check logs: `docker compose logs -f`
 
 ---
 

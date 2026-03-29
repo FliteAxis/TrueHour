@@ -41,16 +41,16 @@ DATABASE_URL=postgresql://truehour:your_secure_password_here@db:5432/truehour
 
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs (optional)
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 4. Access TrueHour
 
 Open your browser:
-- **Frontend (React)**: http://localhost:3000
+- **Frontend (React)**: http://localhost:8181
 - **Backend API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 
@@ -61,7 +61,7 @@ Open your browser:
 Check that all three containers are running:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 You should see:
@@ -163,23 +163,23 @@ TrueHour v2.0 uses a three-container architecture:
 
 ```bash
 # View all logs
-docker-compose logs -f
+docker compose logs -f
 
 # View specific service logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 
 # Restart services
-docker-compose restart
+docker compose restart
 
 # Stop services (preserves data)
-docker-compose down
+docker compose down
 
 # Stop and remove data (⚠️ deletes everything)
-docker-compose down -v
+docker compose down -v
 
 # Rebuild containers
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Database Management
@@ -208,7 +208,7 @@ curl http://localhost:8000/api/v1/health
 curl http://localhost:8000/api/v1/aircraft/N172SP
 
 # Get flights
-curl http://localhost:8000/api/flights/
+curl http://localhost:8000/api/v1/health/
 
 # Get user aircraft
 curl http://localhost:8000/api/user/aircraft
@@ -239,7 +239,7 @@ uvicorn app.main:app --reload
 ```bash
 cd frontend-react
 npm install
-echo "VITE_API_URL=http://localhost:8000" > .env
+echo "APP_PORT=http://localhost:8000" > .env
 npm run dev
 ```
 
@@ -258,24 +258,24 @@ lsof -i :8000  # Backend
 lsof -i :5432  # Database
 
 # Change ports in infrastructure/.env
-FRONTEND_PORT=3001
-BACKEND_PORT=8001
+APP_PORT=8182
+
 ```
 
 ### Containers Won't Start
 
 ```bash
 # Check container status
-docker-compose ps
+docker compose ps
 
 # View logs for errors
-docker-compose logs backend
-docker-compose logs frontend
-docker-compose logs db
+docker compose logs backend
+docker compose logs frontend
+docker compose logs db
 
 # Full restart
-docker-compose down -v
-docker-compose up -d --build
+docker compose down -v
+docker compose up -d --build
 ```
 
 ### Database Connection Failed
@@ -285,23 +285,23 @@ docker-compose up -d --build
 docker ps | grep postgres
 
 # Test connection
-docker exec -it infrastructure-db-1 psql -U truehour truehour -c "SELECT 1;"
+docker exec -it truehour-db psql -U truehour truehour -c "SELECT 1;"
 
 # Verify DATABASE_URL
-docker exec -it infrastructure-backend-1 env | grep DATABASE_URL
+docker exec -it truehour-api env | grep DATABASE_URL
 ```
 
 ### Frontend Not Loading
 
 ```bash
 # Check frontend container logs
-docker-compose logs frontend
+docker compose logs frontend
 
-# Check VITE_API_URL
-cat infrastructure/.env | grep VITE_API_URL
+# Check APP_PORT
+cat infrastructure/.env | grep APP_PORT
 
 # Verify backend is responding
-curl http://localhost:8000/api/flights
+curl http://localhost:8000/api/v1/health
 ```
 
 ---
