@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY frontend-react/package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (npm install instead of ci to handle lock file drift from devDep additions)
+RUN npm install
 
 # Copy source code
 COPY frontend-react/ ./
