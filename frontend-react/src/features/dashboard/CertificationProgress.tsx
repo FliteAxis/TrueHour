@@ -56,9 +56,8 @@ export function CertificationProgress() {
       return { current: 0, remaining: req.required, percentage: 0 };
     }
 
-    let current = 0;
-
     // Special case for total_xc_pic (cross country PIC)
+    let current: number;
     if (req.key === "total_xc_pic") {
       // For now, use cross_country as approximation
       // TODO: Calculate actual XC PIC from flights table

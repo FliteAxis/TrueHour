@@ -1,6 +1,16 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-truehour-dark: #0f172a;
+  --color-truehour-darker: #0a0f1e;
+  --color-truehour-card: #1e293b;
+  --color-truehour-surface: #334155;
+  --color-truehour-border: #475569;
+  --color-truehour-blue: #3b82f6;
+  --color-truehour-green: #10b981;
+  --color-truehour-orange: #f59e0b;
+  --color-truehour-red: #ef4444;
+}
 
 @layer base {
   body {
