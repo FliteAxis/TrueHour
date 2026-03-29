@@ -28,7 +28,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install flake8 pylint black isort mypy
+          pip install flake8 pylint black==25.12.0 isort mypy
           pip install -r backend/requirements.txt
 
       - name: Run Black (formatter check)
