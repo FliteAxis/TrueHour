@@ -7,7 +7,6 @@
     ":separateMajorReleases"
   ],
   "branchPrefix": "renovate/",
-  "username": "renovate[bot]",
   "gitAuthor": "Renovate Bot <bot@renovateapp.com>",
   "labels": [
     "dependencies",
@@ -17,7 +16,6 @@
   "reviewersFromCodeOwners": true,
   "prHourlyLimit": 0,
   "prConcurrentLimit": 10,
-  "semanticCommits": "enabled",
   "commitMessagePrefix": "chore(deps):",
   "schedule": [
     "before 6am on monday"
@@ -57,9 +55,9 @@
         "before 6am on the first day of the month"
       ],
       "matchPackageNames": [
-        "/python/",
-        "/postgres/",
-        "/nginx/"
+        "python",
+        "postgres",
+        "nginx"
       ]
     },
     {
@@ -138,21 +136,9 @@
       "description": "FastAPI and Uvicorn should be updated together",
       "groupName": "FastAPI ecosystem",
       "matchPackageNames": [
-        "/^fastapi$/",
-        "/^uvicorn/"
+        "fastapi",
+        "uvicorn"
       ]
-    },
-    {
-      "description": "Security updates with high priority",
-      "matchUpdateTypes": [
-        "patch"
-      ],
-      "matchCurrentVersion": "!/^0/",
-      "automerge": true,
-      "schedule": [
-        "at any time"
-      ],
-      "prPriority": 10
     },
     {
       "description": "Disable major version updates for stable APIs",
@@ -161,8 +147,8 @@
         "major"
       ],
       "matchPackageNames": [
-        "/^fastapi$/",
-        "/^pydantic$/"
+        "fastapi",
+        "pydantic"
       ]
     }
   ],
