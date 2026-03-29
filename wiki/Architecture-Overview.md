@@ -110,7 +110,7 @@ The application also includes:
 │  │ Zustand         │  │ asyncpg          │  │ Data:          ││
 │  │ TypeScript      │  │ Pydantic         │  │ • flights      ││
 │  │                 │  │                  │  │ • aircraft     ││
-│  │ Port: 3000      │  │ FAA SQLite DB    │  │ • budget_cards ││
+│  │ Port: 8181      │  │ FAA SQLite DB    │  │ • budget_cards ││
 │  │                 │  │ (308K aircraft)  │  │ • expenses     ││
 │  │                 │  │                  │  │ • user_data    ││
 │  │                 │  │ Port: 8000       │  │ Port: 5432     ││
@@ -343,7 +343,7 @@ app = FastAPI(title="TrueHour API", version="2.0.0")
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:8181", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -872,7 +872,7 @@ services:
   frontend:
     build: ./frontend-react
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-8181}:80"
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
@@ -909,7 +909,7 @@ volumes:
 **Frontend Container:**
 - Base: Node 18
 - Build: `npm run build` (Vite production build)
-- Serve: Dev server (port 3000) or Nginx (future)
+- Serve: Nginx reverse proxy (port 8181)
 - Size: ~200MB
 
 **Backend Container:**
