@@ -124,9 +124,9 @@ export function FlightsView() {
       }
 
       if (typeof aVal === "string") {
-        return sortDirection === "asc" ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return sortDirection === "asc" ? aVal.localeCompare(String(bVal)) : String(bVal).localeCompare(aVal);
       } else {
-        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+        return sortDirection === "asc" ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
       }
     });
   };
