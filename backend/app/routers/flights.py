@@ -8,8 +8,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Annotated, List, Optional
 
-# Fix for _strptime threading issue - import at module level to initialize
-import _strptime  # noqa: F401
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field, condecimal
