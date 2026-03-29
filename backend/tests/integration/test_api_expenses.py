@@ -68,7 +68,7 @@ def test_create_expense_success(client):
                 "date": "2025-01-15",
             },
         )
-    assert response.status_code == 200
+    assert response.status_code == 201
     data = response.json()
     assert data["category"] == "fuel"
     assert data["amount"] == "85.50"
@@ -130,14 +130,23 @@ def test_delete_expense_success(client):
 
 def test_delete_expense_not_found(client):
     """DELETE /api/user/expenses/{id} returns 404 when not found."""
-    with patch("app.postgres_database.postgres_db.get_expense_by_id", AsyncMock(return_value=None)):
+    with patch("app.postgres_database.postgres_db.delete_expense", AsyncMock(return_value=False)):
         response = client.delete("/api/user/expenses/999")
     assert response.status_code == 404
 
 
 def test_get_expense_summary(client):
     """GET /api/user/expenses/summary returns aggregated summary."""
-    mock_summary = [{"category": "fuel", "total": "500.00", "count": 5}]
+    mock_summary = [
+        {
+            "group_name": "fuel",
+            "count": 5,
+            "total_amount": "500.00",
+            "avg_amount": "100.00",
+            "min_amount": "50.00",
+            "max_amount": "200.00",
+        }
+    ]
     with patch("app.postgres_database.postgres_db.get_expense_summary", AsyncMock(return_value=mock_summary)):
         response = client.get("/api/user/expenses/summary")
     assert response.status_code == 200

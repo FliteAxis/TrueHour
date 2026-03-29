@@ -70,7 +70,7 @@ describe("useExpenseStore - fetchExpenses", () => {
       })
     ).rejects.toThrow();
 
-    expect(useExpenseStore.getState().error).toMatch(/500/);
+    expect(useExpenseStore.getState().error).toEqual(expect.stringContaining("500"));
   });
 
   it("builds query string for filters", async () => {

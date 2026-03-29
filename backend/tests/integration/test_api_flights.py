@@ -115,7 +115,7 @@ def test_create_flight_minimal(client):
                 "total_time": "1.2",
             },
         )
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["departure_airport"] == "KPWK"
 
 
@@ -160,21 +160,30 @@ def test_delete_flight_success(client):
 
 def test_delete_flight_not_found(client):
     """DELETE /api/user/flights/{id} returns 404 when flight doesn't exist."""
-    with patch("app.postgres_database.postgres_db.get_flight_by_id", AsyncMock(return_value=None)):
+    with patch("app.postgres_database.postgres_db.delete_flight", AsyncMock(return_value=False)):
         response = client.delete("/api/user/flights/999")
     assert response.status_code == 404
 
 
-def test_get_flight_hours_summary(client):
-    """GET /api/user/flights/hours returns summary data."""
-    mock_hours = {
-        "total": 42.5,
-        "pic": 20.0,
-        "cross_country": 15.0,
-        "night": 3.0,
-        "instrument_total": 5.0,
-        "dual_received": 22.5,
+def test_get_flight_summary(client):
+    """GET /api/user/flights/summary returns summary data."""
+    mock_summary = {
+        "total_flights": 10,
+        "total_hours": "42.5",
+        "pic_hours": "20.0",
+        "sic_hours": "0.0",
+        "night_hours": "3.0",
+        "cross_country_hours": "15.0",
+        "actual_instrument_hours": "2.0",
+        "simulated_instrument_hours": "3.0",
+        "simulator_hours": "0.0",
+        "dual_received_hours": "22.5",
+        "dual_given_hours": "0.0",
+        "complex_hours": "0.0",
+        "high_performance_hours": "0.0",
+        "total_landings": 15,
+        "night_landings": 2,
     }
-    with patch("app.postgres_database.postgres_db.get_flight_hours_summary", AsyncMock(return_value=mock_hours)):
-        response = client.get("/api/user/flights/hours")
+    with patch("app.postgres_database.postgres_db.get_flight_summary", AsyncMock(return_value=mock_summary)):
+        response = client.get("/api/user/flights/summary")
     assert response.status_code == 200

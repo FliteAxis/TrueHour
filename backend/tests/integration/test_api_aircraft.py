@@ -82,7 +82,7 @@ def test_create_aircraft(client):
                 "is_active": True,
             },
         )
-    assert response.status_code == 200
+    assert response.status_code == 201
     assert response.json()["tail_number"] == "N172SP"
 
 
@@ -107,7 +107,7 @@ def test_update_aircraft_not_found(client):
 
 def test_delete_aircraft_not_found(client):
     """DELETE /api/user/aircraft/{id} returns 404 when aircraft doesn't exist."""
-    with patch("app.postgres_database.postgres_db.get_aircraft_by_id", AsyncMock(return_value=None)):
+    with patch("app.postgres_database.postgres_db.delete_aircraft", AsyncMock(return_value=False)):
         response = client.delete("/api/user/aircraft/999")
     assert response.status_code == 404
 

@@ -1,6 +1,6 @@
 """Integration tests for health and root API endpoints."""
 
-import pytest
+from unittest.mock import patch
 
 
 def test_health_no_faa_db(client):
@@ -17,8 +17,8 @@ def test_health_no_faa_db(client):
 
 def test_stats_unavailable_without_faa_db(client):
     """Stats endpoint returns 503 when FAA database is not available."""
-    response = client.get("/api/v1/stats")
-    # FAA database is not present in the test environment
+    with patch("app.main.db", None):
+        response = client.get("/api/v1/stats")
     assert response.status_code == 503
 
 
@@ -33,18 +33,13 @@ def test_aircraft_faa_lookup_not_found(client):
 
 def test_aircraft_faa_lookup_invalid_tail(client):
     """FAA aircraft lookup returns 400 for an invalid (empty) tail number."""
-    # An empty tail after normalization raises 400.
-    # "N" alone normalizes to "" which is falsy.
-    with pytest.raises(Exception):
-        # The normalized value is "", so HTTPException(400) should be raised.
-        # TestClient converts that to a 400 response.
-        pass
-    # Actually test it directly:
+    # "N" alone normalizes to "" which is falsy, resulting in a 400 response.
     response = client.get("/api/v1/aircraft/N")
     assert response.status_code == 400
 
 
 def test_bulk_lookup_unavailable_without_faa_db(client):
     """Bulk lookup returns 503 when FAA database is not available."""
-    response = client.post("/api/v1/aircraft/bulk", json={"tail_numbers": ["N172SP"]})
+    with patch("app.main.db", None):
+        response = client.post("/api/v1/aircraft/bulk", json={"tail_numbers": ["N172SP"]})
     assert response.status_code == 503
