@@ -214,23 +214,16 @@ Reload budget cards (actual_amount updated)
 
 ## Frontend Components
 
-### ExpenseManager (expenses.js)
+The expense UI is implemented as React components in
+`frontend-react/src/features/expenses/`:
 
-**Main Functions:**
-- `init()` - Initialize and load data
-- `loadExpenses()` - Fetch from API
-- `renderExpenses()` - Display with month grouping
-- `showCreateModal()` - Open expense form
-- `saveExpense()` - Create/update expense
-- `deleteExpense()` - Remove expense
-- `linkToBudget()` - Open budget link modal
-- `saveBudgetLink()` - Create expense-budget link
-- `applyFilters()` - Filter by month/category
+- **ExpensesView.tsx** - Main expense list with filtering
+- **CreateExpenseModal.tsx** - Create new expenses
+- **EditExpenseModal.tsx** - Edit existing expenses
+- **ExpensesList.tsx** - Expense table with sorting and grouping
 
-**Integration:**
-- Auto-reloads budget cards after changes
-- Triggers UserDataManager.triggerAutoSave()
-- Updates summary statistics
+Budget card linking is handled via the budget card detail views in
+`frontend-react/src/features/budget/`.
 
 ---
 
@@ -273,20 +266,19 @@ Reload budget cards (actual_amount updated)
 
 ---
 
-## Files Modified
+## Key Files
 
 ### Backend
-- `backend/app/routers/expense_budget_links.py` (NEW - 135 lines)
-- `backend/app/main.py` (added expense_budget_links router)
+
+- `backend/app/routers/expenses.py` - Expense CRUD endpoints
+- `backend/app/routers/expense_budget_links.py` - Budget linking endpoints
+- `backend/app/routers/budget_cards.py` - Budget card endpoints
 
 ### Frontend
-- `frontend/js/expenses.js` (NEW - 650 lines)
-- `frontend/index.html` (added expense section + modals)
-- `frontend/css/styles.css` (added expense styles)
 
-### Existing Components Leveraged
-- Expense CRUD endpoints already complete
-- Database schema already in place
+- `frontend-react/src/features/expenses/` - Expense UI components
+- `frontend-react/src/features/budget/` - Budget card UI components
+- `frontend-react/src/store/expenseStore.ts` - Zustand state management
 - Budget cards query already calculates actual_amount
 
 ---

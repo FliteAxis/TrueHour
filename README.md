@@ -265,52 +265,51 @@ See [infrastructure/init.sql](infrastructure/init.sql) for complete schema.
 
 ### Flight Management
 ```
-GET    /api/flights              # List all flights
-POST   /api/flights              # Add flight
-PUT    /api/flights/{id}         # Update flight
-DELETE /api/flights/{id}         # Delete flight
-POST   /api/import-csv           # Import ForeFlight CSV
+GET    /api/user/flights                  # List all flights
+POST   /api/user/flights                  # Add flight
+PUT    /api/user/flights/{id}             # Update flight
+DELETE /api/user/flights/{id}             # Delete flight
+POST   /api/user/flights/import           # Import ForeFlight CSV
 ```
 
 ### Aircraft Management
 ```
-GET    /api/aircraft             # List aircraft
-POST   /api/aircraft             # Add aircraft
-PUT    /api/aircraft/{id}        # Update aircraft
-DELETE /api/aircraft/{id}        # Delete aircraft
-GET    /api/faa/{tail_number}    # FAA lookup
+GET    /api/user/aircraft                 # List aircraft
+POST   /api/user/aircraft                 # Add aircraft
+PUT    /api/user/aircraft/{id}            # Update aircraft
+DELETE /api/user/aircraft/{id}            # Delete aircraft
+GET    /api/v1/aircraft/{tail}            # FAA lookup
 ```
 
 ### Budget Cards
 ```
-GET    /api/budget-cards                        # List cards
-POST   /api/budget-cards                        # Create card
-PUT    /api/budget-cards/{id}                   # Update card
-DELETE /api/budget-cards/{id}                   # Delete card
-GET    /api/budget-cards/summary-by-category   # Category summaries
+GET    /api/user/budget-cards             # List cards
+POST   /api/user/budget-cards             # Create card
+PUT    /api/user/budget-cards/{id}        # Update card
+DELETE /api/user/budget-cards/{id}        # Delete card
 ```
 
 ### Expenses
 ```
-GET    /api/expenses             # List expenses
-POST   /api/expenses             # Add expense
-PUT    /api/expenses/{id}        # Update expense
-DELETE /api/expenses/{id}        # Delete expense
+GET    /api/user/expenses                 # List expenses
+POST   /api/user/expenses                 # Add expense
+PUT    /api/user/expenses/{id}            # Update expense
+DELETE /api/user/expenses/{id}            # Delete expense
 ```
 
 ### Exports
 ```
-GET    /api/exports/flights/csv        # Export flights CSV
-GET    /api/exports/budget-cards/csv   # Export budget cards CSV
-GET    /api/exports/expenses/csv       # Export expenses CSV
-GET    /api/exports/aircraft/csv       # Export aircraft CSV
+GET    /api/user/exports/flights/csv      # Export flights CSV
+GET    /api/user/exports/budget-cards/csv # Export budget cards CSV
+GET    /api/user/exports/expenses/csv     # Export expenses CSV
+GET    /api/user/exports/aircraft/csv     # Export aircraft CSV
 ```
 
-### User Data
+### User Settings & Import History
 ```
-GET    /api/user-data                  # Get user settings
-POST   /api/user-data                  # Save user settings
-GET    /api/import-history/latest      # Get latest import info
+GET    /api/user/settings                 # Get user settings
+PUT    /api/user/settings                 # Update user settings
+GET    /api/user/import-history           # Get import history
 ```
 
 **Interactive API Docs:** http://localhost:8000/docs

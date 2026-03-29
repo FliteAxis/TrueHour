@@ -131,9 +131,9 @@ export function CreateCardModal({ isOpen, onClose }: CreateCardModalProps) {
     const bufferPercent = settings?.budget_buffer_percentage || 10;
 
     // Calculate based on frequency
-    let suggestedHours = totalWithBuffer;
-    let explanation = "";
-    let frequencyAdvice = "";
+    let suggestedHours: number;
+    let explanation: string;
+    let frequencyAdvice: string;
 
     // Check if instructor rate is configured
     const instructorRate = settings?.ground_instruction_rate || 0;
