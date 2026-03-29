@@ -77,18 +77,16 @@ repos:
         args: ["--ignore", "DL3008", "--ignore", "DL3013"]
 
   # TypeScript/JavaScript linting with ESLint
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.17.0
+  # NOTE: Using local eslint via system hook to ensure the pre-commit hook
+  # uses the same eslint version as the project (installed via npm).
+  - repo: local
     hooks:
       - id: eslint
+        name: eslint
+        entry: npx --prefix frontend-react eslint --fix --config frontend-react/eslint.config.js
+        language: system
         files: ^frontend-react/.*\.[jt]sx?$
         types: [file]
-        args: ["--fix", "--config=frontend-react/eslint.config.js"]
-        additional_dependencies:
-          - eslint@9.17.0
-          - typescript@5.7.2
-          - "@typescript-eslint/eslint-plugin@8.18.2"
-          - "@typescript-eslint/parser@8.18.2"
 
   # Prettier formatting for frontend
   - repo: https://github.com/pre-commit/mirrors-prettier

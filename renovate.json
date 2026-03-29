@@ -150,6 +150,21 @@
         "fastapi",
         "pydantic"
       ]
+    },
+    {
+      "description": "Pin ESLint to 9.x - eslint-plugin-react-hooks does not support ESLint 10 yet",
+      "matchPackageNames": [
+        "eslint",
+        "@eslint/js"
+      ],
+      "allowedVersions": "<10.0.0"
+    },
+    {
+      "description": "Pin TypeScript to 5.x - typescript-eslint does not support TS 6 yet",
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "allowedVersions": "<6.0.0"
     }
   ],
   "lockFileMaintenance": {
