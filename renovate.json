@@ -172,6 +172,5 @@
   },
   "minimumReleaseAge": "3 days",
   "prCreation": "not-pending",
-  "stabilityDays": 1,
   "rebaseWhen": "behind-base-branch"
 }
