@@ -363,7 +363,7 @@ async def get_schema_status(db) -> dict:
 
     Returns a dict with table counts, column checks, and index status.
     """
-    status = {
+    status: dict = {
         "tables": {},
         "missing_columns": [],
         "missing_indexes": [],
@@ -439,7 +439,7 @@ async def get_detailed_schema_status(db) -> dict:
 
     Returns a dictionary with information about missing tables, columns, and indexes.
     """
-    status = {"missing_tables": [], "missing_columns": [], "missing_indexes": []}
+    status: dict = {"missing_tables": [], "missing_columns": [], "missing_indexes": []}
 
     async with db.acquire() as conn:
         # Check critical tables

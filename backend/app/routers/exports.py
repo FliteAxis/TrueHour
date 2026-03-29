@@ -22,7 +22,7 @@ async def export_flights_csv(
         async with postgres_db.acquire() as conn:
             # Build query with optional date filters
             query = "SELECT * FROM flights WHERE 1=1"
-            params = []
+            params: list = []
 
             if start_date:
                 query += " AND date >= $" + str(len(params) + 1)
@@ -281,7 +281,7 @@ async def export_expenses_csv(
     try:
         async with postgres_db.acquire() as conn:
             query = "SELECT * FROM expenses WHERE 1=1"
-            params = []
+            params: list = []
 
             if start_date:
                 query += " AND date >= $" + str(len(params) + 1)
