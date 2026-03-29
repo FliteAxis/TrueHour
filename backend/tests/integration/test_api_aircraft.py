@@ -67,7 +67,10 @@ def test_get_aircraft_by_id_not_found(client):
 
 def test_create_aircraft(client):
     """POST /api/user/aircraft creates and returns new aircraft."""
-    with patch("app.postgres_database.postgres_db.create_aircraft", AsyncMock(return_value=SAMPLE_AIRCRAFT)):
+    with (
+        patch("app.postgres_database.postgres_db.get_aircraft_by_tail", AsyncMock(return_value=None)),
+        patch("app.postgres_database.postgres_db.create_aircraft", AsyncMock(return_value=SAMPLE_AIRCRAFT)),
+    ):
         response = client.post(
             "/api/user/aircraft",
             json={

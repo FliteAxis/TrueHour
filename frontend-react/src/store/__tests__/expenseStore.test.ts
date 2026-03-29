@@ -64,12 +64,16 @@ describe("useExpenseStore - fetchExpenses", () => {
   it("sets error and throws on failed fetch", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(makeErrorResponse(500, "Server error"));
 
-    await expect(
-      act(async () => {
+    let threw = false;
+    await act(async () => {
+      try {
         await useExpenseStore.getState().fetchExpenses();
-      })
-    ).rejects.toThrow();
+      } catch {
+        threw = true;
+      }
+    });
 
+    expect(threw).toBe(true);
     expect(useExpenseStore.getState().error).toEqual(expect.stringContaining("500"));
   });
 

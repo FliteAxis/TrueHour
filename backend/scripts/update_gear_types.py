@@ -26,12 +26,14 @@ async def update_aircraft_gear_types():
     try:
         async with db.acquire() as conn:
             # Get all aircraft with make/model
-            aircraft_list = await conn.fetch("""
+            aircraft_list = await conn.fetch(
+                """
                 SELECT id, tail_number, make, model, gear_type
                 FROM aircraft
                 WHERE make IS NOT NULL AND model IS NOT NULL
                 ORDER BY id
-                """)
+                """
+            )
 
             print(f"Found {len(aircraft_list)} aircraft to update")
             updated_count = 0
