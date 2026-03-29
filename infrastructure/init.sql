@@ -29,6 +29,7 @@ CREATE TABLE aircraft (
 CREATE TABLE flights (
     id SERIAL PRIMARY KEY,
     aircraft_id INTEGER REFERENCES aircraft(id),
+    tail_number VARCHAR(20),  -- Store tail number directly from CSV for simulator sessions
     date DATE NOT NULL,
     departure_airport TEXT,
     arrival_airport TEXT,
@@ -118,7 +119,33 @@ CREATE TABLE expenses (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Budgets
+-- Budget Cards (new outcome-based budget system)
+CREATE TABLE budget_cards (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,  -- 'Administrative', 'Training', 'Family', etc.
+    frequency TEXT NOT NULL,  -- 'once', 'monthly', 'annual'
+    when_date DATE NOT NULL,  -- The date this budget applies to (Jan 2026, etc.)
+    budgeted_amount DECIMAL(10,2) NOT NULL,
+    actual_amount DECIMAL(10,2) DEFAULT 0.00,
+    notes TEXT,
+    associated_hours DECIMAL(5,2),  -- For training items
+    status TEXT DEFAULT 'active',  -- 'active', 'completed', 'cancelled'
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Link expenses to budget cards (many-to-many)
+CREATE TABLE expense_budget_links (
+    id SERIAL PRIMARY KEY,
+    expense_id INTEGER REFERENCES expenses(id) ON DELETE CASCADE,
+    budget_card_id INTEGER REFERENCES budget_cards(id) ON DELETE CASCADE,
+    amount DECIMAL(10,2) NOT NULL,  -- How much of expense to allocate
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(expense_id, budget_card_id)
+);
+
+-- Legacy budgets (keep for backward compatibility, but deprecated)
 CREATE TABLE budgets (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -133,7 +160,7 @@ CREATE TABLE budgets (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Budget entries (manual Ally Bank replacement)
+-- Legacy budget entries (keep for backward compatibility, but deprecated)
 CREATE TABLE budget_entries (
     id SERIAL PRIMARY KEY,
     budget_id INTEGER REFERENCES budgets(id) ON DELETE CASCADE,
@@ -177,6 +204,8 @@ CREATE TABLE user_settings (
     default_aircraft_id INTEGER REFERENCES aircraft(id) ON DELETE SET NULL,
     timezone VARCHAR(50) DEFAULT 'America/New_York',
     budget_state JSONB,  -- Phase 3: certification goal, current hours, training settings
+    onboarding_completed BOOLEAN DEFAULT false,  -- Track whether user completed onboarding
+    target_certification TEXT,  -- Current target certification (private, ir, cpl, cfi)
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -190,20 +219,56 @@ CREATE TABLE user_sessions (
     expires_at TIMESTAMPTZ
 );
 
+-- Import history (track ForeFlight imports for reconciliation)
+CREATE TABLE import_history (
+    id SERIAL PRIMARY KEY,
+    import_type TEXT NOT NULL,  -- 'foreflight_csv', 'manual_entry'
+    file_name TEXT,
+    flights_imported INTEGER DEFAULT 0,
+    hours_imported JSONB,  -- {total: 120.5, pic: 100.0, instrument: 8.5, ...}
+    import_date TIMESTAMPTZ DEFAULT NOW(),
+    notes TEXT
+);
+
+-- Training goals (link certification goals to budgets)
+CREATE TABLE training_goals (
+    id SERIAL PRIMARY KEY,
+    certification TEXT NOT NULL,  -- 'ir', 'cpl', 'cfi'
+    budget_id INTEGER REFERENCES budgets(id) ON DELETE SET NULL,
+    target_hours JSONB NOT NULL,  -- {total: 50, instrument: 50, cross_country: 0}
+    current_hours JSONB,  -- Snapshot from last import
+    hours_remaining JSONB,  -- Calculated field
+    start_date DATE,
+    target_completion_date DATE,
+    lessons_per_week DECIMAL(3,1) DEFAULT 2.0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Indexes for performance
 CREATE INDEX idx_flights_date ON flights(date DESC);
 CREATE INDEX idx_flights_aircraft ON flights(aircraft_id);
 CREATE INDEX idx_expenses_date ON expenses(date DESC);
 CREATE INDEX idx_expenses_category ON expenses(category);
+CREATE INDEX idx_budget_cards_when_date ON budget_cards(when_date DESC);
+CREATE INDEX idx_budget_cards_category ON budget_cards(category);
+CREATE INDEX idx_budget_cards_status ON budget_cards(status) WHERE status = 'active';
+CREATE INDEX idx_expense_budget_links_expense ON expense_budget_links(expense_id);
+CREATE INDEX idx_expense_budget_links_budget_card ON expense_budget_links(budget_card_id);
 CREATE INDEX idx_reminders_due ON reminders(due_date) WHERE is_completed = false;
 CREATE INDEX idx_user_sessions_session_id ON user_sessions(session_id);
+CREATE INDEX idx_import_history_date ON import_history(import_date DESC);
+CREATE INDEX idx_training_goals_active ON training_goals(is_active) WHERE is_active = true;
 
 -- Comments for documentation
 COMMENT ON TABLE aircraft IS 'User aircraft list - can include owned, club, and rental aircraft';
 COMMENT ON TABLE flights IS 'Flight log entries imported from ForeFlight or entered manually';
 COMMENT ON TABLE expenses IS 'Aviation-related expenses including subscriptions, insurance, maintenance, etc.';
-COMMENT ON TABLE budgets IS 'Budget definitions for tracking aviation spending';
-COMMENT ON TABLE budget_entries IS 'Monthly budget allocations - replaces Ally Bank envelope system';
+COMMENT ON TABLE budget_cards IS 'Outcome-based budget cards for tracking planned vs actual aviation spending';
+COMMENT ON TABLE expense_budget_links IS 'Links expenses to budget cards for tracking actual spending against budgets';
+COMMENT ON TABLE budgets IS 'DEPRECATED: Legacy budget definitions - use budget_cards instead';
+COMMENT ON TABLE budget_entries IS 'DEPRECATED: Legacy monthly budget allocations - use budget_cards instead';
 COMMENT ON TABLE reminders IS 'Reminders for medicals, flight reviews, currency, etc.';
 COMMENT ON TABLE chat_history IS 'Chat conversation history with Claude AI for context persistence';
 COMMENT ON TABLE user_settings IS 'User preferences including auto-save settings and default aircraft';
@@ -212,3 +277,8 @@ COMMENT ON TABLE user_sessions IS 'Session tracking for auto-save and data persi
 COMMENT ON COLUMN flights.simulated_instrument_time IS 'Hood/foggles time in REAL aircraft';
 COMMENT ON COLUMN flights.simulated_flight_time IS 'Time in simulator device (AATD/BATD) - NOT flight time';
 COMMENT ON COLUMN aircraft.is_simulator IS 'TRUE if this is a simulator device, not an actual aircraft';
+COMMENT ON COLUMN budget_cards.when_date IS 'The date this budget applies to - use first of month for monthly budgets';
+COMMENT ON COLUMN budget_cards.actual_amount IS 'Auto-calculated sum of linked expenses via expense_budget_links';
+
+COMMENT ON TABLE import_history IS 'Tracks ForeFlight CSV imports for hour reconciliation and progress tracking';
+COMMENT ON TABLE training_goals IS 'Training goals linked to budgets for progress tracking and cost estimation';

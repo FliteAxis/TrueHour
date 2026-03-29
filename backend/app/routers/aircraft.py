@@ -29,6 +29,8 @@ class UserAircraftCreate(BaseModel):
     category: Optional[str] = Field(None, description="owned, club, or rental")
     hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    fuel_burn_rate: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    fuel_price_per_gallon: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: bool = True
 
@@ -51,6 +53,8 @@ class UserAircraftUpdate(BaseModel):
     category: Optional[str] = None
     hourly_rate_wet: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     hourly_rate_dry: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    fuel_burn_rate: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
+    fuel_price_per_gallon: Optional[Annotated[Decimal, condecimal(max_digits=10, decimal_places=2)]] = None
     notes: Optional[str] = None
     is_active: Optional[bool] = None
 
@@ -74,8 +78,13 @@ class UserAircraftResponse(BaseModel):
     category: Optional[str] = None
     hourly_rate_wet: Optional[Decimal] = None
     hourly_rate_dry: Optional[Decimal] = None
+    fuel_burn_rate: Optional[Decimal] = None
+    fuel_price_per_gallon: Optional[Decimal] = None
     notes: Optional[str] = None
     is_active: bool
+    data_source: Optional[str] = None
+    faa_last_checked: Optional[datetime] = None
+    total_time: Optional[Decimal] = Field(None, description="Total hours logged in this aircraft")
     created_at: datetime
     updated_at: datetime
 
