@@ -258,9 +258,13 @@ jobs:
           path: reports/
           retention-days: 30
 
+      - name: Sanitize SARIF for GitHub Code Scanning
+        if: always() && hashFiles('reports/dependency-check-report.sarif') != ''
+        run: python3 scripts/sanitize-sarif.py reports/dependency-check-report.sarif
+
       - name: Upload SARIF to GitHub
         uses: github/codeql-action/upload-sarif@v4
-        if: always()
+        if: always() && hashFiles('reports/dependency-check-report.sarif') != ''
         with:
           sarif_file: reports/dependency-check-report.sarif
 
