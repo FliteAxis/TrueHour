@@ -20,7 +20,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -83,7 +85,18 @@ def sanitize(path: Path) -> tuple[int, int]:
     for run in data.get("runs", []) or []:
         renamed += len(sanitize_rule_ids(run))
     fixed_uris = sanitize_artifact_locations(data)
-    path.write_text(json.dumps(data), encoding="utf-8")
+
+    # Atomic write so a partially written file can never replace the original.
+    fd, tmp_name = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh)
+        os.replace(tmp_name, path)
+    except Exception:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+        raise
+
     return renamed, fixed_uris
 
 
