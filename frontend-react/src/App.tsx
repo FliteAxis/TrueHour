@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router";
 import { useUserStore } from "./store/userStore";
 import { DashboardLayout } from "./components/layout/DashboardLayout";
 import { SummaryView } from "./features/dashboard/SummaryView";
