@@ -77,8 +77,8 @@ async def export_flights_csv(
             ]
             writer.writerow(headers)
 
-            # Initialize totals
-            totals = {
+            # Initialize totals (times accumulate as floats)
+            totals: dict[str, float] = {
                 "total_time": 0,
                 "pic_time": 0,
                 "sic_time": 0,
