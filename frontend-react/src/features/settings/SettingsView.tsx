@@ -2,7 +2,7 @@
 // Central settings page for customization
 
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { getUserSettings, updateUserSettings } from "../../services/api";
 import type { UserSettings, UserAircraft } from "../../types/api";
 

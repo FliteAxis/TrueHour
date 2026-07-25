@@ -19,5 +19,15 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      // react-hooks 7.1 folds the React Compiler rule set into `recommended`;
+      // this codebase predates the compiler and isn't written to satisfy it.
+      // Keep the classic rules-of-hooks/exhaustive-deps enforcement only.
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+    },
   },
 ]);

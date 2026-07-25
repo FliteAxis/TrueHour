@@ -2,7 +2,7 @@
 // Dedicated page for managing aircraft hourly rates
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import type { UserAircraft } from "../../types/api";
 
 type RateType = "wet" | "dry" | "owned";

@@ -4,7 +4,8 @@
 
 **TrueHour** by FliteAxis is an aviation expense tracking app that calculates
 true hourly flying costs. Personal-first tool with potential SaaS expansion
-(June 2026 checkpoint).
+(June 2026 checkpoint). Product positioning, copy tone, personas, and roadmap
+posture: `wiki/Product-Notes.md` — read it before writing user-facing copy.
 
 **Stack**: FastAPI (Python 3.12) + React 19 (TypeScript) + PostgreSQL 18 + Docker
 **Repo**: Consolidated monorepo (backend, frontend-react, infrastructure)
@@ -16,6 +17,14 @@ true hourly flying costs. Personal-first tool with potential SaaS expansion
 - **No major version bumps** for fastapi or pydantic without explicit approval
 - The API container image (`python:3.12-slim`) does NOT have `curl` - use `python -c "import urllib.request; ..."` for healthchecks
 
+## Architecture Decisions (settled — don't relitigate)
+
+- Consolidated monorepo, not microservices
+- Raw asyncpg with parameterized queries, no ORM; custom startup migrations
+  (`backend/app/db_migrations.py`), not Alembic; schema in `infrastructure/init.sql`
+- FAA aircraft data baked into nightly-rebuilt Docker images (SQLite, 308K+ aircraft)
+- Single-user design (no user_id columns) - multi-tenancy deferred until SaaS validation
+
 ## Quick Reference
 
 ### Backend
@@ -24,19 +33,8 @@ true hourly flying costs. Personal-first tool with potential SaaS expansion
 cd backend
 pip install -r requirements.txt
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+pytest tests/unit --cov=app && pytest tests/integration --cov=app
 ```
-
-**Tests:**
-```bash
-pytest tests/unit --cov=app
-pytest tests/integration --cov=app
-```
-
-**Lint (all enforced by pre-commit):**
-- Black (120 char lines, target py312)
-- isort (black-compatible profile)
-- Flake8 (120 chars, ignores E203/W503/C901)
-- Bandit (security, excludes tests)
 
 ### Frontend
 
@@ -46,7 +44,6 @@ npm install
 npm run dev        # Dev server on :5173
 npm run build      # tsc -b && vite build
 npm test           # vitest run
-npm run lint       # eslint
 ```
 
 **Key libs**: Zustand (state), React Query (data fetching), Tailwind CSS 3, Chart.js, React Router 7
@@ -62,44 +59,32 @@ docker compose up -d
 
 Three containers: `frontend` (nginx), `api` (FastAPI), `db` (PostgreSQL 18 Alpine)
 
-## Pre-commit Hooks
+## Lint & CI
 
-Installed via `pre-commit install`. Runs on every commit:
-
-**Python**: Black, isort, Flake8, Bandit
-**Frontend**: ESLint (--fix), Prettier (--write)
-**Infra**: hadolint (Dockerfiles), yamllint, shellcheck, markdownlint
-**General**: trailing whitespace, EOF fixes, YAML/JSON validation, large file check, merge conflict detection, private key detection
-
-## CI Workflows
-
-| Workflow | Trigger | Key Jobs |
-|----------|---------|----------|
-| `tests.yml` | push main/develop, PRs | Backend pytest (unit + integration), Frontend vitest |
-| `lint.yml` | push main/develop, PRs | Python lint, Frontend lint, Dockerfile lint, YAML/MD/Shell lint |
-| `build-develop.yml` | push develop | Multi-arch Docker build, push to GHCR, smoke tests |
-| `build-main.yml` | push main | Multi-arch Docker build, push to GHCR, GitHub release |
-| `security-scan.yml` | push main/develop, PRs | Semgrep, CodeQL, Trivy, OWASP dependency check, Gitleaks |
-| `sbom-generation.yml` | push main/develop, PRs | SBOM generation, attestation |
+Pre-commit hooks enforce everything (`pre-commit install`; config in
+`.pre-commit-config.yaml`): Black/isort/Flake8/Bandit (Python, 120-char lines),
+ESLint/Prettier (frontend), hadolint/yamllint/shellcheck/markdownlint (infra).
+CI workflows live in `.github/workflows/` (tests, lint, builds, security
+scans, SBOM) — see `wiki/CI-CD-Pipeline.md` for detail.
 
 ## API Structure
 
 - Health endpoint: `GET /api/v1/health`
 - All user endpoints: `/api/user/...` (flights, aircraft, expenses, budget-cards, settings, etc.)
-- Database schema initialized via `infrastructure/init.sql`
-- Startup migrations in `backend/app/db_migrations.py`
 
 ## Domain Notes
 
-**Simulated Instrument Time** vs **Simulated Flight Time** - these are different:
+**Simulated Instrument Time** vs **Simulated Flight Time** - these are different and must never be conflated:
 - Simulated Instrument = flying a real aircraft under a hood/foggles
 - Simulated Flight = time in a simulator device (AATD/BATD), NOT actual flight time
+
+ForeFlight CSV is the primary import source - preserve all columns during import.
 
 **True Hourly Cost** = (Annual Fixed Costs / Annual Flight Hours) + Hourly Variable Costs
 
 ## Git Conventions
 
-- Commit style: `fix:`, `feat:`, `chore(deps):` etc.
+- Commit style: `fix:`, `feat:`, `chore(deps):` etc. Co-Authored-By tags for AI-assisted commits are expected.
 - Branch naming: `feature/v{version}-description`, `fix/v{version}-description`
-- PRs go `feature-branch` -> `develop` -> `main`
+- PRs go `feature-branch` -> `develop` -> `main`; prefer merge commits; force pushes to `main`/`develop` require explicit confirmation
 - Renovate handles dependency PRs (scheduled Mondays before 6am ET)

@@ -2,7 +2,7 @@
 // Comprehensive navigation menu with organized sections
 
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 
 interface HamburgerMenuProps {
   onImportLogbook: () => void;
