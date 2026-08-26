@@ -18,7 +18,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://truehour:truehour@db:5432/truehour
+      - DATABASE_URL=${DATABASE_URL:-postgresql://truehour:truehour@db:5432/truehour}
       - DB_PATH=/app/data/aircraft.db
       - ENABLE_FAA_LOOKUP=${ENABLE_FAA_LOOKUP:-false}
     depends_on:
@@ -36,6 +36,9 @@ services:
       - POSTGRES_DB=truehour
       - POSTGRES_USER=truehour
       - POSTGRES_PASSWORD=truehour
+      # postgres:18+ moved PGDATA to /var/lib/postgresql/<major>/docker.
+      # Pin it to the mounted path so the named volume is actually used.
+      - PGDATA=/var/lib/postgresql/data
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql

@@ -13,7 +13,7 @@ services:
       - ../backend/app:/app/app:ro  # Hot reload for code changes
       - ../data:/app/config
     environment:
-      - DATABASE_URL=postgresql://truehour:truehour@db:5432/truehour
+      - DATABASE_URL=${DATABASE_URL:-postgresql://truehour:truehour@db:5432/truehour}
       - CONFIG_PATH=/app/config/config.json
       - RELOAD=true  # Enable uvicorn auto-reload
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
