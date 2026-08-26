@@ -9,6 +9,7 @@ posture: `wiki/Product-Notes.md` — read it before writing user-facing copy.
 
 **Stack**: FastAPI (Python 3.12) + React 19 (TypeScript) + PostgreSQL 18 + Docker
 **Repo**: Consolidated monorepo (backend, frontend-react, infrastructure)
+**Tracking**: Work for this repo is ticketed in the `FATH` project in It's a Plan.
 
 ## Critical Constraints
 
