@@ -9,6 +9,7 @@ posture: `wiki/Product-Notes.md` — read it before writing user-facing copy.
 
 **Stack**: FastAPI (Python 3.12) + React 19 (TypeScript) + PostgreSQL 18 + Docker
 **Repo**: Consolidated monorepo (backend, frontend-react, infrastructure)
+**Tracking**: Work for this repo is ticketed in the `FATH` project in It's a Plan.
 
 ## Critical Constraints
 
@@ -86,5 +87,7 @@ ForeFlight CSV is the primary import source - preserve all columns during import
 
 - Commit style: `fix:`, `feat:`, `chore(deps):` etc. Co-Authored-By tags for AI-assisted commits are expected.
 - Branch naming: `feature/v{version}-description`, `fix/v{version}-description`
-- PRs go `feature-branch` -> `develop` -> `main`; prefer merge commits; force pushes to `main`/`develop` require explicit confirmation
+- PRs go `feature-branch` -> `develop` -> `main`; the repo blocks merge commits on `main`, so release PRs squash —
+  after each promotion, back-merge `main` into `develop` (content-neutral, `-s ours` from develop) or the next
+  promotion hits phantom conflicts; force pushes to `main`/`develop` require explicit confirmation
 - Renovate handles dependency PRs (scheduled Mondays before 6am ET)
