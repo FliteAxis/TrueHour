@@ -313,6 +313,47 @@ class CategoryBudgetSummary(BaseModel):
     card_count: int
 
 
+class UncountedExpense(BaseModel):
+    """An expense that no budget card counts."""
+
+    id: int
+    date: date
+    category: str
+    subcategory: Optional[str] = None
+    description: Optional[str] = None
+    vendor: Optional[str] = None
+    amount: Decimal
+    aircraft_id: Optional[int] = None
+
+
+class FlightCostBreakdown(BaseModel):
+    """Flight cost columns, which budget cards do not read."""
+
+    fuel_cost: Decimal
+    landing_fees: Decimal
+    instructor_cost: Decimal
+    rental_cost: Decimal
+    other_costs: Decimal
+
+
+class UncountedSpendSummary(BaseModel):
+    """Recorded spend that budget card actuals do not include.
+
+    Card actuals sum expense_budget_links.amount, so unlinked expenses count
+    against nothing, and flight cost columns are never read. Reported as
+    separate figures because they are separate problems.
+    """
+
+    unlinked_expense_count: int
+    unlinked_expense_total: Decimal
+    unlinked_expenses: List[UncountedExpense]
+    partially_linked_expense_count: int
+    partially_linked_shortfall: Decimal
+    flight_cost_count: int
+    flight_cost_total: Decimal
+    flight_cost_breakdown: FlightCostBreakdown
+
+
 class AnnualBudgetSummary(BaseModel):
     """Annual budget summary."""
 

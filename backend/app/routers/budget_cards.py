@@ -12,6 +12,7 @@ from app.models import (
     CategoryBudgetSummary,
     ExpenseBudgetLinkResponse,
     MonthlyBudgetSummary,
+    UncountedSpendSummary,
 )
 from app.postgres_database import postgres_db
 from fastapi import APIRouter, HTTPException, Query
@@ -156,6 +157,21 @@ async def get_annual_summary(year: int = Query(..., description="Year to summari
     try:
         summary = await postgres_db.get_annual_budget_summary(year)
         return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/summary/uncounted", response_model=UncountedSpendSummary)
+async def get_uncounted_spend():
+    """Report recorded spend that budget card actuals do not include.
+
+    Card actuals are the sum of expense_budget_links.amount, so an expense with
+    no link counts against no budget, and flight cost columns are never read.
+    Both are reported separately: an unlinked expense is fixed by linking it,
+    while flight costs are a modelling question, not a missing link.
+    """
+    try:
+        return await postgres_db.get_uncounted_spend()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
