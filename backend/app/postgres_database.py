@@ -1135,6 +1135,94 @@ class PostgresDatabase:
             "by_category": by_category,
         }
 
+    async def get_uncounted_spend(self) -> Dict[str, Any]:
+        """Report recorded spend that no budget card counts.
+
+        Budget card actuals are the sum of expense_budget_links.amount, so an
+        expense with no link row contributes to no budget. Flight cost columns
+        are not read by the budget card system at all. Both are real money the
+        budget view is blind to; they are reported separately because they are
+        different problems with different fixes.
+        """
+        async with self.acquire() as conn:
+            unlinked_totals = await conn.fetchrow(
+                """
+                SELECT COUNT(*) AS expense_count,
+                       COALESCE(SUM(e.amount), 0) AS total
+                FROM expenses e
+                LEFT JOIN expense_budget_links ebl ON ebl.expense_id = e.id
+                WHERE ebl.id IS NULL
+                """
+            )
+
+            unlinked_rows = await conn.fetch(
+                """
+                SELECT e.id, e.date, e.category, e.subcategory, e.description,
+                       e.vendor, e.amount, e.aircraft_id
+                FROM expenses e
+                LEFT JOIN expense_budget_links ebl ON ebl.expense_id = e.id
+                WHERE ebl.id IS NULL
+                ORDER BY e.date DESC, e.id DESC
+                """
+            )
+
+            # Partially allocated: linked, but the links do not cover the full
+            # expense. The shortfall counts against no budget either.
+            partial = await conn.fetchrow(
+                """
+                SELECT COUNT(*) AS expense_count,
+                       COALESCE(SUM(shortfall), 0) AS total
+                FROM (
+                    SELECT e.amount - SUM(ebl.amount) AS shortfall
+                    FROM expenses e
+                    JOIN expense_budget_links ebl ON ebl.expense_id = e.id
+                    GROUP BY e.id, e.amount
+                    HAVING e.amount - SUM(ebl.amount) > 0
+                ) gaps
+                """
+            )
+
+            flight_costs = await conn.fetchrow(
+                """
+                SELECT COUNT(*) FILTER (
+                           WHERE COALESCE(fuel_cost, 0) + COALESCE(landing_fees, 0)
+                               + COALESCE(instructor_cost, 0) + COALESCE(rental_cost, 0)
+                               + COALESCE(other_costs, 0) > 0
+                       ) AS flight_count,
+                       COALESCE(SUM(COALESCE(fuel_cost, 0)), 0) AS fuel_cost,
+                       COALESCE(SUM(COALESCE(landing_fees, 0)), 0) AS landing_fees,
+                       COALESCE(SUM(COALESCE(instructor_cost, 0)), 0) AS instructor_cost,
+                       COALESCE(SUM(COALESCE(rental_cost, 0)), 0) AS rental_cost,
+                       COALESCE(SUM(COALESCE(other_costs, 0)), 0) AS other_costs
+                FROM flights
+                """
+            )
+
+            flight_total = (
+                flight_costs["fuel_cost"]
+                + flight_costs["landing_fees"]
+                + flight_costs["instructor_cost"]
+                + flight_costs["rental_cost"]
+                + flight_costs["other_costs"]
+            )
+
+            return {
+                "unlinked_expense_count": unlinked_totals["expense_count"],
+                "unlinked_expense_total": unlinked_totals["total"],
+                "unlinked_expenses": [dict(r) for r in unlinked_rows],
+                "partially_linked_expense_count": partial["expense_count"],
+                "partially_linked_shortfall": partial["total"],
+                "flight_cost_count": flight_costs["flight_count"],
+                "flight_cost_total": flight_total,
+                "flight_cost_breakdown": {
+                    "fuel_cost": flight_costs["fuel_cost"],
+                    "landing_fees": flight_costs["landing_fees"],
+                    "instructor_cost": flight_costs["instructor_cost"],
+                    "rental_cost": flight_costs["rental_cost"],
+                    "other_costs": flight_costs["other_costs"],
+                },
+            }
+
     # Expense-Budget Card Links
 
     async def create_expense_budget_link(self, data: Dict[str, Any]) -> int:
